@@ -74,7 +74,7 @@ const TradingDashboard: React.FC = () => {
       const active = data.find(t => t.symbol === selectedSymbol);
       if (active) setCurrentTicker(active);
     });
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, [selectedSymbol]);
 
   return (
