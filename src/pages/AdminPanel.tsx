@@ -16,11 +16,61 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
+import { supabase } from '../services/supabase';
+
 const AdminPanel: React.FC = () => {
   const { profile } = useAuthStore();
   const [activeSection, setActiveSection] = useState<'overview' | 'users' | 'plans' | 'tokens'>('overview');
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState([
+    { label: 'Total Users', value: '0', icon: Users, change: '0' },
+    { label: 'Total Deposits', value: '$0', icon: Database, change: '0' },
+    { label: 'Active Investments', value: '0', icon: Activity, change: '0' },
+    { label: 'Liquidity Pool', value: '$500,000', icon: ShieldAlert, change: 'Stable' },
+  ]);
 
-  if (profile?.email !== 'horaciowalterortiz@gmail.com') {
+  React.useEffect(() => {
+    if (profile?.role === 'admin') {
+      fetchAdminData();
+    }
+  }, [profile]);
+
+  const fetchAdminData = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch Users
+      const { data: userData } = await supabase
+        .from('profiles')
+        .select('*, wallets(balance_usdc)');
+      
+      if (userData) {
+        setUsers(userData);
+        
+        // 2. Fetch Global Stats
+        const totalUsers = userData.length;
+        const totalDeposits = userData.reduce((acc, curr: any) => acc + (curr.wallets?.[0]?.balance_usdc || 0), 0);
+        
+        const { count: activeInvs } = await supabase
+          .from('investments')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'active');
+
+        setStats([
+          { label: 'Total Users', value: totalUsers.toString(), icon: Users, change: '+0%' },
+          { label: 'Total Balances', value: `$${totalDeposits.toLocaleString()}`, icon: Database, change: '+0%' },
+          { label: 'Active Investments', value: (activeInvs || 0).toString(), icon: Activity, change: '+0%' },
+          { label: 'Liquidity Pool', value: '$500,000', icon: ShieldAlert, change: 'Stable' },
+        ]);
+      }
+    } catch (error) {
+      console.error('Admin data fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (profile?.role !== 'admin') {
     return (
       <div className="flex flex-col items-center justify-center p-20 glass-card">
         <ShieldAlert size={60} className="text-rose-500 mb-4" />
@@ -29,13 +79,6 @@ const AdminPanel: React.FC = () => {
       </div>
     );
   }
-
-  const stats = [
-    { label: 'Total Users', value: '1,284', icon: Users, change: '+12%' },
-    { label: 'Total Deposits', value: '$452,190', icon: Database, change: '+5%' },
-    { label: 'Active Investments', value: '342', icon: Activity, change: '+18%' },
-    { label: 'Liquidity Pool', value: '$500,000', icon: ShieldAlert, change: 'Stable' },
-  ];
 
   return (
     <div className="space-y-8">
@@ -161,27 +204,25 @@ const AdminPanel: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {[
-                  { name: 'John Doe', email: 'john@example.com', balance: '12,450', status: 'verified' },
-                  { name: 'Sarah Miller', email: 'sarah@trade.io', balance: '2,100', status: 'pending' },
-                  { name: 'Mike Ross', email: 'mike@law.com', balance: '45,000', status: 'verified' },
-                ].map((user) => (
+                {users.map((user) => (
                   <tr key={user.email} className="hover:bg-white/5 transition-all">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-primary">
-                          {user.name.charAt(0)}
+                          {user.full_name?.charAt(0) || user.email.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-white">{user.name}</p>
+                          <p className="text-sm font-bold text-white">{user.full_name || 'No Name'}</p>
                           <p className="text-xs text-slate-500">{user.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-mono font-bold text-white">${user.balance}</td>
+                    <td className="px-6 py-4 text-sm font-mono font-bold text-white">
+                      ${user.wallets?.[0]?.balance_usdc?.toLocaleString() || '0'}
+                    </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${user.status === 'verified' ? 'bg-accent/20 text-accent' : 'bg-amber-500/20 text-amber-500'}`}>
-                        {user.status}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-primary/20 text-primary' : 'bg-accent/20 text-accent'}`}>
+                        {user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4">

@@ -16,19 +16,34 @@ import {
 import { useAuthStore } from '../store/useAuthStore';
 import type { Transaction } from '../types';
 
-const mockTransactions: Transaction[] = [
-  { id: '1', user_id: '123', type: 'deposit', amount: 1000, status: 'completed', description: 'External Deposit', created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },
-  { id: '2', user_id: '123', type: 'investment', amount: 500, status: 'completed', description: 'Plan 2 Investment', created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: '3', user_id: '123', type: 'profit', amount: 45, status: 'completed', description: 'Plan 2 Interest Payout', created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-];
+import { supabase } from '../services/supabase';
 
 const Wallet: React.FC = () => {
-  const { wallet } = useAuthStore();
+  const { wallet, profile } = useAuthStore();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'deposits' | 'withdrawals'>('all');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  React.useEffect(() => {
+    if (profile) fetchTransactions();
+  }, [profile, activeTab]);
+
+  const fetchTransactions = async () => {
+    let query = supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', profile?.id)
+      .order('created_at', { ascending: false });
+
+    if (activeTab === 'deposits') query = query.eq('type', 'deposit');
+    if (activeTab === 'withdrawals') query = query.eq('type', 'withdrawal');
+
+    const { data, error } = await query;
+    if (!error && data) setTransactions(data);
+  };
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(wallet?.address || 'T-Ox82...492');
+    navigator.clipboard.writeText(wallet?.address || '');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -142,7 +157,7 @@ const Wallet: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {mockTransactions.map((tx, i) => {
+                {transactions.map((tx, i) => {
                   const isPositive = ['deposit', 'profit', 'reward', 'referral'].includes(tx.type);
                   return (
                     <motion.tr 

@@ -14,62 +14,60 @@ const App: React.FC = () => {
   const { setUser, setProfile, setWallet, profile } = useAuthStore();
 
   useEffect(() => {
-    const isMockMode = !import.meta.env.VITE_SUPABASE_URL;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchProfile(session.user.id);
+    });
 
-    if (isMockMode) {
-      // Mock session if Supabase is not configured yet
-      const dummyUser = { id: 'dummy-user-id' };
-      setUser(dummyUser);
-      fetchProfile(dummyUser.id);
-      return;
-    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setWallet(null);
+      }
+    });
 
-    try {
-      // Listen for auth changes
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        }
-      }).catch(console.error);
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setWallet(null);
-        }
-      });
-
-      return () => subscription.unsubscribe();
-    } catch (error) {
-      console.error('Supabase init error:', error);
-    }
+    return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
-    // Check if the user is the specific admin
-    const session = await supabase.auth.getSession();
-    const email = session.data.session?.user?.email || 'user@example.com';
-    const isAdmin = email === 'horaciowalterortiz@gmail.com';
+  const fetchProfile = async (userId: string, retries = 3) => {
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    const mockProfile: any = {
-      id: userId,
-      email: email,
-      full_name: isAdmin ? 'Horacio Ortiz' : 'Trader User',
-      role: isAdmin ? 'admin' : 'user',
-      referral_code: 'TRADIFY-' + userId.slice(0, 5).toUpperCase()
-    };
-    
-    const mockWallet: any = {
-      balance_usdc: isAdmin ? 500000 : 1540.25,
-      address: 'Ox' + Math.random().toString(16).slice(2, 10).toUpperCase()
-    };
+      if (profileError && profileError.code === 'PGRST116' && retries > 0) {
+        // Wait 1 second and retry (for trigger lag)
+        setTimeout(() => fetchProfile(userId, retries - 1), 1000);
+        return;
+      }
 
-    setProfile(mockProfile);
-    setWallet(mockWallet);
+      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+
+      // 2. Fetch Wallet
+      let { data: walletData, error: walletError } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (walletError && walletError.code !== 'PGRST116') {
+        throw walletError;
+      }
+
+      if (profileData) {
+        setProfile(profileData);
+      }
+      if (walletData) {
+        setWallet(walletData);
+      }
+    } catch (error) {
+      console.error('Error fetching real data:', error);
+    }
   };
 
   return (

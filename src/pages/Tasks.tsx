@@ -10,18 +10,60 @@ const initialTasks = [
   { id: 4, title: 'Reach $1000 Portfolio', reward: 10.00, description: 'Maintain a balance of $1000 in plans.', icon: Trophy, status: 'ongoing', progress: [500, 1000] },
 ];
 
+import { supabase } from '../services/supabase';
+
 const Tasks: React.FC = () => {
-  const [tasks, setTasks] = useState(initialTasks);
-  const { updateBalance } = useAuthStore();
+  const { profile, wallet, setWallet } = useAuthStore();
+  const [tasks, setTasks] = useState<any[]>([]);
   const [claimingId, setClaimingId] = useState<number | null>(null);
 
-  const handleClaim = (id: number, reward: number) => {
+  React.useEffect(() => {
+    if (profile) fetchTasks();
+  }, [profile]);
+
+  const fetchTasks = async () => {
+    const { data: allTasks } = await supabase.from('tasks').select('*').eq('is_active', true);
+    const { data: userTasks } = await supabase.from('user_tasks').select('task_id').eq('user_id', profile?.id);
+
+    if (allTasks) {
+      const mapped = allTasks.map(t => ({
+        ...t,
+        status: userTasks?.find(ut => ut.task_id === t.id) ? 'completed' : (t.task_type === 'daily_login' ? 'claim' : 'ongoing'),
+        progress: [1, 1], // Simplified
+        icon: t.task_type === 'daily_login' ? Zap : t.task_type === 'referral' ? Users : t.task_type === 'investment' ? Wallet : Trophy
+      }));
+      setTasks(mapped);
+    }
+  };
+
+  const handleClaim = async (id: number, reward: number) => {
+    if (!profile || !wallet) return;
     setClaimingId(id);
-    setTimeout(() => {
-      updateBalance(reward);
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'completed' as const } : t));
+    
+    try {
+      // 1. Mark task as completed
+      await supabase.from('user_tasks').insert({ user_id: profile.id, task_id: id });
+
+      // 2. Update wallet
+      const newBalance = wallet.balance_usdc + reward;
+      await supabase.from('wallets').update({ balance_usdc: newBalance }).eq('user_id', profile.id);
+
+      // 3. Record transaction
+      await supabase.from('transactions').insert({
+        user_id: profile.id,
+        type: 'reward',
+        amount: reward,
+        description: 'Task Reward',
+        status: 'completed'
+      });
+
+      setWallet({ ...wallet, balance_usdc: newBalance });
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'completed' } : t));
+    } catch (error) {
+      console.error('Claim error:', error);
+    } finally {
       setClaimingId(null);
-    }, 1500);
+    }
   };
 
   return (
@@ -93,10 +135,10 @@ const Tasks: React.FC = () => {
             <div className="shrink-0 pl-4 border-l border-white/5 ml-4 h-16 flex items-center">
               {task.status === 'claim' ? (
                 <button 
-                  onClick={() => handleClaim(task.id, task.reward)}
+                  onClick={() => handleClaim(task.id, task.reward_amount)}
                   className="px-4 py-2 bg-accent text-dark font-black text-[10px] rounded-xl hover:scale-105 transition-all shadow-xl shadow-accent/20 uppercase tracking-widest whitespace-nowrap"
                 >
-                  Claim {task.reward}
+                  Claim {task.reward_amount}
                 </button>
               ) : task.status === 'completed' ? (
                 <div className="flex flex-col items-center justify-center text-accent">
@@ -106,7 +148,7 @@ const Tasks: React.FC = () => {
               ) : (
                 <div className="text-right">
                   <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Reward</p>
-                  <p className="text-sm font-black text-white whitespace-nowrap">{task.reward} <span className="text-[8px] font-normal text-slate-500">USDC</span></p>
+                  <p className="text-sm font-black text-white whitespace-nowrap">{task.reward_amount} <span className="text-[8px] font-normal text-slate-500">USDC</span></p>
                 </div>
               )}
             </div>

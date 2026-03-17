@@ -13,32 +13,98 @@ import {
 import type { Plan, Investment } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
 
-const PLANS: Plan[] = [
-  { id: 1, name: 'Plan 1', interest_rate: 6.00, duration_days: 60, interest_period_days: 15, min_amount: 70, max_amount: 220, max_simultaneous: 3, is_active: true },
-  { id: 2, name: 'Plan 2', interest_rate: 9.00, duration_days: 60, interest_period_days: 15, min_amount: 250, max_amount: 700, max_simultaneous: 5, is_active: true },
-  { id: 3, name: 'Plan 3', interest_rate: 12.00, duration_days: 30, interest_period_days: 15, min_amount: 800, max_amount: 2300, max_simultaneous: 5, is_active: true },
-  { id: 4, name: 'Plan 4', interest_rate: 16.00, duration_days: 30, interest_period_days: 15, min_amount: 2500, max_amount: 7000, max_simultaneous: 5, is_active: true },
-  { id: 5, name: 'Plan 5', interest_rate: 21.00, duration_days: 15, interest_period_days: 15, min_amount: 8000, max_amount: 23000, max_simultaneous: 6, is_active: true },
-];
+import { supabase } from '../services/supabase';
 
 const Investments: React.FC = () => {
-  const { wallet } = useAuthStore();
+  const { wallet, profile, setWallet } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'plans' | 'active' | 'history'>('plans');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [activeInvestments, setActiveInvestments] = useState<Investment[]>([]);
+  const [investmentAmount, setInvestmentAmount] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
-  const mockActiveInvestments: Investment[] = [
-    {
-      id: '1',
-      user_id: '123',
-      plan_id: 2,
-      amount: 500,
-      start_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-      end_date: new Date(Date.now() + 50 * 24 * 60 * 60 * 1000).toISOString(),
-      last_interest_payment: new Date().toISOString(),
-      status: 'active',
-      plan: PLANS[1]
+  React.useEffect(() => {
+    fetchPlans();
+    if (profile) fetchActiveInvestments();
+  }, [profile]);
+
+  const fetchPlans = async () => {
+    const { data, error } = await supabase.from('plans').select('*').eq('is_active', true);
+    if (!error && data) setPlans(data);
+  };
+
+  const fetchActiveInvestments = async () => {
+    const { data, error } = await supabase
+      .from('investments')
+      .select('*, plan:plans(*)')
+      .eq('user_id', profile?.id)
+      .eq('status', 'active');
+    if (!error && data) setActiveInvestments(data);
+  };
+
+  const handleInvest = async () => {
+    if (!selectedPlan || !profile || !wallet) return;
+    const amount = parseFloat(investmentAmount);
+    
+    if (amount < selectedPlan.min_amount || amount > selectedPlan.max_amount) {
+      alert(`Amount must be between ${selectedPlan.min_amount} and ${selectedPlan.max_amount}`);
+      return;
     }
-  ];
+
+    if (amount > wallet.balance_usdc) {
+      alert('Insufficient balance');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1. Create investment
+      const { data: invData, error: invError } = await supabase
+        .from('investments')
+        .insert({
+          user_id: profile.id,
+          plan_id: selectedPlan.id,
+          amount: amount,
+          status: 'active',
+          start_date: new Date().toISOString(),
+          end_date: new Date(Date.now() + selectedPlan.duration_days * 24 * 60 * 60 * 1000).toISOString()
+        })
+        .select()
+        .single();
+
+      if (invError) throw invError;
+
+      // 2. Update wallet balance
+      const newBalance = wallet.balance_usdc - amount;
+      const { error: walletError } = await supabase
+        .from('wallets')
+        .update({ balance_usdc: newBalance })
+        .eq('user_id', profile.id);
+
+      if (walletError) throw walletError;
+
+      // 3. Record transaction
+      await supabase.from('transactions').insert({
+        user_id: profile.id,
+        type: 'investment',
+        amount: amount,
+        description: `Investment in ${selectedPlan.name}`,
+        status: 'completed'
+      });
+
+      setWallet({ ...wallet, balance_usdc: newBalance });
+      setSelectedPlan(null);
+      setInvestmentAmount('');
+      fetchActiveInvestments();
+      alert('Investment successful!');
+    } catch (error) {
+      console.error('Investment error:', error);
+      alert('Failed to create investment');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -61,7 +127,7 @@ const Investments: React.FC = () => {
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'active' ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
           >
             <TrendingUp size={18} />
-            <span>Active ({mockActiveInvestments.length})</span>
+            <span>Active ({activeInvestments.length})</span>
           </button>
           <button 
             onClick={() => setActiveTab('history')}
@@ -112,7 +178,7 @@ const Investments: React.FC = () => {
 
           {/* Plans Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {PLANS.map((plan, i) => (
+            {plans.map((plan, i) => (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -165,7 +231,7 @@ const Investments: React.FC = () => {
 
       {activeTab === 'active' && (
         <div className="space-y-4">
-          {mockActiveInvestments.map((inv) => (
+          {activeInvestments.map((inv) => (
             <motion.div
               key={inv.id}
               initial={{ opacity: 0, x: -20 }}
@@ -236,6 +302,8 @@ const Investments: React.FC = () => {
                     placeholder="0.00"
                     min={selectedPlan.min_amount}
                     max={selectedPlan.max_amount}
+                    value={investmentAmount}
+                    onChange={(e) => setInvestmentAmount(e.target.value)}
                   />
                   <span className="absolute right-4 top-3 text-xs font-bold text-slate-500">USDC</span>
                 </div>
@@ -265,8 +333,12 @@ const Investments: React.FC = () => {
                 <p>Funds will be locked for the duration of the plan. Interests are paid every {selectedPlan.interest_period_days} days to your wallet.</p>
               </div>
 
-              <button className="w-full primary-button py-4 text-sm font-bold shadow-xl shadow-primary/30">
-                Confirm Investment
+              <button 
+                onClick={handleInvest}
+                disabled={loading}
+                className="w-full primary-button py-4 text-sm font-bold shadow-xl shadow-primary/30 disabled:opacity-50"
+              >
+                {loading ? 'Processing...' : 'Confirm Investment'}
               </button>
             </div>
           </motion.div>

@@ -3,12 +3,38 @@ import { motion } from 'framer-motion';
 import { Users, Link as LinkIcon, Gift, TrendingUp, Copy, Check, UserPlus } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
+import { supabase } from '../services/supabase';
+
 const Referrals: React.FC = () => {
   const { profile } = useAuthStore();
   const [copied, setCopied] = React.useState(false);
+  const [referrals, setReferrals] = React.useState<any[]>([]);
+  const [stats, setStats] = React.useState({ total: 0, active: 0, rewards: 0 });
+
+  React.useEffect(() => {
+    if (profile) fetchReferralData();
+  }, [profile]);
+
+  const fetchReferralData = async () => {
+    const { data: refs, error } = await supabase
+      .from('referrals')
+      .select('*, referred:profiles!referred_id(email)')
+      .eq('referrer_id', profile?.id);
+
+    if (!error && refs) {
+      setReferrals(refs);
+      const totalEarned = refs.reduce((acc: number, curr: any) => acc + (curr.commission_earned || 0), 0);
+      setStats({
+        total: refs.length,
+        active: refs.length, // Simplified
+        rewards: totalEarned
+      });
+    }
+  };
 
   const copyRef = () => {
-    navigator.clipboard.writeText(`https://tradify.io/register?ref=${profile?.referral_code}`);
+    const url = `${window.location.origin}/register?ref=${profile?.referral_code}`;
+    navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -49,7 +75,7 @@ const Referrals: React.FC = () => {
               <Gift size={32} className="text-primary" />
             </div>
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rewards Earned</p>
-            <p className="text-2xl font-black text-white">450.00 <span className="text-xs font-normal text-slate-500">USDC</span></p>
+            <p className="text-2xl font-black text-white">{stats.rewards.toFixed(2)} <span className="text-xs font-normal text-slate-500">USDC</span></p>
           </div>
         </motion.div>
 
@@ -61,9 +87,9 @@ const Referrals: React.FC = () => {
           <h3 className="font-bold text-white">Program Stats</h3>
           <div className="space-y-4">
             {[
-              { label: 'Total Referrals', value: '24', icon: UserPlus },
-              { label: 'Active Investors', value: '18', icon: TrendingUp },
-              { label: 'Pending Payout', value: '12.50 USDC', icon: Gift },
+              { label: 'Total Referrals', value: stats.total.toString(), icon: UserPlus },
+              { label: 'Active Investors', value: stats.active.toString(), icon: TrendingUp },
+              { label: 'Total Commissions', value: `${stats.rewards.toFixed(2)} USDC`, icon: Gift },
             ].map((stat) => (
               <div key={stat.label} className="flex items-center justify-between">
                 <div className="flex items-center space-x-3 text-slate-400">
@@ -98,24 +124,24 @@ const Referrals: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {[
-                { user: 'alex***@gmail.com', level: '1 (5%)', comm: '25.50 USDC', status: 'Received', date: '2024-03-15' },
-                { user: 'marta***@gmail.com', level: '2 (3%)', comm: '12.00 USDC', status: 'Received', date: '2024-03-14' },
-                { user: 'kevin***@gmail.com', level: '1 (5%)', comm: '150.00 USDC', status: 'Pending', date: '2024-03-14' },
-                { user: 'luna***@gmail.com', level: '3 (1%)', comm: '4.20 USDC', status: 'Received', date: '2024-03-12' },
-              ].map((ref, i) => (
+              {referrals.map((ref, i) => (
                 <tr key={i} className="text-sm text-slate-300 hover:bg-white/2 transition-colors">
-                  <td className="px-6 py-4 font-medium">{ref.user}</td>
+                  <td className="px-6 py-4 font-medium">{ref.referred?.email?.split('@')[0]}***</td>
                   <td className="px-6 py-4">{ref.level}</td>
-                  <td className="px-6 py-4 font-bold text-white">{ref.comm}</td>
+                  <td className="px-6 py-4 font-bold text-white">{ref.commission_earned} USDC</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ref.status === 'Received' ? 'bg-accent/20 text-accent' : 'bg-amber-500/20 text-amber-500'}`}>
-                      {ref.status}
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent/20 text-accent">
+                      Received
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-slate-500 font-mono">{ref.date}</td>
+                  <td className="px-6 py-4 text-slate-500 font-mono">{new Date(ref.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
+              {referrals.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500 italic">No referrals found yet.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
