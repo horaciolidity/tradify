@@ -8,12 +8,28 @@ import { supabase } from '../services/supabase';
 const Referrals: React.FC = () => {
   const { profile } = useAuthStore();
   const [copied, setCopied] = React.useState(false);
+  const [commissions, setCommissions] = React.useState({ level1: 5, level2: 3, level3: 1 });
   const [referrals, setReferrals] = React.useState<any[]>([]);
   const [stats, setStats] = React.useState({ total: 0, active: 0, rewards: 0 });
 
   React.useEffect(() => {
-    if (profile) fetchReferralData();
+    if (profile) {
+      fetchReferralData();
+      fetchCommissions();
+    }
   }, [profile]);
+
+  const fetchCommissions = async () => {
+    const { data } = await supabase
+      .from('admin_settings')
+      .select('value')
+      .eq('key', 'referral_commissions')
+      .single();
+    
+    if (data?.value) {
+      setCommissions(data.value);
+    }
+  };
 
   const fetchReferralData = async () => {
     const { data: refs, error } = await supabase
@@ -40,26 +56,33 @@ const Referrals: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Referral Program</h1>
-        <p className="text-slate-400 mt-1">Invite friends and earn up to 5% commission on their investments.</p>
-      </div>
+    <div className="space-y-8 text-slate-200">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+      >
+        <h1 className="text-4xl font-black text-white uppercase tracking-tighter italic">Referral Nexus</h1>
+        <p className="text-slate-400 mt-2 font-medium italic">Expand the Tradify network and harvest passive generational rewards.</p>
+      </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-2 glass-card p-8 bg-gradient-to-br from-primary/20 to-transparent flex flex-col md:flex-row md:items-center justify-between gap-6"
+          className="lg:col-span-2 glass-card p-10 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent relative overflow-hidden group border-white/10"
         >
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold text-white">Share your link</h3>
-            <p className="text-sm text-slate-400 max-w-md">
-              Earn passive income from your network. Get commissions from 3 levels: 5%, 3%, and 1% of every investment made by your referrals.
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -mr-32 -mt-32 rounded-full group-hover:bg-primary/20 transition-all duration-700" />
+          
+          <div className="relative z-10 space-y-6">
+            <h3 className="text-2xl font-black text-white uppercase tracking-tight italic">Your Neural Gateway</h3>
+            <p className="text-slate-400 max-w-xl leading-relaxed font-medium">
+              Activate your connection. Earn <span className="text-primary font-black italic">{commissions.level1}%</span> from level 1, 
+              <span className="text-primary font-black italic ml-1">{commissions.level2}%</span> from level 2, and 
+              <span className="text-primary font-black italic ml-1">{commissions.level3}%</span> from level 3 of every protocol investment.
             </p>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between group">
-              <span className="text-xs font-mono text-primary font-bold">
-                TRADIFY.IO/REF?ID={profile?.referral_code || 'DEMO-123'}
+            <div className="bg-black/40 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-md">
+              <span className="text-sm font-black text-primary font-mono tracking-widest break-all">
+                {window.location.origin}/JOIN?REF={profile?.referral_code || 'TRADIFY-X'}
               </span>
               <button 
                 onClick={copyRef}

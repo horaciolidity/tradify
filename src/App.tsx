@@ -12,18 +12,41 @@ import Tasks from './pages/Tasks';
 import { useAuthStore } from './store/useAuthStore';
 import { supabase } from './services/supabase';
 
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading } = useAuthStore();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6" />
+        <h2 className="text-xl font-bold text-white uppercase tracking-widest">Loading Tradify</h2>
+        <p className="text-slate-500 mt-2">Connecting to secure servers...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   const { setUser, setProfile, setWallet, profile, loading, setLoading } = useAuthStore();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
       } else {
         setLoading(false);
       }
-    });
+    };
+
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -72,16 +95,6 @@ const App: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6" />
-        <h2 className="text-xl font-bold text-white uppercase tracking-widest">Loading Tradify</h2>
-        <p className="text-slate-500 mt-2">Connecting to secure servers...</p>
-      </div>
-    );
-  }
-
   return (
     <BrowserRouter>
       <Routes>
@@ -91,46 +104,62 @@ const App: React.FC = () => {
 
         {/* Protected Routes */}
         <Route path="/" element={
-          <MainLayout>
-            <TradingDashboard />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <TradingDashboard />
+            </MainLayout>
+          </ProtectedRoute>
         } />
         <Route path="/trading" element={
-          <MainLayout>
-            <TradingDashboard />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <TradingDashboard />
+            </MainLayout>
+          </ProtectedRoute>
         } />
         <Route path="/referrals" element={
-          <MainLayout>
-            <Referrals />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Referrals />
+            </MainLayout>
+          </ProtectedRoute>
         } />
         <Route path="/tasks" element={
-          <MainLayout>
-            <Tasks />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Tasks />
+            </MainLayout>
+          </ProtectedRoute>
         } />
         <Route path="/custom-token" element={
-          <MainLayout>
-            <CustomTokens />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <CustomTokens />
+            </MainLayout>
+          </ProtectedRoute>
         } />
         <Route path="/investments" element={
-          <MainLayout>
-            <Investments />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Investments />
+            </MainLayout>
+          </ProtectedRoute>
         } />
         <Route path="/wallet" element={
-          <MainLayout>
-            <Wallet />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Wallet />
+            </MainLayout>
+          </ProtectedRoute>
         } />
         <Route path="/admin" element={
-          profile?.role === 'admin' ? (
-            <MainLayout>
-              <AdminPanel />
-            </MainLayout>
-          ) : <Navigate to="/" />
+          <ProtectedRoute>
+            {profile?.role === 'admin' ? (
+              <MainLayout>
+                <AdminPanel />
+              </MainLayout>
+            ) : <Navigate to="/" />}
+          </ProtectedRoute>
         } />
 
         {/* Fallback */}

@@ -159,7 +159,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </section>
 
         {/* Mobile Bottom Bar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-dark-lighter border-t border-white/5 flex items-center justify-around px-4 z-40 backdrop-blur-xl bg-opacity-90">
+        <div className="lg:hidden fixed bottom-6 left-4 right-4 h-16 bg-dark-lighter/80 border border-white/10 flex items-center justify-around px-2 z-40 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
           {navigation.filter(item => item.mobile).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
@@ -167,10 +167,18 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Link 
                 key={item.name} 
                 to={item.href}
-                className={`flex flex-col items-center space-y-1 ${isActive ? 'text-primary' : 'text-slate-500'}`}
+                className={`relative flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-300 ${isActive ? 'text-primary' : 'text-slate-500 hover:text-slate-300'}`}
               >
-                <Icon size={22} className={isActive ? 'animate-pulse-slow' : ''} />
-                <span className="text-[10px] font-bold uppercase">{item.name}</span>
+                {isActive && (
+                  <motion.div 
+                    layoutId="mobile-nav-bg"
+                    className="absolute inset-0 bg-primary/10 rounded-xl"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <Icon size={22} className={`relative z-10 ${isActive ? 'scale-110' : ''}`} />
+                <span className="relative z-10 text-[9px] font-bold uppercase mt-1 tracking-tighter">{item.name}</span>
+                {isActive && <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary" />}
               </Link>
             );
           })}

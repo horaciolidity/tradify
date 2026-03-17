@@ -20,7 +20,8 @@ import { supabase } from '../services/supabase';
 
 const AdminPanel: React.FC = () => {
   const { profile } = useAuthStore();
-  const [activeSection, setActiveSection] = useState<'overview' | 'users' | 'plans' | 'tokens'>('overview');
+  const [systemSettings, setSystemSettings] = useState<any>({});
+  const [activeSection, setActiveSection] = useState<'overview' | 'users' | 'plans' | 'tokens' | 'settings'>('overview');
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
@@ -33,8 +34,28 @@ const AdminPanel: React.FC = () => {
   React.useEffect(() => {
     if (profile?.role === 'admin') {
       fetchAdminData();
+      fetchSystemSettings();
     }
   }, [profile]);
+
+  const fetchSystemSettings = async () => {
+    const { data } = await supabase.from('admin_settings').select('*');
+    if (data) {
+      const settingsMap = data.reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }), {});
+      setSystemSettings(settingsMap);
+    }
+  };
+
+  const updateSetting = async (key: string, value: any) => {
+    const { error } = await supabase
+      .from('admin_settings')
+      .upsert({ key, value, updated_at: new Date().toISOString() });
+    
+    if (!error) {
+      setSystemSettings({ ...systemSettings, [key]: value });
+      alert('Settings updated successfully');
+    }
+  };
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -60,7 +81,7 @@ const AdminPanel: React.FC = () => {
           { label: 'Total Users', value: totalUsers.toString(), icon: Users, change: '+0%' },
           { label: 'Total Balances', value: `$${totalDeposits.toLocaleString()}`, icon: Database, change: '+0%' },
           { label: 'Active Investments', value: (activeInvs || 0).toString(), icon: Activity, change: '+0%' },
-          { label: 'Liquidity Pool', value: '$500,000', icon: ShieldAlert, change: 'Stable' },
+          { label: 'Liquidity Pool', value: `$${totalDeposits.toLocaleString()}`, icon: ShieldAlert, change: 'Stable' },
         ]);
       }
     } catch (error) {
@@ -72,10 +93,10 @@ const AdminPanel: React.FC = () => {
 
   if (profile?.role !== 'admin') {
     return (
-      <div className="flex flex-col items-center justify-center p-20 glass-card">
-        <ShieldAlert size={60} className="text-rose-500 mb-4" />
-        <h2 className="text-2xl font-bold text-white">Access Denied</h2>
-        <p className="text-slate-500 mt-2">Only the master administrator can access this panel.</p>
+      <div className="flex flex-col items-center justify-center p-20 glass-card text-center">
+        <ShieldAlert size={64} className="text-rose-500 mb-6 animate-pulse" />
+        <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Access Denied</h2>
+        <p className="text-slate-500 mt-4 max-w-md font-medium">Only the master administrator can access the Control Center. Your attempt has been logged.</p>
       </div>
     );
   }
@@ -84,39 +105,40 @@ const AdminPanel: React.FC = () => {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Admin Control Center</h1>
-          <p className="text-slate-400 mt-1">Manage users, systems, and market parameters.</p>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Control Center</h1>
+          <p className="text-slate-400 mt-1 font-medium italic">Advanced terminal for Tradify system management.</p>
         </div>
-        <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-          <button className="p-2 hover:bg-white/5 rounded-lg text-slate-400"><Settings size={20} /></button>
-          <button className="p-2 hover:bg-white/5 rounded-lg text-slate-400"><Database size={20} /></button>
+        <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
+          <button className="p-2.5 hover:bg-primary/20 hover:text-primary rounded-xl text-slate-400 transition-all"><Settings size={20} /></button>
+          <button className="p-2.5 hover:bg-primary/20 hover:text-primary rounded-xl text-slate-400 transition-all"><Database size={20} /></button>
         </div>
       </div>
 
       {/* Admin Nav */}
-      <div className="flex space-x-6 border-b border-white/5">
+      <div className="flex space-x-8 border-b border-white/5 overflow-x-auto pb-px scrollbar-hide">
         {[
-          { id: 'overview', label: 'Overview', icon: Activity },
-          { id: 'users', label: 'User Management', icon: Users },
-          { id: 'plans', label: 'Investment Plans', icon: TrendingUp },
-          { id: 'tokens', label: 'Custom Tokens', icon: Database },
+          { id: 'overview', label: 'Monitor', icon: Activity },
+          { id: 'users', label: 'Users', icon: Users },
+          { id: 'plans', label: 'Yield Plans', icon: TrendingUp },
+          { id: 'tokens', label: 'Assets', icon: Database },
+          { id: 'settings', label: 'System Settings', icon: ShieldAlert },
         ].map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveSection(item.id as any)}
-            className={`flex items-center space-x-2 pb-4 px-2 text-sm font-bold transition-all relative ${activeSection === item.id ? 'text-primary' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`flex items-center space-x-2 pb-4 px-1 text-xs font-black uppercase tracking-widest transition-all relative ${activeSection === item.id ? 'text-primary' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            <item.icon size={18} />
+            <item.icon size={16} />
             <span>{item.label}</span>
             {activeSection === item.id && (
-              <motion.div layoutId="admin-nav" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              <motion.div layoutId="admin-nav" className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full shadow-[0_-2px_10px_rgba(var(--color-primary),0.5)]" />
             )}
           </button>
         ))}
       </div>
 
       {activeSection === 'overview' && (
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, i) => (
               <motion.div
@@ -124,58 +146,62 @@ const AdminPanel: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="glass-card p-6"
+                className="glass-card p-6 group hover:border-primary/30 transition-all"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                    <stat.icon size={20} />
+                <div className="flex items-center justify-between mb-6">
+                  <div className="p-3 bg-primary/10 rounded-2xl text-primary group-hover:scale-110 transition-transform">
+                    <stat.icon size={24} />
                   </div>
-                  <span className={`text-xs font-bold ${stat.change.startsWith('+') ? 'text-accent' : 'text-slate-500'}`}>
-                    {stat.change}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${stat.change.startsWith('+') ? 'bg-accent/10 text-accent' : 'bg-white/5 text-slate-500'}`}>
+                      {stat.change}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">{stat.label}</p>
-                <h3 className="text-2xl font-bold text-white mt-1">{stat.value}</h3>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
+                <h3 className="text-3xl font-black text-white tracking-tighter italic">{stat.value}</h3>
               </motion.div>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="glass-card p-6">
-              <h3 className="font-bold text-white mb-6 flex items-center">
-                <ShieldAlert size={18} className="mr-2 text-primary" />
-                Global System Status
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="glass-card p-8">
+              <h3 className="text-lg font-black text-white mb-8 flex items-center uppercase tracking-tighter italic">
+                <ShieldAlert size={20} className="mr-3 text-primary" />
+                System Core Gates
               </h3>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { name: 'User Registrations', active: true },
                   { name: 'USDC Deposits', active: true },
                   { name: 'Withdrawals', active: false },
-                  { name: 'API Trading', active: true },
-                  { name: 'Token Creation', active: true },
+                  { name: 'Yield Distribution', active: true },
+                  { name: 'Asset Creation', active: true },
+                  { name: 'Referral Engine', active: true },
                 ].map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-3 bg-white/2 rounded-xl border border-white/5">
-                    <span className="text-sm font-medium text-slate-300">{item.name}</span>
-                    <button className={`${item.active ? 'text-accent' : 'text-slate-600'} hover:scale-110 transition-all`}>
-                      {item.active ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+                  <div key={item.name} className="flex items-center justify-between p-4 bg-white/2 rounded-2xl border border-white/5 hover:bg-white/5 transition-colors">
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">{item.name}</span>
+                    <button className={`${item.active ? 'text-accent' : 'text-slate-700'} transition-all`}>
+                      {item.active ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
                     </button>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="glass-card p-6">
-              <h3 className="font-bold text-white mb-6">Recent Alerts</h3>
+            <div className="glass-card p-8 bg-gradient-to-br from-indigo-500/5 to-transparent">
+              <h3 className="text-lg font-black text-white mb-8 uppercase tracking-tighter italic">Neural Alert Stream</h3>
               <div className="space-y-4">
                 {[
-                  { msg: 'Large withdrawal request: $45,000', type: 'warning', time: '2m ago' },
-                  { msg: 'New admin role assigned to car@trade.com', type: 'info', time: '1h ago' },
-                  { msg: 'System pool liquidity updated', type: 'success', time: '3h ago' },
+                  { msg: 'Security firewall intercepted suspicious request', type: 'warning', time: '1m ago' },
+                  { msg: 'System wide liquidity re-balanced', type: 'success', time: '45m ago' },
+                  { msg: 'New admin role assigned to car@trade.com', type: 'info', time: '2h ago' },
+                  { msg: 'Daily tasks verified for 1,240 users', type: 'success', time: '4h ago' },
                 ].map((alert, i) => (
-                  <div key={i} className="flex items-center space-x-3 text-sm p-3 border-b border-white/5 last:border-none">
-                    <div className={`w-2 h-2 rounded-full ${alert.type === 'warning' ? 'bg-amber-500' : alert.type === 'success' ? 'bg-accent' : 'bg-primary'}`} />
-                    <span className="flex-1 text-slate-300 font-medium">{alert.msg}</span>
-                    <span className="text-xs text-slate-500 whitespace-nowrap">{alert.time}</span>
+                  <div key={i} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/2 border border-white/5">
+                    <div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_10px_currentcolor] ${alert.type === 'warning' ? 'bg-amber-500' : alert.type === 'success' ? 'bg-accent' : 'bg-primary'}`} />
+                    <span className="flex-1 text-xs font-bold text-slate-300 uppercase tracking-wide leading-tight">{alert.msg}</span>
+                    <span className="text-[10px] font-black text-slate-600 italic whitespace-nowrap uppercase">{alert.time}</span>
                   </div>
                 ))}
               </div>
@@ -186,55 +212,152 @@ const AdminPanel: React.FC = () => {
 
       {activeSection === 'users' && (
         <div className="glass-card overflow-hidden">
-          <div className="p-6 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h3 className="font-bold text-white">Active Users</h3>
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-2.5 text-slate-500" />
-              <input type="text" placeholder="Search email or name..." className="input-field pl-10 w-full md:w-64" />
+          <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">User Base Management</h3>
+            <div className="relative group">
+              <Search size={20} className="absolute left-4 top-3 text-slate-500 group-focus-within:text-primary transition-colors" />
+              <input type="text" placeholder="Search by identity..." className="input-field pl-12 py-3 w-full md:w-80 bg-white/2" />
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-white/2 border-b border-white/5">
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">User</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Balance</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Status</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Actions</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Identity</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Balance (USDC)</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Rank</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Protocols</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {users.map((user) => (
-                  <tr key={user.email} className="hover:bg-white/5 transition-all">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-primary">
+                  <tr key={user.email} className="hover:bg-white/5 transition-all group">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-sm font-black text-primary border border-white/10 group-hover:border-primary/50 transition-all">
                           {user.full_name?.charAt(0) || user.email.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-white">{user.full_name || 'No Name'}</p>
-                          <p className="text-xs text-slate-500">{user.email}</p>
+                          <p className="text-sm font-black text-white uppercase tracking-wide">{user.full_name || 'Anonymous'}</p>
+                          <p className="text-xs font-bold text-slate-500 lowercase opacity-60">{user.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-mono font-bold text-white">
-                      ${user.wallets?.[0]?.balance_usdc?.toLocaleString() || '0'}
+                    <td className="px-8 py-6">
+                      <p className="text-lg font-black text-white tracking-tighter italic">${user.wallets?.[0]?.balance_usdc?.toLocaleString() || '0.00'}</p>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-primary/20 text-primary' : 'bg-accent/20 text-accent'}`}>
+                    <td className="px-8 py-6">
+                      <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest leading-none ${user.role === 'admin' ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-accent/20 text-accent border border-accent/20'}`}>
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <button className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-primary transition-colors"><Edit2 size={16} /></button>
-                        <button className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"><XCircle size={16} /></button>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-2.5 bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary rounded-xl transition-all"><Edit2 size={16} /></button>
+                        {user.email !== 'horaciowalterortiz@gmail.com' && (
+                          <button className="p-2.5 bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 rounded-xl transition-all"><XCircle size={16} /></button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {activeSection === 'settings' && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="glass-card p-8">
+              <h3 className="text-xl font-black text-white mb-8 uppercase tracking-tighter italic">Referral Protocol Settings</h3>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {[
+                    { key: 'level1', label: 'Primary Level', icon: '1' },
+                    { key: 'level2', label: 'Secondary Level', icon: '2' },
+                    { key: 'level3', label: 'Tertiary Level', icon: '3' },
+                  ].map((lvl) => (
+                    <div key={lvl.key} className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{lvl.label}</label>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          value={systemSettings.referral_commissions?.[lvl.key] || 0}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            setSystemSettings({
+                              ...systemSettings,
+                              referral_commissions: {
+                                ...systemSettings.referral_commissions,
+                                [lvl.key]: val
+                              }
+                            });
+                          }}
+                          className="input-field w-full pl-6 pr-10 py-3 text-lg font-black italic bg-white/2 border-white/5"
+                        />
+                        <span className="absolute right-4 top-3.5 text-slate-500 font-black">%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  onClick={() => updateSetting('referral_commissions', systemSettings.referral_commissions)}
+                  className="w-full primary-button py-4 text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/30"
+                >
+                  Synchronize Commissions
+                </button>
+              </div>
+            </div>
+
+            <div className="glass-card p-8 bg-gradient-to-br from-indigo-500/5 to-transparent">
+              <h3 className="text-xl font-black text-white mb-8 uppercase tracking-tighter italic">Global Liquidity Parameters</h3>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Guaranteed Pool Amount (USDC)</label>
+                  <div className="relative">
+                    <Database className="absolute left-4 top-3.5 text-primary" size={20} />
+                    <input 
+                      type="number" 
+                      value={systemSettings.pool_guaranteed?.amount || 500000}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setSystemSettings({
+                          ...systemSettings,
+                          pool_guaranteed: { ...systemSettings.pool_guaranteed, amount: val }
+                        });
+                      }}
+                      className="input-field w-full pl-12 py-4 text-xl font-black italic bg-white/2 border-primary/20"
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={() => updateSetting('pool_guaranteed', systemSettings.pool_guaranteed)}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl shadow-xl transition-all text-xs font-black uppercase tracking-[0.2em]"
+                >
+                  Update Reserve Values
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-card p-8 border-rose-500/20 bg-rose-500/5">
+            <h3 className="text-xl font-black text-white mb-6 uppercase tracking-tighter italic flex items-center">
+              <ShieldAlert size={24} className="mr-3 text-rose-500 animate-pulse" />
+              Emergency Protocols
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              <button className="px-6 py-3 bg-rose-500/20 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                Freeze Withdrawals
+              </button>
+              <button className="px-6 py-3 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                Maintenance Mode
+              </button>
+              <button className="px-6 py-3 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                API Lockdown
+              </button>
+            </div>
           </div>
         </div>
       )}

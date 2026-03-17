@@ -93,6 +93,9 @@ const Investments: React.FC = () => {
         status: 'completed'
       });
 
+      // 4. Handle Referral Rewards (3 Levels)
+      await handleReferralRewards(profile.id, amount);
+
       setWallet({ ...wallet, balance_usdc: newBalance });
       setSelectedPlan(null);
       setInvestmentAmount('');
@@ -103,6 +106,77 @@ const Investments: React.FC = () => {
       alert('Failed to create investment');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReferralRewards = async (userId: string, amount: number) => {
+    try {
+      // Get referral settings
+      const { data: settings } = await supabase
+        .from('admin_settings')
+        .select('value')
+        .eq('key', 'referral_commissions')
+        .single();
+      
+      const rates = settings?.value || { level1: 5, level2: 3, level3: 1 };
+      
+      let currentUserId = userId;
+      const levels = [
+        { level: 1, rate: rates.level1 },
+        { level: 2, rate: rates.level2 },
+        { level: 3, rate: rates.level3 }
+      ];
+
+      for (const lvl of levels) {
+        // Find who referred the current user
+        const { data: person } = await supabase
+          .from('profiles')
+          .select('referred_by')
+          .eq('id', currentUserId)
+          .single();
+        
+        if (!person?.referred_by) break; // End of chain
+        
+        const referrerId = person.referred_by;
+        const commission = (amount * lvl.rate) / 100;
+
+        if (commission > 0) {
+          // 1. Update Referrer's Wallet
+          const { data: refWallet } = await supabase
+            .from('wallets')
+            .select('balance_usdc')
+            .eq('user_id', referrerId)
+            .single();
+          
+          if (refWallet) {
+            await supabase
+              .from('wallets')
+              .update({ balance_usdc: refWallet.balance_usdc + commission })
+              .eq('user_id', referrerId);
+            
+            // 2. Record Transaction for Referrer
+            await supabase.from('transactions').insert({
+              user_id: referrerId,
+              type: 'referral',
+              amount: commission,
+              description: `Referral commission Level ${lvl.level} from investment of ${profile?.email}`,
+              status: 'completed'
+            });
+
+            // 3. Log in referrals table
+            await supabase.from('referrals').insert({
+              referrer_id: referrerId,
+              referred_id: profile?.id,
+              commission_earned: commission,
+              level: lvl.level
+            });
+          }
+        }
+        
+        currentUserId = referrerId; // Move up the chain
+      }
+    } catch (err) {
+      console.error('Error processing referral rewards:', err);
     }
   };
 
