@@ -14,25 +14,39 @@ const App: React.FC = () => {
   const { setUser, setProfile, setWallet, profile } = useAuthStore();
 
   useEffect(() => {
-    // Listen for auth changes
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-    });
+    const isMockMode = !import.meta.env.VITE_SUPABASE_URL;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setWallet(null);
-      }
-    });
+    if (isMockMode) {
+      // Mock session if Supabase is not configured yet
+      const dummyUser = { id: 'dummy-user-id' };
+      setUser(dummyUser);
+      fetchProfile(dummyUser.id);
+      return;
+    }
 
-    return () => subscription.unsubscribe();
+    try {
+      // Listen for auth changes
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchProfile(session.user.id);
+        }
+      }).catch(console.error);
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+          setWallet(null);
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    } catch (error) {
+      console.error('Supabase init error:', error);
+    }
   }, []);
 
   const fetchProfile = async (userId: string) => {

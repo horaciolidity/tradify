@@ -23,7 +23,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   setProfile: (profile) => set({ profile }),
   setWallet: (wallet) => set({ wallet }),
   signOut: async () => {
-    await supabase.auth.signOut();
+    try {
+      if (import.meta.env.VITE_SUPABASE_URL) {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.warn("SignOut failed or Supabase not configured");
+    }
     set({ user: null, profile: null, wallet: null });
   },
   updateBalance: (amount) => set((state) => {
