@@ -3,20 +3,39 @@
 @tailwind utilities;
 
 :root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #f8fafc;
+  --card-border: rgba(0, 0, 0, 0.05);
+  --text-muted: #64748b;
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --accent: #10b981;
+}
+
+.dark {
   --background: #0f172a;
   --foreground: #f8fafc;
+  --card: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --text-muted: #94a3b8;
 }
 
 @layer base {
   body {
-    @apply bg-dark text-slate-200 antialiased selection:bg-primary/30;
+    @apply transition-colors duration-300 antialiased selection:bg-primary/30;
+    background-color: var(--background);
+    color: var(--foreground);
     font-family: 'Inter', sans-serif;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl;
+    background-color: var(--card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border);
+    @apply rounded-2xl;
   }
   
   .glass-button {
@@ -28,19 +47,27 @@
   }
 
   .secondary-button {
-    @apply glass-button bg-white/10 hover:bg-white/20 text-white border border-white/10;
+    background-color: var(--card);
+    @apply glass-button hover:opacity-80 border border-white/10;
   }
 
   .input-field {
-    @apply bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all;
+    background-color: var(--card);
+    border: 1px solid var(--card-border);
+    @apply rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all;
+    color: var(--foreground);
   }
 
   .sidebar-link {
-    @apply flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-white/5 text-slate-400 hover:text-white;
+    @apply flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white;
   }
 
   .sidebar-link.active {
     @apply bg-primary/10 text-primary border border-primary/20;
+  }
+
+  .text-muted {
+    color: var(--text-muted);
   }
 }
 
@@ -55,7 +82,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-white/10 rounded-full hover:bg-white/20 transition-all;
+  @apply bg-slate-300 dark:bg-white/10 rounded-full hover:bg-slate-400 dark:hover:bg-white/20 transition-all;
 }
 
 /* TradingView Chart Customization */

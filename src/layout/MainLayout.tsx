@@ -14,7 +14,9 @@ import {
   Bell,
   Search,
   ChevronRight,
-  Database
+  Database,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,8 +26,8 @@ const navigation = [
   { name: 'Trading', href: '/trading', icon: TrendingUp, mobile: true },
   { name: 'Investments', href: '/investments', icon: PieChart, mobile: true },
   { name: 'Wallet', href: '/wallet', icon: WalletIcon, mobile: true },
-  { name: 'Referrals', href: '/referrals', icon: Users, mobile: false },
-  { name: 'Tasks', href: '/tasks', icon: CheckSquare, mobile: false },
+  { name: 'Referrals', href: '/referrals', icon: Users, mobile: true },
+  { name: 'Tasks', href: '/tasks', icon: CheckSquare, mobile: true },
   { name: 'Admin', href: '/admin', icon: Settings, mobile: false, adminOnly: true },
   { name: 'Tokens', href: '/custom-token', icon: Database, mobile: false, adminOnly: true },
 ];
@@ -57,8 +59,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       `}>
         <div className="flex flex-col h-full p-6">
           <div className="flex items-center space-x-3 mb-10 px-2">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <TrendingUp className="text-white w-6 h-6" />
+            <div className="w-10 h-10 flex items-center justify-center">
+              <img src="/tradify_logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white italic">Tradify</span>
           </div>
@@ -115,6 +117,17 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
 
           <div className="flex items-center space-x-6">
+            <button 
+              onClick={() => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+              }}
+              className="p-2 hover:bg-white/5 rounded-full text-slate-400"
+            >
+              <Sun size={20} className="hidden dark:block" />
+              <Moon size={20} className="block dark:hidden" />
+            </button>
+            
             <div className="hidden sm:flex flex-col items-end mr-2">
               <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Balance</span>
               <span className="text-lg font-bold text-accent">

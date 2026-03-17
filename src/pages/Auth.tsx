@@ -1,10 +1,53 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Mail, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '../services/supabase';
 
 const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const referralCode = searchParams.get('ref');
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (mode === 'register') {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              referral_code: referralCode,
+            },
+          },
+        });
+        if (signUpError) throw signUpError;
+        alert('Registration successful! Please sign in.');
+        navigate('/login');
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
+        navigate('/');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during authentication');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-dark flex flex-col md:flex-row overflow-hidden">
@@ -80,7 +123,13 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-6" onSubmit={handleAuth}>
+            {error && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-500 text-sm font-medium">
+                {error}
+              </div>
+            )}
+
             {mode === 'register' && (
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Full Name</label>
@@ -88,7 +137,10 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
                   <User className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
                   <input 
                     type="text" 
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
                     placeholder="John Doe" 
+                    required
                     className="input-field w-full pl-12 py-3.5 bg-white/2 hover:bg-white/5"
                   />
                 </div>
@@ -101,7 +153,10 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
                 <Mail className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
                 <input 
                   type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com" 
+                  required
                   className="input-field w-full pl-12 py-3.5 bg-white/2 hover:bg-white/5"
                 />
               </div>
@@ -113,7 +168,10 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
                 <Lock className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
                 <input 
                   type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••" 
+                  required
                   className="input-field w-full pl-12 py-3.5 bg-white/2 hover:bg-white/5"
                 />
               </div>
@@ -123,8 +181,10 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
               disabled={loading}
               className="w-full primary-button py-4 text-sm font-bold flex items-center justify-center space-x-2 shadow-2xl shadow-primary/40 group overflow-hidden relative"
             >
-              <span className="relative z-10">{mode === 'login' ? 'Sign In' : 'Get Started'}</span>
-              <ArrowRight size={18} className="relative z-10 group-hover:translate-x-1 transition-transform" />
+              <span className="relative z-10">
+                {loading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Get Started')}
+              </span>
+              {!loading && <ArrowRight size={18} className="relative z-10 group-hover:translate-x-1 transition-transform" />}
               <div className="absolute inset-0 bg-white/10 -translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
             </button>
           </form>
