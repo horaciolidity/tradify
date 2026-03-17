@@ -14,9 +14,21 @@ import {
   CheckCircle2,
   XCircle
 } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
 
 const AdminPanel: React.FC = () => {
+  const { profile } = useAuthStore();
   const [activeSection, setActiveSection] = useState<'overview' | 'users' | 'plans' | 'tokens'>('overview');
+
+  if (profile?.email !== 'horaciowalterortiz@gmail.com') {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 glass-card">
+        <ShieldAlert size={60} className="text-rose-500 mb-4" />
+        <h2 className="text-2xl font-bold text-white">Access Denied</h2>
+        <p className="text-slate-500 mt-2">Only the master administrator can access this panel.</p>
+      </div>
+    );
+  }
 
   const stats = [
     { label: 'Total Users', value: '1,284', icon: Users, change: '+12%' },

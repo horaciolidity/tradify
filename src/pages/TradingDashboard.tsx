@@ -51,8 +51,14 @@ const TradingDashboard: React.FC = () => {
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
 
-    const data = MarketService.getHistory(selectedSymbol, selectedTimeframe);
-    candlestickSeries.setData(data as any);
+    const loadData = async () => {
+      const data = await MarketService.getHistory(selectedSymbol, selectedTimeframe);
+      if (candlestickSeriesRef.current) {
+        candlestickSeriesRef.current.setData(data as any);
+      }
+    };
+
+    loadData();
 
     const handleResize = () => {
       chart.applyOptions({ width: chartContainerRef.current?.clientWidth });

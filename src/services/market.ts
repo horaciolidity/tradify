@@ -7,87 +7,88 @@ export interface TickerData {
   volume: number;
 }
 
-const INITIAL_PRICES: Record<string, number> = {
-  'BTC/USDC': 64230.50,
-  'ETH/USDC': 3450.25,
-  'SOL/USDC': 145.80,
-  'BNB/USDC': 580.10,
-  'ADA/USDC': 0.45,
-  'DOT/USDC': 7.20,
-  'MATIC/USDC': 0.68,
-  'LINK/USDC': 18.50,
-  'AVAX/USDC': 35.20,
-  'DOGE/USDC': 0.16,
-};
+const SYMBOLS = [
+  'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'ADAUSDT', 
+  'DOTUSDT', 'MATICUSDT', 'LINKUSDT', 'AVAXUSDT', 'DOGEUSDT',
+  'XRPUSDT', 'LTCUSDT', 'SHIBUSDT', 'TRXUSDT', 'UNIUSDT'
+];
 
 export class MarketService {
   private static subscribers: Set<(data: TickerData[]) => void> = new Set();
-  private static prices: Record<string, number> = { ...INITIAL_PRICES };
   private static interval: any = null;
+  private static lastData: TickerData[] = [];
 
-  static startSimulation() {
+  static async startSimulation() {
     if (this.interval) return;
-    
-    this.interval = setInterval(() => {
-      const data: TickerData[] = Object.keys(this.prices).map(symbol => {
-        const currentPrice = this.prices[symbol];
-        const changePercent = (Math.random() - 0.5) * 0.002; // max 0.1% change
-        const newPrice = currentPrice * (1 + changePercent);
-        this.prices[symbol] = newPrice;
 
-        return {
-          symbol,
-          price: newPrice,
-          change: changePercent * 100,
-          high: newPrice * (1 + Math.random() * 0.01),
-          low: newPrice * (1 - Math.random() * 0.01),
-          volume: Math.random() * 1000000,
-        };
-      });
+    const fetchData = async () => {
+      try {
+        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+        const allTickers = await response.json();
+        
+        const filtered = allTickers
+          .filter((t: any) => SYMBOLS.includes(t.symbol))
+          .map((t: any) => ({
+            symbol: t.symbol.replace('USDT', '/USDC'),
+            price: parseFloat(t.lastPrice),
+            change: parseFloat(t.priceChangePercent),
+            high: parseFloat(t.highPrice),
+            low: parseFloat(t.lowPrice),
+            volume: parseFloat(t.volume) * parseFloat(t.lastPrice)
+          }));
 
-      this.subscribers.forEach(cb => cb(data));
-    }, 2000);
+        this.lastData = filtered;
+        this.subscribers.forEach(cb => cb(filtered));
+      } catch (error) {
+        console.error('Error fetching real market data:', error);
+      }
+    };
+
+    fetchData();
+    this.interval = setInterval(fetchData, 5000); // Update every 5 seconds
+  }
+
+  static stopSimulation() {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+    }
   }
 
   static subscribe(cb: (data: TickerData[]) => void) {
     this.subscribers.add(cb);
+    if (this.lastData.length > 0) cb(this.lastData);
     return () => this.subscribers.delete(cb);
   }
 
-  static getHistory(symbol: string, timeframe: string) {
-    // Generate mock OHLC data
-    const data = [];
-    let basePrice = this.prices[symbol] || 50000;
-    const now = Math.floor(Date.now() / 1000);
-    const intervals: Record<string, number> = {
-      '1m': 60,
-      '5m': 300,
-      '15m': 900,
-      '1h': 3600,
-      '4h': 14400,
-      '1d': 86400,
+  static async getHistory(symbol: string, timeframe: string) {
+    const binanceSymbol = symbol.replace('/USDC', 'USDT');
+    const intervalMap: Record<string, string> = {
+      '1m': '1m',
+      '5m': '5m',
+      '15m': '15m',
+      '1h': '1h',
+      '4h': '4h',
+      '1d': '1d',
     };
+
+    const interval = intervalMap[timeframe] || '15m';
     
-    const step = intervals[timeframe] || 60;
-    
-    for (let i = 200; i >= 0; i--) {
-      const open = basePrice;
-      const close = open * (1 + (Math.random() - 0.5) * 0.01);
-      const high = Math.max(open, close) * (1 + Math.random() * 0.005);
-      const low = Math.min(open, close) * (1 - Math.random() * 0.005);
+    try {
+      const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=500`);
+      const klines = await response.json();
       
-      data.push({
-        time: now - (i * step),
-        open,
-        high,
-        low,
-        close,
-        volume: Math.random() * 100
-      });
-      
-      basePrice = close;
+      return klines.map((k: any) => ({
+        time: k[0] / 1000,
+        open: parseFloat(k[1]),
+        high: parseFloat(k[2]),
+        low: parseFloat(k[3]),
+        close: parseFloat(k[4]),
+        volume: parseFloat(k[5])
+      }));
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      return [];
     }
-    
-    return data;
   }
 }

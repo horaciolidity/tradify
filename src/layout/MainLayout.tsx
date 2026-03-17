@@ -20,13 +20,14 @@ import { useAuthStore } from '../store/useAuthStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Trading', href: '/trading', icon: TrendingUp },
-  { name: 'Custom Token', href: '/custom-token', icon: Database },
-  { name: 'Investments', href: '/investments', icon: PieChart },
-  { name: 'Wallet', href: '/wallet', icon: WalletIcon },
-  { name: 'Referrals', href: '/referrals', icon: Users },
-  { name: 'Tasks', href: '/tasks', icon: CheckSquare },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, mobile: true },
+  { name: 'Trading', href: '/trading', icon: TrendingUp, mobile: true },
+  { name: 'Investments', href: '/investments', icon: PieChart, mobile: true },
+  { name: 'Wallet', href: '/wallet', icon: WalletIcon, mobile: true },
+  { name: 'Referrals', href: '/referrals', icon: Users, mobile: false },
+  { name: 'Tasks', href: '/tasks', icon: CheckSquare, mobile: false },
+  { name: 'Admin', href: '/admin', icon: Settings, mobile: false, adminOnly: true },
+  { name: 'Tokens', href: '/custom-token', icon: Database, mobile: false, adminOnly: true },
 ];
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -64,6 +65,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
           <nav className="flex-1 space-y-2">
             {navigation.map((item) => {
+              if (item.adminOnly && profile?.role !== 'admin') return null;
+              
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
               return (
@@ -78,16 +81,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </Link>
               );
             })}
-            
-            {profile?.role === 'admin' && (
-              <div className="pt-6 mt-6 border-t border-white/5">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-4">Admin Only</p>
-                <Link to="/admin" className={`sidebar-link ${location.pathname === '/admin' ? 'active' : ''}`}>
-                  <Settings size={20} />
-                  <span className="font-medium">Admin Panel</span>
-                </Link>
-              </div>
-            )}
           </nav>
 
           <button 
@@ -148,9 +141,27 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <section className="p-6 lg:p-10 flex-1">
+        <section className="p-4 lg:p-10 flex-1 pb-24 lg:pb-10">
           {children}
         </section>
+
+        {/* Mobile Bottom Bar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-dark-lighter border-t border-white/5 flex items-center justify-around px-4 z-40 backdrop-blur-xl bg-opacity-90">
+          {navigation.filter(item => item.mobile).map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.href;
+            return (
+              <Link 
+                key={item.name} 
+                to={item.href}
+                className={`flex flex-col items-center space-y-1 ${isActive ? 'text-primary' : 'text-slate-500'}`}
+              >
+                <Icon size={22} className={isActive ? 'animate-pulse-slow' : ''} />
+                <span className="text-[10px] font-bold uppercase">{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
       </main>
     </div>
   );

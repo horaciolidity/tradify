@@ -50,19 +50,22 @@ const App: React.FC = () => {
   }, []);
 
   const fetchProfile = async (userId: string) => {
-    // In a real app, you would fetch from your Supabase tables
-    // For now, we'll mock the profile and wallet if not found
+    // Check if the user is the specific admin
+    const session = await supabase.auth.getSession();
+    const email = session.data.session?.user?.email || 'user@example.com';
+    const isAdmin = email === 'horaciowalterortiz@gmail.com';
+
     const mockProfile: any = {
       id: userId,
-      email: 'user@example.com',
-      full_name: 'John Doe',
-      role: 'admin', // Default to admin for demo purposes
-      referral_code: 'TRADIFY-123'
+      email: email,
+      full_name: isAdmin ? 'Horacio Ortiz' : 'Trader User',
+      role: isAdmin ? 'admin' : 'user',
+      referral_code: 'TRADIFY-' + userId.slice(0, 5).toUpperCase()
     };
     
     const mockWallet: any = {
-      balance_usdc: 1540.25,
-      address: 'Ox71C7656EC7ab88b098defB751B7401B5f6d8976F'
+      balance_usdc: isAdmin ? 500000 : 1540.25,
+      address: 'Ox' + Math.random().toString(16).slice(2, 10).toUpperCase()
     };
 
     setProfile(mockProfile);

@@ -24,34 +24,32 @@ const Referrals: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-2 glass-card p-8 bg-gradient-to-br from-primary/20 to-transparent"
+          className="lg:col-span-2 glass-card p-8 bg-gradient-to-br from-primary/20 to-transparent flex flex-col md:flex-row md:items-center justify-between gap-6"
         >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-4">
-              <h3 className="text-xl font-bold text-white">Share your link</h3>
-              <p className="text-sm text-slate-400 max-w-md">
-                Earn passive income from your network. Get commissions from 3 levels: 5%, 3%, and 1% of every investment made by your referrals.
-              </p>
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between group">
-                <span className="text-xs font-mono text-primary font-bold">
-                  TRADIFY.IO/REF?ID={profile?.referral_code || 'DEMO-123'}
-                </span>
-                <button 
-                  onClick={copyRef}
-                  className="shrink-0 p-2 hover:bg-white/5 rounded-lg text-white transition-colors flex items-center space-x-2"
-                >
-                  {copied ? <Check size={18} className="text-accent" /> : <Copy size={18} />}
-                  <span className="text-xs font-bold uppercase">{copied ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold text-white">Share your link</h3>
+            <p className="text-sm text-slate-400 max-w-md">
+              Earn passive income from your network. Get commissions from 3 levels: 5%, 3%, and 1% of every investment made by your referrals.
+            </p>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between group">
+              <span className="text-xs font-mono text-primary font-bold">
+                TRADIFY.IO/REF?ID={profile?.referral_code || 'DEMO-123'}
+              </span>
+              <button 
+                onClick={copyRef}
+                className="shrink-0 p-2 hover:bg-white/5 rounded-lg text-white transition-colors flex items-center space-x-2"
+              >
+                {copied ? <Check size={18} className="text-accent" /> : <Copy size={18} />}
+                <span className="text-xs font-bold uppercase">{copied ? 'Copied' : 'Copy'}</span>
+              </button>
             </div>
-            <div className="bg-white/5 p-6 rounded-3xl border border-white/10 flex flex-col items-center">
-              <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mb-4">
-                <Gift size={40} className="text-primary" />
-              </div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Rewards Earned</p>
-              <p className="text-3xl font-black text-white">450.00 <span className="text-sm font-normal text-slate-500">USDC</span></p>
+          </div>
+          <div className="bg-white/5 p-6 rounded-3xl border border-white/10 flex flex-col items-center shrink-0">
+            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+              <Gift size={32} className="text-primary" />
             </div>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rewards Earned</p>
+            <p className="text-2xl font-black text-white">450.00 <span className="text-xs font-normal text-slate-500">USDC</span></p>
           </div>
         </motion.div>
 
@@ -78,6 +76,50 @@ const Referrals: React.FC = () => {
           </div>
         </motion.div>
       </div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card overflow-hidden"
+      >
+        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+          <h3 className="font-bold text-white">Recent Referrals</h3>
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Page 1 of 3</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/2">
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Level</th>
+                <th className="px-6 py-4">Commission</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {[
+                { user: 'alex***@gmail.com', level: '1 (5%)', comm: '25.50 USDC', status: 'Received', date: '2024-03-15' },
+                { user: 'marta***@gmail.com', level: '2 (3%)', comm: '12.00 USDC', status: 'Received', date: '2024-03-14' },
+                { user: 'kevin***@gmail.com', level: '1 (5%)', comm: '150.00 USDC', status: 'Pending', date: '2024-03-14' },
+                { user: 'luna***@gmail.com', level: '3 (1%)', comm: '4.20 USDC', status: 'Received', date: '2024-03-12' },
+              ].map((ref, i) => (
+                <tr key={i} className="text-sm text-slate-300 hover:bg-white/2 transition-colors">
+                  <td className="px-6 py-4 font-medium">{ref.user}</td>
+                  <td className="px-6 py-4">{ref.level}</td>
+                  <td className="px-6 py-4 font-bold text-white">{ref.comm}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ref.status === 'Received' ? 'bg-accent/20 text-accent' : 'bg-amber-500/20 text-amber-500'}`}>
+                      {ref.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 font-mono">{ref.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
     </div>
   );
 };
