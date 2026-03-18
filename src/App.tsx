@@ -27,13 +27,36 @@ const PageTransition: React.FC<{ children: React.ReactNode }> = ({ children }) =
 );
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuthStore();
+  const { user, loading, signOut } = useAuthStore();
+  const [showRescue, setShowRescue] = React.useState(false);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading) setShowRescue(true);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [loading]);
   
   if (loading) {
     return (
       <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-6 text-center">
         <div className="w-16 h-16 border-t-2 border-primary rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(243,186,47,0.2)]" />
         <h2 className="text-xl font-black text-white uppercase tracking-[0.3em] italic animate-pulse">Synchronizing Data</h2>
+        {showRescue && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            className="mt-8 space-y-4"
+          >
+            <p className="text-rose-500 text-xs font-bold italic">Synchronization is taking longer than usual.</p>
+            <button 
+              onClick={() => signOut()}
+              className="px-6 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl border border-rose-500/20 text-xs font-black uppercase tracking-widest transition-all"
+            >
+              Force Logout & Reset
+            </button>
+          </motion.div>
+        )}
       </div>
     );
   }
@@ -137,47 +160,55 @@ const App: React.FC = () => {
       }
     }, 5000);
 
+    const fetchInProgress = React.useRef(false);
+
     const initAuth = async () => {
+      if (fetchInProgress.current) return;
       try {
-        console.log("Synchronizing Identity...");
+        fetchInProgress.current = true;
+        setLoading(true);
+        console.log("Core: Phase 1 - Initializing session...");
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (mounted) {
-          if (session?.user) {
-            setUser(session.user);
-            await fetchProfile(session.user.id);
-          } else {
-            setLoading(false);
-          }
+        if (mounted && session?.user) {
+          console.log("Core: Session active. Phase 2 - Hydrating identity...");
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+        } else if (mounted) {
+          console.log("Core: No active session.");
+          setLoading(false);
         }
       } catch (err) {
+        console.error("Core Init Failure:", err);
         if (mounted) setLoading(false);
       } finally {
-        if (mounted) clearTimeout(authTimeout);
+        fetchInProgress.current = false;
       }
     };
 
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Auth Event: ${event}`);
-      if (mounted) {
-        if (session?.user) {
-          setUser(session.user);
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+      console.log(`Core Event: ${event}`);
+      if (!mounted) return;
+
+      if (session?.user) {
+        setUser(session.user);
+        
+        // Prevent re-fetching if profile is already loaded for non-auth events
+        if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+          await fetchProfile(session.user.id);
+        } else if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
+          if (!useAuthStore.getState().profile && !useAuthStore.getState().loading) {
             await fetchProfile(session.user.id);
-          } else if (event === 'INITIAL_SESSION') {
-            // Already handled by initAuth but keeping it as backup
-            if (!useAuthStore.getState().profile) {
-              await fetchProfile(session.user.id);
-            }
           }
-        } else {
-          setUser(null);
-          setProfile(null);
-          setWallet(null);
-          setLoading(false);
         }
+      } else {
+        console.log("Core: Session Terminated.");
+        setUser(null);
+        setProfile(null);
+        setWallet(null);
+        setLoading(false);
       }
     });
 
@@ -198,16 +229,23 @@ const App: React.FC = () => {
         supabase.from('wallets').select('*').eq('user_id', userId).single()
       ]);
 
-      if (profileResponse.data) {
-        setProfile(profileResponse.data);
-      } else if (profileResponse.error) {
-        console.warn("Profile fetch warning:", profileResponse.error.message);
+      if (profileResponse.error) {
+        console.error("CRITICAL: Profile fetch failed.", profileResponse.error);
+        // If we have a user but no profile, the session is corrupted
+        await supabase.auth.signOut();
+        return;
       }
 
+      if (profileResponse.data) {
+        setProfile(profileResponse.data);
+      } else {
+        console.warn("Core: Missing profile metadata. Resetting...");
+        await supabase.auth.signOut();
+        return;
+      }
+      
       if (walletResponse.data) {
         setWallet(walletResponse.data);
-      } else if (walletResponse.error) {
-        console.warn("Wallet fetch warning:", walletResponse.error.message);
       }
 
     } catch (error) {
