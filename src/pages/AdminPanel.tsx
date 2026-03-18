@@ -12,7 +12,15 @@ import {
   ToggleRight,
   Search,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Plus,
+  Trash2,
+  Save,
+  ChevronRight,
+  ShieldCheck,
+  Smartphone,
+  Globe,
+  DollarSign
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -21,12 +29,16 @@ import { supabase } from '../services/supabase';
 const AdminPanel: React.FC = () => {
   const { profile } = useAuthStore();
   const [systemSettings, setSystemSettings] = useState<any>({});
-  const [activeSection, setActiveSection] = useState<'overview' | 'users' | 'plans' | 'tokens' | 'settings'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'users' | 'deposits' | 'plans' | 'tokens' | 'settings'>('overview');
   const [users, setUsers] = useState<any[]>([]);
+  const [pendingDeposits, setPendingDeposits] = useState<any[]>([]);
+  const [tokens, setTokens] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingToken, setEditingToken] = useState<any>(null);
   const [stats, setStats] = useState([
     { label: 'Total Users', value: '0', icon: Users, change: '0' },
-    { label: 'Total Deposits', value: '$0', icon: Database, change: '0' },
+    { label: 'Pending Deposits', value: '0', icon: Database, change: 'Critical' },
     { label: 'Active Investments', value: '0', icon: Activity, change: '0' },
     { label: 'Liquidity Pool', value: '$500,000', icon: ShieldAlert, change: 'Stable' },
   ]);
@@ -66,15 +78,29 @@ const AdminPanel: React.FC = () => {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Users
+      // 1. Fetch Users & Wallets
       const { data: userData } = await supabase
         .from('profiles')
         .select('*, wallets(balance_usdc)');
       
+      // 2. Fetch Pending Deposits
+      const { data: depositData } = await supabase
+        .from('transactions')
+        .select('*, profile:profiles(*)')
+        .eq('status', 'pending');
+      
+      // 3. Fetch Tokens
+      const { data: tokenData } = await supabase
+        .from('custom_tokens')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (userData) setUsers(userData);
+      if (depositData) setPendingDeposits(depositData);
+      if (tokenData) setTokens(tokenData);
+
+      // 4. Update Stats
       if (userData) {
-        setUsers(userData);
-        
-        // 2. Fetch Global Stats
         const totalUsers = userData.length;
         const totalDeposits = userData.reduce((acc, curr: any) => acc + (curr.wallets?.[0]?.balance_usdc || 0), 0);
         
@@ -83,20 +109,101 @@ const AdminPanel: React.FC = () => {
           .select('*', { count: 'exact', head: true })
           .eq('status', 'active');
 
-        // Get guaranteed pool from settings or use a fallback
-        const poolReserve = systemSettings.pool_guaranteed?.amount || totalDeposits;
-
         setStats([
-          { label: 'Network Total Users', value: totalUsers.toString(), icon: Users, change: '+2.4%' },
-          { label: 'Global Liquidity', value: `$${totalDeposits.toLocaleString()}`, icon: Database, change: '+12.5%' },
+          { label: 'Users Network', value: totalUsers.toString(), icon: Users, change: '+2.4%' },
+          { label: 'Pending Authorizations', value: (depositData?.length || 0).toString(), icon: Database, change: 'Action Required' },
           { label: 'Active Smart Plans', value: (activeInvs || 0).toString(), icon: Activity, change: '+5.2%' },
-          { label: 'Protocol Reserve', value: `$${poolReserve.toLocaleString()}`, icon: ShieldAlert, change: 'Stable' },
+          { label: 'Pool Guaranteed', value: `$${(systemSettings.pool_guaranteed?.amount || totalDeposits).toLocaleString()}`, icon: ShieldAlert, change: 'Stable' },
         ]);
       }
     } catch (error) {
       console.error('Admin data fetch error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateBalance = async (userId: string, newBalance: number) => {
+    const { error } = await supabase
+      .from('wallets')
+      .update({ balance_usdc: newBalance })
+      .eq('user_id', userId);
+    
+    if (!error) {
+      alert('Balance updated successfully');
+      setEditingUser(null);
+      fetchAdminData();
+    }
+  };
+
+  const approveDeposit = async (transaction: any) => {
+    try {
+      // 1. Update wallet balance
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('balance_usdc')
+        .eq('user_id', transaction.user_id)
+        .single();
+      
+      if (!wallet) throw new Error('Wallet not found');
+
+      await supabase
+        .from('wallets')
+        .update({ balance_usdc: wallet.balance_usdc + transaction.amount })
+        .eq('user_id', transaction.user_id);
+
+      // 2. Update transaction status
+      await supabase
+        .from('transactions')
+        .update({ status: 'completed' })
+        .eq('id', transaction.id);
+      
+      // 3. Notify user
+      await supabase.from('notifications').insert({
+        user_id: transaction.user_id,
+        title: 'Deposit Approved',
+        message: `Your deposit of ${transaction.amount} USDC has been confirmed. Network synchronization complete.`,
+        type: 'success'
+      });
+
+      alert('Transaction approved and funds credited.');
+      fetchAdminData();
+    } catch (err) {
+      console.error('Approval error:', err);
+    }
+  };
+
+  const rejectDeposit = async (id: string, userId: string) => {
+    await supabase.from('transactions').update({ status: 'failed' }).eq('id', id);
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      title: 'Deposit Failed',
+      message: `Your deposit signal was rejected. Please contact support via neural net if this is an error.`,
+      type: 'error'
+    });
+    alert('Deposit rejected.');
+    fetchAdminData();
+  };
+
+  const handleTokenSave = async (tokenData: any) => {
+    // Ensure we send current_price to DB
+    const payload = {
+      ...tokenData,
+      current_price: tokenData.current_price || tokenData.price || 1,
+      updated_at: new Date().toISOString()
+    };
+    
+    // Remove client-only fields if any
+    delete (payload as any).price;
+
+    const { error } = await supabase
+      .from('custom_tokens')
+      .upsert(payload);
+    
+    if (!error) {
+      alert('Token configuration synchronized.');
+      setEditingToken(null);
+      fetchAdminData();
     }
   };
 
@@ -150,8 +257,9 @@ const AdminPanel: React.FC = () => {
         {[
           { id: 'overview', label: 'Telemetry', icon: Activity },
           { id: 'users', label: 'Entities', icon: Users },
+          { id: 'deposits', label: 'Auth Inbox', icon: Database },
           { id: 'plans', label: 'Protocols', icon: TrendingUp },
-          { id: 'tokens', label: 'Market Assets', icon: Database },
+          { id: 'tokens', label: 'Market Assets', icon: Globe },
           { id: 'settings', label: 'System Gates', icon: ShieldAlert },
         ].map((item) => (
           <button
@@ -247,61 +355,343 @@ const AdminPanel: React.FC = () => {
           </div>
         </div>
       )}
-
       {activeSection === 'users' && (
-        <div className="glass-card overflow-hidden">
+        <div className="glass-card overflow-hidden border-white/5">
           <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">User Base Management</h3>
-            <div className="relative group">
-              <Search size={20} className="absolute left-4 top-3 text-slate-500 group-focus-within:text-primary transition-colors" />
-              <input type="text" placeholder="Search by identity..." className="input-field pl-12 py-3 w-full md:w-80 bg-white/2" />
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Entity Distribution</h3>
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-4 top-3.5 text-slate-500" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search entities by email or ID..." 
+                className="w-full bg-white/2 border border-white/5 rounded-2xl py-3 pl-12 pr-6 text-sm font-bold text-white focus:border-primary/50 outline-none transition-all"
+              />
             </div>
           </div>
           <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-white/2 border-b border-white/5">
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Identity</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Profile</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Role</th>
                   <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Balance (USDC)</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Rank</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Protocols</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {users.map((user) => (
-                  <tr key={user.email} className="hover:bg-white/5 transition-all group">
+                  <tr key={user.id} className="hover:bg-white/5 transition-all group">
                     <td className="px-8 py-6">
                       <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-sm font-black text-primary border border-white/10 group-hover:border-primary/50 transition-all">
-                          {user.full_name?.charAt(0) || user.email.charAt(0)}
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black italic">
+                          {user.email?.[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-black text-white uppercase tracking-wide">{user.full_name || 'Anonymous'}</p>
-                          <p className="text-xs font-bold text-slate-500 lowercase opacity-60">{user.email}</p>
+                          <p className="text-sm font-black text-white uppercase">{user.full_name || 'Anonymous Entity'}</p>
+                          <p className="text-[10px] text-slate-500 font-bold">{user.email}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <p className="text-lg font-black text-white tracking-tighter italic">${user.wallets?.[0]?.balance_usdc?.toLocaleString() || '0.00'}</p>
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest leading-none ${user.role === 'admin' ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-accent/20 text-accent border border-accent/20'}`}>
+                      <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${user.role === 'admin' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-slate-500'}`}>
                         {user.role}
                       </span>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-2.5 bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary rounded-xl transition-all"><Edit2 size={16} /></button>
-                        {user.email !== 'horaciowalterortiz@gmail.com' && (
-                          <button className="p-2.5 bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 rounded-xl transition-all"><XCircle size={16} /></button>
-                        )}
-                      </div>
+                      <p className="text-lg font-black text-white italic tracking-tighter">
+                        ${(user.wallets?.[0]?.balance_usdc || 0).toLocaleString()}
+                      </p>
+                    </td>
+                    <td className="px-8 py-6">
+                      <button 
+                        onClick={() => setEditingUser(user)}
+                        className="p-3 bg-white/2 hover:bg-primary/20 text-slate-500 hover:text-primary rounded-xl transition-all border border-white/5"
+                      >
+                        <Edit2 size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {editingUser && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card p-10 max-w-lg w-full relative">
+            <button onClick={() => setEditingUser(null)} className="absolute top-8 right-8 text-slate-500 hover:text-white"><XCircle size={28} /></button>
+            <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-8">Override Balance</h3>
+            <div className="space-y-6">
+              <div className="p-6 bg-white/2 rounded-3xl border border-white/5">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Target Entity</p>
+                <p className="text-sm font-black text-white uppercase">{editingUser.email}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">New Volume (USDC)</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-4 top-4 text-primary" size={20} />
+                  <input 
+                    type="number" 
+                    defaultValue={editingUser.wallets?.[0]?.balance_usdc || 0}
+                    id="new-balance-input"
+                    className="w-full bg-black/40 border border-primary/20 rounded-2xl py-4 pl-12 pr-6 text-xl font-black text-white italic outline-none focus:border-primary/50 transition-all"
+                  />
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  const val = (document.getElementById('new-balance-input') as HTMLInputElement).value;
+                  handleUpdateBalance(editingUser.id, parseFloat(val));
+                }}
+                className="w-full primary-button py-5 text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/40 flex items-center justify-center space-x-3"
+              >
+                <Save size={18} />
+                <span>Override System Ledger</span>
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {activeSection === 'deposits' && (
+        <div className="glass-card overflow-hidden">
+          <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Auth Inbox (Pending Deposits)</h3>
+          </div>
+          <div className="overflow-x-auto min-h-[400px]">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-white/2 border-b border-white/5">
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Entity</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Amount</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">TXID / Hash</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Authorization</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {pendingDeposits.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-white/5 transition-all">
+                    <td className="px-8 py-6">
+                      <p className="text-sm font-black text-white uppercase">{tx.profile?.email}</p>
+                      <p className="text-[10px] text-slate-500 font-bold">{new Date(tx.created_at).toLocaleString()}</p>
+                    </td>
+                    <td className="px-8 py-6 font-black text-emerald-500 italic text-lg">+${tx.amount.toLocaleString()}</td>
+                    <td className="px-8 py-6">
+                      <code className="text-[10px] font-mono text-primary bg-primary/5 px-2 py-1 rounded-lg border border-primary/20">{tx.tx_hash}</code>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center space-x-3">
+                        <button 
+                          onClick={() => approveDeposit(tx)}
+                          className="flex items-center space-x-2 px-4 py-2 bg-accent/20 text-accent border border-accent/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-accent hover:text-dark transition-all"
+                        >
+                          <CheckCircle2 size={14} />
+                          <span>Approve</span>
+                        </button>
+                        <button 
+                          onClick={() => rejectDeposit(tx.id, tx.user_id)}
+                          className="flex items-center space-x-2 px-4 py-2 bg-rose-500/20 text-rose-500 border border-rose-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
+                        >
+                          <XCircle size={14} />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {pendingDeposits.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-8 py-20 text-center text-slate-500 italic font-medium uppercase tracking-[0.2em]">No signals detected in queue.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeSection === 'tokens' && (
+        <div className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Market Assets Management</h3>
+            <button 
+              onClick={() => setEditingToken({ name: '', symbol: '', price: 1, supply: 1000000, type: 'custom', simulation_type: 'random', trend_direction: 'neutral', volatility: 0.05 })}
+              className="flex items-center space-x-3 px-6 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-primary/40 hover:scale-105 transition-all"
+            >
+              <Plus size={18} />
+              <span>Register New Asset</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {tokens.map((token) => (
+              <div key={token.id} className="glass-card p-6 border-white/5 hover:border-primary/30 transition-all group">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-primary border border-white/10 italic font-black">
+                      {token.symbol.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-black text-white uppercase tracking-tighter">{token.name}</h4>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{token.symbol}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setEditingToken(token)} className="p-2.5 bg-white/2 hover:bg-primary/20 text-slate-500 hover:text-primary rounded-xl transition-all"><Edit2 size={16} /></button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-white/2 rounded-xl border border-white/5">
+                    <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Price</p>
+                    <p className="text-sm font-black text-white italic">${token.price.toLocaleString()}</p>
+                  </div>
+                  <div className="p-3 bg-white/2 rounded-xl border border-white/5">
+                    <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Volatitity</p>
+                    <p className="text-sm font-black text-primary italic">{(token.volatility * 100).toFixed(1)}%</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Simulation Mode</p>
+                    <p className="text-[10px] font-black text-white uppercase tracking-widest">{token.simulation_type}</p>
+                  </div>
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${token.simulation_type === 'pump' ? 'bg-accent shadow-[0_0_10px_#10b981]' : token.simulation_type === 'dump' ? 'bg-rose-500' : 'bg-primary'}`} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {editingToken && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl overflow-y-auto">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-10 max-w-2xl w-full relative my-8">
+                <button onClick={() => setEditingToken(null)} className="absolute top-8 right-8 text-slate-500 hover:text-white"><XCircle size={28} /></button>
+                
+                <div className="flex items-center space-x-4 mb-10">
+                  <div className="p-4 bg-primary/20 rounded-3xl text-primary border border-primary/20">
+                    <Globe size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Asset Configuration</h3>
+                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Neural Market Orchestration</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Asset Identity (Name)</label>
+                      <input 
+                        type="text" 
+                        value={editingToken.name}
+                        onChange={(e) => setEditingToken({...editingToken, name: e.target.value})}
+                        className="input-field w-full p-4 bg-white/2"
+                        placeholder="Neural Token"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Symbol (Ticker)</label>
+                      <input 
+                        type="text" 
+                        value={editingToken.symbol}
+                        onChange={(e) => setEditingToken({...editingToken, symbol: e.target.value})}
+                        className="input-field w-full p-4 bg-white/2"
+                        placeholder="NRL"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Base Price</label>
+                        <input 
+                          type="number" 
+                          value={editingToken.current_price || editingToken.price || 1}
+                          onChange={(e) => setEditingToken({...editingToken, current_price: parseFloat(e.target.value)})}
+                          className="input-field w-full p-4 bg-white/2 font-black italic"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Volatility (0-1)</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          max="1"
+                          min="0"
+                          value={editingToken.volatility || 0.05}
+                          onChange={(e) => setEditingToken({...editingToken, volatility: parseFloat(e.target.value)})}
+                          className="input-field w-full p-4 bg-white/2"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Liquidity Pool (USDC)</label>
+                      <input 
+                        type="number" 
+                        value={editingToken.liquidity || 100000}
+                        onChange={(e) => setEditingToken({...editingToken, liquidity: parseFloat(e.target.value)})}
+                        className="input-field w-full p-4 bg-white/2 font-black text-emerald-500"
+                        placeholder="100000"
+                      />
+                    </div>
+                  </div>
+
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Simulation Algorithm</label>
+                      <select 
+                        value={editingToken.simulation_type}
+                        onChange={(e) => setEditingToken({...editingToken, simulation_type: e.target.value})}
+                        className="input-field w-full p-4 bg-black/40 text-white font-bold"
+                      >
+                        <option value="random">Random Walk (Natural)</option>
+                        <option value="steady">Steady Growth</option>
+                        <option value="pump">Institutional Pump</option>
+                        <option value="dump">Aggressive Dump</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Trend Direction</label>
+                      <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5">
+                        {['up', 'neutral', 'down'].map((dir) => (
+                          <button 
+                            key={dir}
+                            onClick={() => setEditingToken({...editingToken, trend_direction: dir})}
+                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editingToken.trend_direction === dir ? 'bg-primary text-white shadow-xl shadow-primary/30' : 'text-slate-600'}`}
+                          >
+                            {dir}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10">
+                      <h4 className="text-[10px] font-black text-primary uppercase mb-3 flex items-center">
+                        <Activity size={12} className="mr-2" />
+                        Live Forecast
+                      </h4>
+                      <p className="text-slate-400 text-xs italic font-medium">
+                        Based on these parameters, the asset will experience a {editingToken.volatility > 0.5 ? 'high' : 'controlled'} volatility with a {editingToken.trend_direction} underlying trend.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-12 flex space-x-4">
+                  <button 
+                    onClick={() => handleTokenSave(editingToken)}
+                    className="flex-1 primary-button py-5 text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/30 flex items-center justify-center space-x-3"
+                  >
+                    <Save size={18} />
+                    <span>Synchronize Market Data</span>
+                  </button>
+                  <button className="px-6 py-5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-2xl hover:bg-rose-500 hover:text-white transition-all">
+                    <Trash2 size={24} />
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
         </div>
       )}
 

@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -26,6 +32,9 @@ const Wallet: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'deposits' | 'withdrawals'>('all');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [depositModal, setDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [txHash, setTxHash] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const MASTER_ADDRESS = '0xBAeaDE80A2A1064E4F8f372cd2ADA9a00daB4BBE';
 
@@ -45,6 +54,95 @@ const Wallet: React.FC = () => {
 
     const { data, error } = await query;
     if (!error && data) setTransactions(data);
+  };
+
+  const [depositTab, setDepositTab] = useState<'manual' | 'web3'>('manual');
+  const [isWeb3Loading, setIsWeb3Loading] = useState(false);
+
+  const handleWeb3Deposit = async () => {
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      alert('Please enter a valid amount.');
+      return;
+    }
+
+    if (!window.ethereum) {
+      alert('Metamask not detected. Please install it or use Manual Signal.');
+      return;
+    }
+
+    setIsWeb3Loading(true);
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const userAddress = accounts[0];
+
+      // Simple transfer of Native (BNB/POL/ETH) or we could do ERC20. 
+      // For simplicity in this demo, we'll request a generic transaction or just show the flow.
+      // Real USDC transfer would require ABI and Contract Address.
+      
+      const transactionParameters = {
+        to: MASTER_ADDRESS,
+        from: userAddress,
+        value: '0x0', // 0 if sending token
+        // In a real app, we'd add 'data' for the transfer(to, amount) call
+      };
+
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [transactionParameters],
+      });
+
+      if (txHash) {
+        setTxHash(txHash);
+        // Automatically submit to our backend
+        const { error } = await supabase.from('transactions').insert({
+          user_id: profile?.id,
+          type: 'deposit',
+          amount: parseFloat(depositAmount),
+          description: `Web3 Neural Transmit (${window.ethereum.networkVersion === '56' ? 'BSC' : 'Polygon'})`,
+          status: 'pending',
+          tx_hash: txHash
+        });
+        
+        if (error) throw error;
+        
+        alert('Web3 Transaction Detected & Synced! Waiting for protocol confirmation.');
+        setDepositModal(false);
+        fetchTransactions();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Web3 Transmission Failed or Cancelled.');
+    } finally {
+      setIsWeb3Loading(false);
+    }
+  };
+
+  const handleDepositSubmit = async () => {
+    if (!depositAmount || !txHash || !profile) return;
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase.from('transactions').insert({
+        user_id: profile.id,
+        type: 'deposit',
+        amount: parseFloat(depositAmount),
+        description: `Manual Protocol Signal`,
+        status: 'pending',
+        tx_hash: txHash
+      });
+
+      if (error) throw error;
+
+      alert('Deposit signal transmitted. Waiting for admin review.');
+      setDepositModal(false);
+      setDepositAmount('');
+      setTxHash('');
+      fetchTransactions();
+    } catch (err) {
+      alert('Failed to transmit deposit signal.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const copyText = (text: string) => {
@@ -133,7 +231,7 @@ const Wallet: React.FC = () => {
               <div className="flex items-start space-x-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
                 <p className="text-[10px] text-slate-500 leading-relaxed font-bold uppercase tracking-wide">
-                  Network: POLYGON (USDC)
+                  Network: POLYGON / BSC (USDC)
                 </p>
               </div>
             </div>
@@ -171,77 +269,141 @@ const Wallet: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Protocol Deposit</h3>
-                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Smart Gateway v2.4</p>
+                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Gateway Engine v3.0</p>
                 </div>
               </div>
 
+              <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 mb-8">
+                <button 
+                  onClick={() => setDepositTab('manual')}
+                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${depositTab === 'manual' ? 'bg-primary text-white shadow-xl shadow-primary/30' : 'text-slate-500'}`}
+                >
+                  Manual Signal
+                </button>
+                <button 
+                  onClick={() => setDepositTab('web3')}
+                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${depositTab === 'web3' ? 'bg-accent/20 text-accent border border-accent/20' : 'text-slate-500'}`}
+                >
+                  Web3 Transmit
+                </button>
+              </div>
+
               <div className="space-y-8">
-                <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <ShieldCheck size={20} className="text-rose-500" />
-                    <h4 className="font-black text-white uppercase tracking-widest text-xs">Security Synchronization</h4>
-                  </div>
-                  <p className="text-slate-400 text-xs leading-relaxed font-medium italic">
-                    All deposits are automatically audited and swept to the Tradify Treasury master node. 
-                    Your unique personal identifier must be active for instant credit.
-                  </p>
-                </div>
-
-                <div className="space-y-6">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 block ml-1">Master Treasury Address</label>
-                    <div className="bg-black/40 border border-white/5 rounded-2xl p-6 flex items-center justify-between group">
-                      <span className="text-sm font-mono text-primary font-black tracking-tighter truncate mr-4">
-                        {MASTER_ADDRESS}
-                      </span>
-                      <button 
-                        onClick={() => copyText(MASTER_ADDRESS)}
-                        className="shrink-0 p-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all border border-primary/10"
-                      >
-                        {copied ? <Check size={20} /> : <Copy size={20} />}
-                      </button>
+                {depositTab === 'manual' ? (
+                  <>
+                    <div className="bg-primary/5 rounded-2xl p-6 border border-white/5">
+                      <ol className="space-y-4">
+                        {[
+                          { step: 1, text: "Send USDC (Polygon/BSC) to the Master Treasury Address." },
+                          { step: 2, text: "Copy the Transaction Hash (TXID) from your wallet." },
+                          { step: 3, text: "Paste the Hash below and enter the amount." },
+                        ].map((item) => (
+                          <li key={item.step} className="flex items-start space-x-4">
+                            <span className="w-6 h-6 rounded-lg bg-primary/20 flex items-center justify-center text-[10px] font-black text-primary shrink-0 mt-0.5">{item.step}</span>
+                            <p className="text-xs text-slate-400 font-bold italic">{item.text}</p>
+                          </li>
+                        ))}
+                      </ol>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 block ml-1">Your Personal Node Identifier</label>
-                    <div className="bg-white/2 border border-white/5 rounded-2xl p-6 flex items-center justify-between group">
-                      <span className="text-sm font-mono text-slate-300 font-bold truncate mr-4 italic">
-                        {wallet?.address}
-                      </span>
-                      <div className="p-2 bg-white/5 rounded-lg">
-                        <Check size={16} className="text-emerald-500" />
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Master Treasury Address</label>
+                        <div className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center justify-between group">
+                          <span className="text-xs font-mono text-primary font-black truncate mr-4">{MASTER_ADDRESS}</span>
+                          <button onClick={() => copyText(MASTER_ADDRESS)} className="p-2 bg-primary/10 text-primary rounded-lg"><Copy size={16} /></button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Amount</label>
+                          <input 
+                            type="number"
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-white font-black italic focus:border-primary/50 transition-all outline-none"
+                          />
+                        </div>
+                        <div className="space-y-2 text-right">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mr-1">Network</label>
+                          <div className="w-full bg-white/2 border border-white/5 rounded-2xl p-4 text-slate-400 font-black italic flex items-center justify-center space-x-2 uppercase">
+                            <span className="text-emerald-500">USDC</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Protocol Hash (TXID)</label>
+                        <input 
+                          type="text"
+                          value={txHash}
+                          onChange={(e) => setTxHash(e.target.value)}
+                          placeholder="0x..."
+                          className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-white font-mono text-xs focus:border-primary/50 transition-all outline-none"
+                        />
                       </div>
                     </div>
+
+                    <button 
+                      onClick={handleDepositSubmit}
+                      disabled={isSubmitting || !depositAmount || !txHash}
+                      className="w-full primary-button py-5 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/40"
+                    >
+                      {isSubmitting ? 'Syncing...' : 'Confirm External Signal'}
+                    </button>
+                  </>
+                ) : (
+                  <div className="space-y-8 py-4">
+                    <div className="p-8 bg-accent/5 border border-accent/20 rounded-3xl text-center">
+                      <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center text-accent mx-auto mb-6 shadow-2xl shadow-accent/10">
+                        <ShieldCheck size={40} />
+                      </div>
+                      <h4 className="text-xl font-black text-white uppercase italic mb-3">Direct Web3 Bridge</h4>
+                      <p className="text-slate-400 text-xs font-medium italic leading-relaxed">
+                        Securely connect your Metamask wallet and transmit USDC directly to the protocol. 
+                        Works on BSC and Polygon networks.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Amount to Transmit (USDC)</label>
+                      <input 
+                        type="number"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full bg-black/40 border border-white/5 rounded-3xl p-6 text-3xl font-black italic text-primary focus:border-primary/50 transition-all outline-none text-center"
+                      />
+                    </div>
+
+                    <button 
+                      onClick={handleWeb3Deposit}
+                      disabled={isWeb3Loading || !depositAmount}
+                      className="w-full py-6 bg-accent text-dark font-black text-xs uppercase tracking-[0.3em] rounded-3xl shadow-2xl shadow-accent/40 hover:scale-[1.02] transition-all flex items-center justify-center space-x-3"
+                    >
+                      {isWeb3Loading ? (
+                        <RefreshCcw size={20} className="animate-spin" />
+                      ) : (
+                        <>
+                          <Plus size={20} />
+                          <span>Transmit via Metamask</span>
+                        </>
+                      )}
+                    </button>
+                    
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">
+                      Funds are sent directly to the Admin Master Address
+                    </p>
                   </div>
-                </div>
-
-                <div className="bg-primary/5 rounded-2xl p-6 border border-white/5">
-                  <ol className="space-y-4">
-                    {[
-                      { step: 1, text: "Send USDC (Polygon Network) to the Master Treasury Address." },
-                      { step: 2, text: "Wait for 3 Network Confirmations (Approx 1 minute)." },
-                      { step: 3, text: "Protocol balance will reflect the deposit automatically." },
-                    ].map((item) => (
-                      <li key={item.step} className="flex items-start space-x-4">
-                        <span className="w-6 h-6 rounded-lg bg-primary/20 flex items-center justify-center text-[10px] font-black text-primary shrink-0 mt-0.5">{item.step}</span>
-                        <p className="text-xs text-slate-400 font-bold italic">{item.text}</p>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-
-                <button 
-                  onClick={() => setDepositModal(false)}
-                  className="w-full primary-button py-5 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/40"
-                >
-                  Confirm Instructions
-                </button>
+                )}
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
 
       {/* Transactions Section */}
       <div className="space-y-8">
