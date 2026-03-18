@@ -489,4 +489,3 @@ const TradingDashboard: React.FC = () => {
 };
 
 export default TradingDashboard;
-```
