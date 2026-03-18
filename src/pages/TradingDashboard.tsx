@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TradingChat from '../components/TradingChat';
 import AnnouncementCarousel from '../components/AnnouncementCarousel';
 import { useNotificationStore } from '../store/useNotificationStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { supabase } from '../services/supabase';
 
 const timeframes = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
@@ -22,7 +24,9 @@ const TradingDashboard: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const { profile, wallet, setWallet } = useAuthStore();
   const { addNotification } = useNotificationStore();
+  const [currentTicker, setCurrentTicker] = useState<TickerData | null>(null);
   const [assetBalance, setAssetBalance] = useState(0);
+  const symbolOnly = selectedSymbol.split('/')[0];
 
   // Initialize Chart
   useEffect(() => {
