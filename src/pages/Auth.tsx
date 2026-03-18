@@ -153,10 +153,10 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
 
           <div className="space-y-3">
             <h2 className="text-5xl font-black text-white tracking-tighter italic leading-none">
-              {mode === 'login' ? 'RE-SYNC' : 'REGISTER'}
+              {mode === 'login' ? 'SIGN IN' : 'REGISTER'}
             </h2>
             <p className="text-slate-500 font-bold italic text-sm">
-              {mode === 'login' ? 'Authenticate your credentials to access the node.' : 'Initialize your personal neural node in the ecosystem.'}
+              {mode === 'login' ? 'Access your trading account.' : 'Create your account to start trading and investing.'}
             </p>
           </div>
 
@@ -176,14 +176,14 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
               <div className="space-y-6">
                 {mode === 'register' && (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Identity Name</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Full Name</label>
                     <div className="relative group">
                       <User className="absolute left-5 top-5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
                       <input 
                         type="text" 
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Neural Participant" 
+                        placeholder="John Doe" 
                         required
                         className="input-field w-full pl-14 py-5 bg-white/2 hover:bg-white/5 border-white/5 rounded-3xl text-sm font-bold placeholder:opacity-30"
                       />
@@ -192,14 +192,14 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">E-Mail Interface</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Email Address</label>
                   <div className="relative group">
                     <Mail className="absolute left-5 top-5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
                     <input 
                       type="email" 
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="node@tradify.network" 
+                      placeholder="you@email.com" 
                       required
                       className="input-field w-full pl-14 py-5 bg-white/2 hover:bg-white/5 border-white/5 rounded-3xl text-sm font-bold placeholder:opacity-30"
                     />
@@ -207,14 +207,14 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Access Cipher</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Password</label>
                   <div className="relative group">
                     <Lock className="absolute left-5 top-5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
                     <input 
                       type="password" 
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••" 
+                      placeholder="••••••••" 
                       required
                       className="input-field w-full pl-14 py-5 bg-white/2 hover:bg-white/5 border-white/5 rounded-3xl text-sm font-bold placeholder:opacity-30"
                     />
@@ -224,10 +224,10 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
 
               <button 
                 disabled={loading}
-                className="w-full primary-button py-6 text-xs font-black flex items-center justify-center space-x-3 shadow-[0_20px_40px_rgba(139,92,246,0.3)] group overflow-hidden relative rounded-3xl"
+                className="w-full primary-button py-6 text-xs font-black flex items-center justify-center space-x-3 shadow-[0_20px_40px_rgba(243,186,47,0.2)] group overflow-hidden relative rounded-3xl"
               >
                 <span className="relative z-10">
-                  {loading ? 'INITIALIZING...' : (mode === 'login' ? 'AUTHORIZE ACCESS' : 'CREATE CORE NODE')}
+                  {loading ? 'PROCESSING...' : (mode === 'login' ? 'SIGN IN' : 'SIGN UP')}
                 </span>
                 {!loading && <ArrowRight size={20} className="relative z-10 group-hover:translate-x-2 transition-transform duration-500" />}
                 <div className="absolute inset-x-0 bottom-0 h-[2px] bg-white opacity-20 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-1000" />
@@ -257,12 +257,12 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
 
           <div className="text-center space-y-8 pt-6">
             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-              {mode === 'login' ? "New to the ecosystem?" : "Already part of the network?"} {' '}
+              {mode === 'login' ? "New to Tradify?" : "Already have an account?"} {' '}
               <Link 
                 to={mode === 'login' ? '/register' : '/login'} 
                 className="text-primary hover:text-white transition-colors underline underline-offset-8 decoration-primary/30 ml-2"
               >
-                {mode === 'login' ? 'INITIALIZE NEW NODE' : 'LOGIN TO NODE'}
+                {mode === 'login' ? 'CREATE ACCOUNT' : 'LOGIN'}
               </Link>
             </p>
           </div>

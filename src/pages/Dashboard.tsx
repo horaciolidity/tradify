@@ -78,7 +78,7 @@ const Dashboard: React.FC = () => {
         <div className="px-6 md:px-12 mb-3 md:mb-4">
           <div className="flex items-center space-x-3 text-primary">
             <TrendingUp size={14} className="text-primary animate-pulse" />
-            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Global Updates</span>
+            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Real-time Market Updates</span>
           </div>
         </div>
         <MarketTicker />
@@ -89,7 +89,7 @@ const Dashboard: React.FC = () => {
         <div className="space-y-3 md:space-y-4">
           <div className="flex items-center space-x-3 text-primary">
             <div className="w-8 md:w-10 h-[2px] bg-primary/30 rounded-full" />
-            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Neural Protocol</span>
+            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Trading Dashboard</span>
           </div>
           <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter italic leading-tight md:leading-none">
             Welcome, <br className="hidden md:block" />
@@ -99,7 +99,7 @@ const Dashboard: React.FC = () => {
           </h1>
           <p className="text-slate-500 font-bold italic tracking-wide flex items-center text-xs md:text-sm">
             <Zap size={14} className="text-accent mr-2" />
-            System status: Secured
+            Status: System Online & Protected
           </p>
         </div>
         
@@ -112,7 +112,7 @@ const Dashboard: React.FC = () => {
             <Wallet className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-0.5 md:mb-1">Treasury</p>
+            <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-0.5 md:mb-1">Available Balance</p>
             <p className="text-2xl md:text-4xl font-black text-white italic tracking-tighter">
               {wallet?.balance_usdc.toLocaleString() || '0.00'} <span className="text-[10px] md:text-sm font-normal text-slate-500 not-italic uppercase tracking-widest ml-1">USDC</span>
             </p>
@@ -130,10 +130,10 @@ const Dashboard: React.FC = () => {
       {/* Stats Display */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
         {[
-          { label: 'Total Capital', value: `$${stats.totalInvested.toLocaleString()}`, icon: TrendingUp, color: 'text-primary', delay: 0 },
-          { label: 'Neural Nodes', value: stats.activeInvestments, icon: Zap, color: 'text-accent', delay: 0.1 },
-          { label: 'Network Yield', value: `$${stats.totalReferralEarned.toLocaleString()}`, icon: Users, color: 'text-indigo-400', delay: 0.2 },
-          { label: 'Safety', value: '99.9%', icon: ShieldCheck, color: 'text-emerald-400', delay: 0.3 },
+          { label: 'Total Invested', value: `$${stats.totalInvested.toLocaleString()}`, icon: TrendingUp, color: 'text-primary', delay: 0 },
+          { label: 'Active Plans', value: stats.activeInvestments, icon: Zap, color: 'text-accent', delay: 0.1 },
+          { label: 'Referral Credits', value: `$${stats.totalReferralEarned.toLocaleString()}`, icon: Users, color: 'text-indigo-400', delay: 0.2 },
+          { label: 'Security Status', value: '100%', icon: ShieldCheck, color: 'text-emerald-400', delay: 0.3 },
         ].map((stat) => (
           <motion.div
             key={stat.label}
@@ -158,9 +158,9 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between px-4">
             <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic flex items-center">
               <Clock size={24} className="text-primary mr-3" />
-              Transaction Stream
+              Recent Transactions
             </h3>
-            <Link to="/wallet" className="text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-[0.3em] border-b border-primary/20 pb-1">Historical Archive</Link>
+            <Link to="/wallet" className="text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-[0.3em] border-b border-primary/20 pb-1">View All Activity</Link>
           </div>
           
           <div className="glass-card overflow-hidden bg-white/2 border-white/5">
@@ -244,11 +244,11 @@ const Dashboard: React.FC = () => {
             </div>
           </motion.div>
 
-          <Link to="/investments" className="block p-10 glass-card bg-primary text-white relative overflow-hidden group text-center shadow-[0_20px_40px_rgba(139,92,246,0.3)] border-none">
+          <Link to="/investments" className="block p-10 glass-card bg-primary text-white relative overflow-hidden group text-center shadow-[0_20px_40px_rgba(243,186,47,0.3)] border-none">
             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             <Zap size={40} className="mx-auto mb-4 group-hover:scale-110 group-hover:rotate-12 transition-transform" />
-            <span className="text-xs font-black uppercase tracking-[0.4em]">Initialize</span>
-            <h4 className="text-3xl font-black italic tracking-tighter mt-1">NEW INVESTMENT</h4>
+            <span className="text-xs font-black uppercase tracking-[0.4em]">Get Started</span>
+            <h4 className="text-3xl font-black italic tracking-tighter mt-1">NEW PLAN</h4>
           </Link>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, ISeriesApi } from 'lightweight-charts';
 import { MarketService, TickerData } from '../services/market';
-import { TrendingUp, TrendingDown, Clock, Maximize2, Settings, ShieldCheck, Zap, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Maximize2, Settings, ShieldCheck, Zap, Activity, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TradingChat from '../components/TradingChat';
 import AnnouncementCarousel from '../components/AnnouncementCarousel';
@@ -290,7 +290,12 @@ const TradingDashboard: React.FC = () => {
                   <Activity size={12} className="text-primary animate-pulse" />
                   <span>Real-time</span>
                 </div>
-                <div className="flex items-center space-x-4 md:space-x-8">
+              </div>
+              <div className="flex items-center space-x-3 text-primary mb-4 md:mb-6">
+          <div className="w-12 h-0.5 bg-primary/30" />
+          <span className="text-[10px] md:text-sm font-black uppercase tracking-[0.4em] italic opacity-70">Trading Terminal</span>
+        </div>
+              <div className="flex items-center space-x-4 md:space-x-8">
                   <div className="flex flex-col">
                     <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase italic">High</span>
                     <span className="text-[10px] md:text-sm font-mono font-bold text-white">${currentTicker?.high?.toLocaleString() || '0.00'}</span>
@@ -300,7 +305,6 @@ const TradingDashboard: React.FC = () => {
                     <span className="text-[10px] md:text-sm font-mono font-bold text-white">${currentTicker?.low?.toLocaleString() || '0.00'}</span>
                   </div>
                 </div>
-              </div>
               <div className="hidden md:flex items-center space-x-3">
                 <button className="p-2 md:p-3 bg-white/2 hover:bg-white/5 rounded-lg md:rounded-xl text-slate-500 transition-all border border-white/5"><Settings size={16} /></button>
                 <button className="p-2 md:p-3 bg-white/2 hover:bg-white/5 rounded-lg md:rounded-xl text-slate-500 transition-all border border-white/5"><Maximize2 size={16} /></button>
@@ -429,11 +433,13 @@ const TradingDashboard: React.FC = () => {
               <button 
                 onClick={handleTrade}
                 disabled={processing}
-                className={`w-full py-4 md:py-5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] italic rounded-2xl shadow-2xl transition-all transform active:scale-95 ${
-                  tradeType === 'buy' ? 'bg-accent text-black shadow-accent/20' : 'bg-error text-white shadow-error/20'
-                } disabled:opacity-50`}
-              >
-                {processing ? 'EXECUTING...' : `Execute ${tradeType.toUpperCase()}`}
+               className={`w-full py-4 md:py-6 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-[0.4em] italic transition-all flex items-center justify-center space-x-3 shadow-xl ${
+                tradeType === 'buy' 
+                  ? 'bg-accent text-black shadow-accent/20 hover:bg-white' 
+                  : 'bg-error text-white shadow-error/20 hover:bg-white hover:text-black'
+              }`}>
+                <span>{processing ? 'EXECUTING...' : `${tradeType === 'buy' ? 'CONFIRM BUY' : 'CONFIRM SELL'}`}</span>
+                <ChevronRight size={18} />
               </button>
             </div>
           </div>
@@ -450,13 +456,16 @@ const TradingDashboard: React.FC = () => {
         transition={{ delay: 0.2 }}
         className="glass-card overflow-hidden"
       >
-        <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
-          <h3 className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em] italic text-white text-trader">Asset Core</h3>
-          <div className="flex items-center space-x-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-            <span className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase">Synced</span>
-          </div>
-        </div>
+              <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
+              <h3 className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em] italic text-white flex items-center">
+                <Settings size={14} className="mr-2 text-primary" />
+                Spot Order
+              </h3>
+              <div className="flex items-center space-x-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                <span className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase">Terminal Online</span>
+              </div>
+            </div>
         <div className="max-h-[300px] md:max-h-[400px] overflow-y-auto scrollbar-hide py-1 md:py-2">
           {tickers.map((ticker) => (
             <button

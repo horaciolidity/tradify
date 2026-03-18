@@ -158,7 +158,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               {/* Notification Dropdown */}
               <div className="absolute right-0 mt-2 w-[400px] bg-dark-lighter border border-white/10 rounded-3xl shadow-2xl opacity-0 translate-y-4 pointer-events-none group-hover/notif:opacity-100 group-hover/notif:translate-y-0 group-hover/notif:pointer-events-auto transition-all duration-300 z-50 overflow-hidden backdrop-blur-2xl">
                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
-                  <h3 className="font-black text-white uppercase tracking-tighter italic">Neural Updates</h3>
+                  <h3 className="font-black text-white uppercase tracking-tighter italic">Notifications</h3>
                   <button 
                     onClick={() => profile && markAllAsRead(profile.id)}
                     className="text-[10px] font-black text-primary hover:text-white uppercase tracking-[0.2em] transition-colors"
@@ -199,14 +199,14 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   ) : (
                     <div className="p-12 text-center space-y-4">
                       <Bell size={40} className="mx-auto text-slate-800" />
-                      <p className="text-slate-500 font-medium italic text-sm">No neural signals detected. Stay sharp.</p>
+                      <p className="text-slate-500 font-medium italic text-sm">No new notifications. Everything is on track.</p>
                     </div>
                   )}
                 </div>
                 
                 <div className="p-4 border-t border-white/5 bg-white/2">
                   <button className="w-full py-3 text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-[0.3em] transition-all">
-                    Syncing Protocol 1.0.4
+                    System Stable
                   </button>
                 </div>
               </div>

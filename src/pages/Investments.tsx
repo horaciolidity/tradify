@@ -112,7 +112,7 @@ const Investments: React.FC = () => {
       await addNotification(
         profile.id,
         'Investment Active',
-        `Successfully staked ${amount} USDC in ${selectedPlan.name}. Neural synchronization complete.`,
+        `Successfully invested ${amount} USDC in ${selectedPlan.name}. Your funds are now working for you.`,
         'success'
       );
 
@@ -215,8 +215,8 @@ const Investments: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Compound Investments</h1>
-          <p className="text-slate-400 mt-1">Grow your USDC with our high-yield guaranteed plans.</p>
+          <h1 className="text-3xl font-bold text-white">Investment Plans</h1>
+          <p className="text-slate-400 mt-1">Earn stable returns by staking your USDC in our guaranteed plans.</p>
         </div>
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 self-start">
           <button 
@@ -258,11 +258,11 @@ const Investments: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex items-center space-x-2 text-primary">
                   <ShieldCheck size={20} />
-                  <span className="text-sm font-bold uppercase tracking-widest">Guaranteed Safety</span>
+                  <span className="text-sm font-bold uppercase tracking-widest">Guaranteed Returns</span>
                 </div>
-                <h2 className="text-2xl font-bold text-white">Protocol Liquidity Pool</h2>
+                <h2 className="text-2xl font-bold text-white">System Reserve Fund</h2>
                 <p className="text-slate-400 max-w-xl">
-                  Our 500,000 USDC liquidity pool ensures that all interests and withdrawals are processed instantly and safely for every user.
+                  Our 500,000 USDC reserve fund ensures that all interest payments and capital withdrawals are processed instantly.
                 </p>
               </div>
               <div className="flex flex-col items-end">
@@ -324,7 +324,7 @@ const Investments: React.FC = () => {
                   onClick={() => setSelectedPlan(plan)}
                   className="w-full primary-button py-3 text-sm font-bold flex items-center justify-center space-x-2"
                 >
-                  <span>Invest Now</span>
+                  <span>Start Plan</span>
                   <ChevronRight size={18} />
                 </button>
               </motion.div>
