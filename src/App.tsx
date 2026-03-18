@@ -147,6 +147,7 @@ const AnimatedRoutes = () => {
 
 const App: React.FC = () => {
   const { setUser, setProfile, setWallet, loading, setLoading } = useAuthStore();
+  const fetchInProgress = React.useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -159,8 +160,6 @@ const App: React.FC = () => {
         setLoading(false);
       }
     }, 5000);
-
-    const fetchInProgress = React.useRef(false);
 
     const initAuth = async () => {
       if (fetchInProgress.current) return;
