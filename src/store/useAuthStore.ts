@@ -33,6 +33,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.warn("SignOut failed or Supabase not configured");
     }
     set({ user: null, profile: null, wallet: null });
+    window.location.href = '/login';
   },
   updateBalance: (amount) => set((state) => {
     if (state.wallet) {

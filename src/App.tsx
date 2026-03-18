@@ -126,40 +126,49 @@ const App: React.FC = () => {
   const { setUser, setProfile, setWallet, loading, setLoading } = useAuthStore();
 
   useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setUser(session.user);
-        await fetchProfile(session.user.id);
-      } else {
-        // Check for Web3 Auto-auth possibility if Ethereum is available
-        const accounts = await window.ethereum?.request({ method: 'eth_accounts' }).catch(() => []);
-        if (accounts && accounts.length > 0) {
-          console.log("Web3 account detected:", accounts[0]);
-          // Here we could try to find a guest session or prompt, 
-          // but for now we just finish loading
+      try {
+        setLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          if (session?.user) {
+            setUser(session.user);
+            await fetchProfile(session.user.id);
+          } else {
+            setLoading(false);
+          }
         }
-        setLoading(false);
+      } catch (err) {
+        console.error("Auth init error:", err);
+        if (mounted) setLoading(false);
       }
     };
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        await fetchProfile(session.user.id);
-      } else {
-        setUser(null);
-        setProfile(null);
-        setWallet(null);
-        setLoading(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (mounted) {
+        if (session?.user) {
+          setUser(session.user);
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            await fetchProfile(session.user.id);
+          }
+        } else {
+          setUser(null);
+          setProfile(null);
+          setWallet(null);
+          setLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {

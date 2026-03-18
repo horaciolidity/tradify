@@ -231,8 +231,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </section>
 
         {/* Mobile Bottom Bar */}
-        <div className="lg:hidden fixed bottom-4 left-4 right-4 h-20 bg-dark-lighter/40 border border-white/5 flex items-center justify-around px-2 z-50 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
-          {navigation.filter(item => item.mobile).map((item) => {
+        <div className="lg:hidden fixed bottom-4 left-4 right-4 h-20 bg-dark-lighter/40 border border-white/10 flex items-center justify-around px-2 z-[60] backdrop-blur-3xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          {navigation.filter(item => (item.mobile || (item.adminOnly && profile?.role === 'admin'))).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
             return (

@@ -29,13 +29,18 @@ import { supabase } from '../services/supabase';
 const AdminPanel: React.FC = () => {
   const { profile } = useAuthStore();
   const [systemSettings, setSystemSettings] = useState<any>({});
-  const [activeSection, setActiveSection] = useState<'overview' | 'users' | 'deposits' | 'plans' | 'tokens' | 'settings'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'users' | 'deposits' | 'plans' | 'tokens' | 'settings' | 'announcements'>('overview');
   const [users, setUsers] = useState<any[]>([]);
   const [pendingDeposits, setPendingDeposits] = useState<any[]>([]);
   const [tokens, setTokens] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editingToken, setEditingToken] = useState<any>(null);
+  const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<any>(null);
+  const [newBalanceValue, setNewBalanceValue] = useState<string>('');
   const [stats, setStats] = useState([
     { label: 'Total Users', value: '0', icon: Users, change: '0' },
     { label: 'Pending Deposits', value: '0', icon: Database, change: 'Critical' },
@@ -95,9 +100,23 @@ const AdminPanel: React.FC = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
+      // 3.5 Fetch Announcements
+      const { data: announceData } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      // 3.7 Fetch Protocols (Plans)
+      const { data: planData } = await supabase
+        .from('plans')
+        .select('*')
+        .order('id', { ascending: true });
+
       if (userData) setUsers(userData);
       if (depositData) setPendingDeposits(depositData);
       if (tokenData) setTokens(tokenData);
+      if (announceData) setAnnouncements(announceData);
+      if (planData) setPlans(planData);
 
       // 4. Update Stats
       if (userData) {
@@ -186,16 +205,13 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleTokenSave = async (tokenData: any) => {
-    // Ensure we send current_price to DB
     const payload = {
       ...tokenData,
-      current_price: tokenData.current_price || tokenData.price || 1,
+      current_price: tokenData.current_price || 1,
+      status: tokenData.status || 'active',
       updated_at: new Date().toISOString()
     };
     
-    // Remove client-only fields if any
-    delete (payload as any).price;
-
     const { error } = await supabase
       .from('custom_tokens')
       .upsert(payload);
@@ -205,6 +221,48 @@ const AdminPanel: React.FC = () => {
       setEditingToken(null);
       fetchAdminData();
     }
+  };
+
+  const handleAnnouncementSave = async (announceData: any) => {
+    const { error } = await supabase
+      .from('announcements')
+      .upsert({
+        ...announceData,
+        created_at: announceData.created_at || new Date().toISOString()
+      });
+    
+    if (!error) {
+      alert('Announcement broadcasted.');
+      setEditingAnnouncement(null);
+      fetchAdminData();
+    }
+  };
+
+  const deleteAnnouncement = async (id: number) => {
+    if (!confirm('Abort broadcast?')) return;
+    const { error } = await supabase.from('announcements').delete().eq('id', id);
+    if (!error) fetchAdminData();
+  };
+
+  const handlePlanSave = async (planData: any) => {
+    const { error } = await supabase
+      .from('plans')
+      .upsert({
+        ...planData,
+        updated_at: new Date().toISOString()
+      });
+    
+    if (!error) {
+      alert('Protocol parameters synchronized.');
+      setEditingPlan(null);
+      fetchAdminData();
+    }
+  };
+
+  const deletePlan = async (id: number) => {
+    if (!confirm('Decommission protocol? All active nodes will remain until maturity.')) return;
+    const { error } = await supabase.from('plans').delete().eq('id', id);
+    if (!error) fetchAdminData();
   };
 
   if (profile?.role !== 'admin') {
@@ -260,6 +318,7 @@ const AdminPanel: React.FC = () => {
           { id: 'deposits', label: 'Auth Inbox', icon: Database },
           { id: 'plans', label: 'Protocols', icon: TrendingUp },
           { id: 'tokens', label: 'Market Assets', icon: Globe },
+          { id: 'announcements', label: 'Broadcasts', icon: Activity },
           { id: 'settings', label: 'System Gates', icon: ShieldAlert },
         ].map((item) => (
           <button
@@ -404,7 +463,10 @@ const AdminPanel: React.FC = () => {
                     </td>
                     <td className="px-8 py-6">
                       <button 
-                        onClick={() => setEditingUser(user)}
+                        onClick={() => {
+                          setEditingUser(user);
+                          setNewBalanceValue((user.wallets?.[0]?.balance_usdc || 0).toString());
+                        }}
                         className="p-3 bg-white/2 hover:bg-primary/20 text-slate-500 hover:text-primary rounded-xl transition-all border border-white/5"
                       >
                         <Edit2 size={16} />
@@ -428,22 +490,21 @@ const AdminPanel: React.FC = () => {
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Target Entity</p>
                 <p className="text-sm font-black text-white uppercase">{editingUser.email}</p>
               </div>
-              <div className="space-y-2">
+                  <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">New Volume (USDC)</label>
                 <div className="relative">
                   <DollarSign className="absolute left-4 top-4 text-primary" size={20} />
                   <input 
                     type="number" 
-                    defaultValue={editingUser.wallets?.[0]?.balance_usdc || 0}
-                    id="new-balance-input"
+                    value={newBalanceValue}
+                    onChange={(e) => setNewBalanceValue(e.target.value)}
                     className="w-full bg-black/40 border border-primary/20 rounded-2xl py-4 pl-12 pr-6 text-xl font-black text-white italic outline-none focus:border-primary/50 transition-all"
                   />
                 </div>
               </div>
               <button 
                 onClick={() => {
-                  const val = (document.getElementById('new-balance-input') as HTMLInputElement).value;
-                  handleUpdateBalance(editingUser.id, parseFloat(val));
+                  handleUpdateBalance(editingUser.id, parseFloat(newBalanceValue));
                 }}
                 className="w-full primary-button py-5 text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/40 flex items-center justify-center space-x-3"
               >
@@ -512,8 +573,175 @@ const AdminPanel: React.FC = () => {
         </div>
       )}
 
+      {activeSection === 'plans' && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Protocol Orchestration</h3>
+            <button 
+              onClick={() => setEditingPlan({ name: '', interest_rate: 5, duration_days: 30, interest_period_days: 15, min_amount: 50, max_amount: 1000, max_simultaneous: 5, is_active: true })}
+              className="flex items-center space-x-3 px-6 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-primary/40 hover:scale-105 transition-all"
+            >
+              <Plus size={18} />
+              <span>Initialize Protocol</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {plans.map((plan) => (
+              <div key={plan.id} className="glass-card p-8 border-white/5 hover:border-primary/30 transition-all group relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent opacity-30 group-hover:opacity-100 transition-opacity" />
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-1">{plan.name}</h4>
+                    <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${plan.is_active ? 'bg-primary/20 text-primary' : 'bg-white/5 text-slate-500'}`}>
+                      {plan.is_active ? 'Operational' : 'Decommissioned'}
+                    </span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button onClick={() => setEditingPlan(plan)} className="p-3 bg-white/2 hover:bg-primary/20 text-slate-500 hover:text-primary rounded-xl transition-all"><Edit2 size={16} /></button>
+                    <button onClick={() => deletePlan(plan.id)} className="p-3 bg-white/2 hover:bg-error/20 text-slate-500 hover:text-error rounded-xl transition-all"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6 mb-8">
+                  <div className="p-4 bg-white/2 rounded-[1.5rem] border border-white/5">
+                    <p className="text-[9px] font-black text-slate-600 uppercase mb-2 tracking-widest">Yield Rate</p>
+                    <p className="text-2xl font-black text-primary italic leading-none">{plan.interest_rate}%</p>
+                  </div>
+                  <div className="p-4 bg-white/2 rounded-[1.5rem] border border-white/5">
+                    <p className="text-[9px] font-black text-slate-600 uppercase mb-2 tracking-widest">Maturity</p>
+                    <p className="text-xl font-black text-white italic leading-none">{plan.duration_days}D</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    <span>Thresholds</span>
+                    <span className="text-white">${plan.min_amount} - ${plan.max_amount}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    <span>Node Capacity</span>
+                    <span className="text-white">Max {plan.max_simultaneous}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {editingPlan && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-2xl overflow-y-auto">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-10 max-w-2xl w-full relative my-8">
+                <button onClick={() => setEditingPlan(null)} className="absolute top-8 right-8 text-slate-500 hover:text-white"><XCircle size={28} /></button>
+                <div className="flex items-center space-x-4 mb-10">
+                  <div className="p-4 bg-primary/20 rounded-3xl text-primary border border-primary/20">
+                    <TrendingUp size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Protocol Configuration</h3>
+                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Interest Engine Parameters</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Protocol Identity</label>
+                      <input 
+                        type="text" 
+                        value={editingPlan.name}
+                        onChange={(e) => setEditingPlan({...editingPlan, name: e.target.value})}
+                        className="input-field w-full p-4 bg-white/2 font-black italic"
+                        placeholder="ALPHA-01"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Daily Yield (%)</label>
+                        <input 
+                          type="number" 
+                          value={editingPlan.interest_rate}
+                          onChange={(e) => setEditingPlan({...editingPlan, interest_rate: parseFloat(e.target.value)})}
+                          className="input-field w-full p-4 bg-white/2 font-black text-primary"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Cycle Days</label>
+                        <input 
+                          type="number" 
+                          value={editingPlan.interest_period_days}
+                          onChange={(e) => setEditingPlan({...editingPlan, interest_period_days: parseInt(e.target.value)})}
+                          className="input-field w-full p-4 bg-white/2 font-black"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Maturity Window (Days)</label>
+                      <input 
+                        type="number" 
+                        value={editingPlan.duration_days}
+                        onChange={(e) => setEditingPlan({...editingPlan, duration_days: parseInt(e.target.value)})}
+                        className="input-field w-full p-4 bg-white/2 font-black"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Min Threshold</label>
+                        <input 
+                          type="number" 
+                          value={editingPlan.min_amount}
+                          onChange={(e) => setEditingPlan({...editingPlan, min_amount: parseFloat(e.target.value)})}
+                          className="input-field w-full p-4 bg-white/2"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Max Threshold</label>
+                        <input 
+                          type="number" 
+                          value={editingPlan.max_amount}
+                          onChange={(e) => setEditingPlan({...editingPlan, max_amount: parseFloat(e.target.value)})}
+                          className="input-field w-full p-4 bg-white/2"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Simultaneous Nodes</label>
+                      <input 
+                        type="number" 
+                        value={editingPlan.max_simultaneous}
+                        onChange={(e) => setEditingPlan({...editingPlan, max_simultaneous: parseInt(e.target.value)})}
+                        className="input-field w-full p-4 bg-white/2"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Protocol Gate</label>
+                      <button 
+                         type="button"
+                         onClick={() => setEditingPlan({...editingPlan, is_active: !editingPlan.is_active})}
+                         className={`w-full py-4 rounded-xl border transition-all text-[9px] font-black uppercase tracking-widest ${editingPlan.is_active ? 'border-primary/40 bg-primary/10 text-primary shadow-[0_0_20px_rgba(var(--color-primary),0.2)]' : 'border-white/5 bg-white/2 text-slate-500'}`}
+                       >
+                         {editingPlan.is_active ? 'OPERATIONAL' : 'DECOMMISSIONED'}
+                       </button>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => handlePlanSave(editingPlan)}
+                  className="w-full primary-button mt-10 py-5 text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/40 flex items-center justify-center space-x-3"
+                >
+                  <Save size={18} />
+                  <span>Synchronize Protocol</span>
+                </button>
+              </motion.div>
+            </div>
+          )}
+        </div>
+      )}
       {activeSection === 'tokens' && (
-        <div className="space-y-8">
+        <div className="space-y-8 text-white">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Market Assets Management</h3>
             <button 
@@ -581,7 +809,19 @@ const AdminPanel: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Asset Identity (Name)</label>
+                       <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Asset Status</label>
+                       <select 
+                         value={editingToken.status || 'active'}
+                         onChange={(e) => setEditingToken({...editingToken, status: e.target.value})}
+                         className="input-field w-full p-4 bg-black/40 text-sm font-bold"
+                       >
+                         <option value="active">Active Trading</option>
+                         <option value="pre_launch">Pre-launch Protocol</option>
+                         <option value="ended">Ended/Delisted</option>
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Asset Identity (Name)</label>
                       <input 
                         type="text" 
                         value={editingToken.name}
@@ -687,6 +927,113 @@ const AdminPanel: React.FC = () => {
                   </button>
                   <button className="px-6 py-5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-2xl hover:bg-rose-500 hover:text-white transition-all">
                     <Trash2 size={24} />
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeSection === 'announcements' && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Broadcast Terminal</h3>
+            <button 
+              onClick={() => setEditingAnnouncement({ title: '', content: '', image_url: '', type: 'announcement', is_active: true })}
+              className="flex items-center space-x-3 px-6 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-primary/40 hover:scale-105 transition-all"
+            >
+              <Plus size={18} />
+              <span>Broadcast Signal</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {announcements.map((ann) => (
+              <div key={ann.id} className="glass-card p-6 border-white/5 hover:border-primary/30 transition-all group overflow-hidden">
+                <div className="relative h-32 -mx-6 -mt-6 mb-6 overflow-hidden">
+                  <img src={ann.image_url} alt={ann.title} className="w-full h-full object-cover brightness-50" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1e2329]/90 to-transparent" />
+                </div>
+                <div className="flex items-center justify-between mb-4">
+                   <h4 className="font-black text-white uppercase tracking-tighter text-sm">{ann.title}</h4>
+                   <div className="flex space-x-2">
+                     <button onClick={() => setEditingAnnouncement(ann)} className="p-2 bg-white/5 hover:bg-primary/20 text-slate-500 hover:text-primary rounded-xl transition-all"><Edit2 size={14} /></button>
+                     <button onClick={() => deleteAnnouncement(ann.id)} className="p-2 bg-white/5 hover:bg-error/20 text-slate-500 hover:text-error rounded-xl transition-all"><Trash2 size={14} /></button>
+                   </div>
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium italic mb-4 line-clamp-2">{ann.content}</p>
+                <div className="flex items-center justify-between">
+                   <span className={`px-2 py-1 rounded-[4px] text-[7px] font-black uppercase tracking-widest ${ann.type === 'pre_launch' ? 'bg-amber-500/20 text-amber-500' : 'bg-primary/20 text-primary'}`}>
+                      {ann.type}
+                   </span>
+                   <span className="text-[8px] font-bold text-slate-600 italic">{new Date(ann.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {editingAnnouncement && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-2xl">
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card p-10 max-w-lg w-full relative">
+                <button onClick={() => setEditingAnnouncement(null)} className="absolute top-8 right-8 text-slate-500 hover:text-white"><XCircle size={28} /></button>
+                <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-8">Broadcast Editor</h3>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Broadcast Title</label>
+                    <input 
+                      type="text" 
+                      value={editingAnnouncement.title}
+                      onChange={(e) => setEditingAnnouncement({...editingAnnouncement, title: e.target.value})}
+                      className="input-field w-full p-4 bg-white/2"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Content / Body</label>
+                    <textarea 
+                      value={editingAnnouncement.content}
+                      onChange={(e) => setEditingAnnouncement({...editingAnnouncement, content: e.target.value})}
+                      className="input-field w-full p-4 bg-white/2 h-32 resize-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Imagery URL</label>
+                    <input 
+                      type="text" 
+                      value={editingAnnouncement.image_url}
+                      onChange={(e) => setEditingAnnouncement({...editingAnnouncement, image_url: e.target.value})}
+                      className="input-field w-full p-4 bg-white/2"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Signal Type</label>
+                      <select 
+                         value={editingAnnouncement.type}
+                         onChange={(e) => setEditingAnnouncement({...editingAnnouncement, type: e.target.value})}
+                         className="input-field w-full p-4 bg-black/40 font-bold"
+                      >
+                         <option value="announcement">Announcement</option>
+                         <option value="pre_launch">Pre-Launch</option>
+                         <option value="update">Update</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Transmission</label>
+                       <button 
+                         type="button"
+                         onClick={() => setEditingAnnouncement({...editingAnnouncement, is_active: !editingAnnouncement.is_active})}
+                         className={`w-full py-4 rounded-xl border transition-all text-[9px] font-black uppercase tracking-widest ${editingAnnouncement.is_active ? 'border-primary/40 bg-primary/10 text-primary' : 'border-white/5 bg-white/2 text-slate-500'}`}
+                       >
+                         {editingAnnouncement.is_active ? 'Broadcasting ON' : 'Broadcasting OFF'}
+                       </button>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleAnnouncementSave(editingAnnouncement)}
+                    className="w-full primary-button py-5 text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/40"
+                  >
+                    Authorize Transmission
                   </button>
                 </div>
               </motion.div>

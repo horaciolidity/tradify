@@ -3,68 +3,81 @@
 @tailwind utilities;
 
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: rgba(13, 13, 18, 0.45);
+  --background: #0B0E11;
+  --foreground: #EAECEF;
+  --card: rgba(30, 35, 41, 0.45);
   --card-border: rgba(255, 255, 255, 0.05);
-  --text-muted: #888888;
-  --primary: #8b5cf6;
-  --primary-dark: #7c3aed;
-  --accent: #10b981;
-  --secondary: #1e1b4b;
+  --text-muted: #848E9C;
+  --primary: #F3BA2F;
+  --primary-dark: #C99400;
+  --accent: #0ECB81;
+  --error: #F6465D;
+  --secondary: #1E2329;
 }
 
 @layer base {
   body {
-    @apply transition-all duration-1000 antialiased selection:bg-primary/40 overflow-x-hidden;
-    background: radial-gradient(circle at 50% 0%, #17153b 0%, #000000 100%);
+    @apply transition-all duration-1000 antialiased selection:bg-primary/20 overflow-x-hidden;
+    background: #0B0E11;
     color: var(--foreground);
     font-family: 'Outfit', 'Inter', system-ui, sans-serif;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, h4, .font-trader {
+    @apply tracking-tighter;
   }
 }
 
 @layer components {
   .glass-card {
     background: var(--card);
-    backdrop-filter: blur(40px) saturate(200%);
+    backdrop-filter: blur(25px) saturate(150%);
     border: 1px solid var(--card-border);
-    @apply rounded-[2.5rem] shadow-2xl transition-all duration-500;
-    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
+    @apply rounded-3xl shadow-2xl transition-all duration-500 relative overflow-hidden;
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8);
+  }
+
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(243, 186, 47, 0.03), transparent);
+    pointer-events: none;
   }
   
   .glass-button {
-    @apply px-8 py-4 rounded-[1.8rem] transition-all duration-500 active:scale-90 disabled:opacity-30 disabled:pointer-events-none font-black uppercase tracking-[0.2em] text-[10px] italic;
+    @apply px-8 py-4 rounded-xl transition-all duration-500 active:scale-95 disabled:opacity-30 disabled:pointer-events-none font-black uppercase tracking-[0.1em] text-[11px] italic;
   }
 
   .primary-button {
-    background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
-    @apply glass-button text-white shadow-[0_15px_40px_rgba(139,92,246,0.3)] hover:shadow-[0_20px_50px_rgba(139,92,246,0.5)] hover:-translate-y-1;
+    background: #F3BA2F;
+    @apply glass-button text-black hover:bg-[#C99400] shadow-[0_10px_30px_rgba(243,186,47,0.1)] hover:shadow-[0_15px_40px_rgba(243,186,47,0.2)];
   }
 
   .secondary-button {
-    background: rgba(255, 255, 255, 0.02);
-    @apply glass-button hover:bg-white/5 border border-white/5 text-slate-400 hover:text-white;
+    background: rgba(43, 49, 57, 0.6);
+    @apply glass-button hover:bg-white/5 border border-white/5 text-slate-200 hover:text-white;
   }
 
   .input-field {
-    background: rgba(255, 255, 255, 0.01);
-    border: 1px solid rgba(255, 255, 255, 0.03);
-    @apply rounded-[1.8rem] px-8 py-5 focus:outline-none focus:ring-4 focus:ring-primary/20 transition-all font-bold;
+    background: rgba(30, 35, 41, 0.8);
+    border: 1px solid rgba(71, 77, 87, 0.4);
+    @apply rounded-xl px-6 py-4 focus:outline-none focus:border-primary/60 transition-all font-bold;
     color: var(--foreground);
   }
 
   .sidebar-link {
-    @apply flex items-center space-x-4 px-6 py-5 rounded-[1.5rem] transition-all duration-500 text-slate-500 hover:text-white hover:bg-white/5 font-black uppercase tracking-[0.25em] text-[9px] italic;
+    @apply flex items-center space-x-4 px-6 py-5 rounded-xl transition-all duration-500 text-slate-500 hover:text-primary hover:bg-white/2 font-black uppercase tracking-[0.15em] text-[10px] italic;
   }
 
   .sidebar-link.active {
-    background: linear-gradient(to right, rgba(139, 92, 246, 0.1), transparent);
-    @apply text-primary border-r-4 border-primary;
+    background: rgba(243, 186, 47, 0.05);
+    @apply text-primary border-r-2 border-primary;
   }
 }
 
-/* Custom Scrollbar - Futuristic Minimal */
+/* Custom Scrollbar - Binance Style */
 ::-webkit-scrollbar {
   width: 4px;
 }
@@ -74,32 +87,43 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  transition: all 0.5s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
-  box-shadow: 0 0 10px var(--primary);
 }
 
 /* TradingView Chart Glow */
 .tv-lightweight-charts {
-  @apply rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl;
-  box-shadow: 0 0 50px rgba(139, 92, 246, 0.05);
+  @apply rounded-xl overflow-hidden border border-white/5 bg-[#161A1E];
 }
 
-/* Glow Animation */
-@keyframes pulse-glow {
-  0% { transform: scale(1); opacity: 0.3; }
-  50% { transform: scale(1.1); opacity: 0.5; }
-  100% { transform: scale(1); opacity: 0.3; }
+/* Binane Theme Animations */
+@keyframes bincane-pulse {
+  0% { transform: scale(1); opacity: 0.2; }
+  50% { transform: scale(1.05); opacity: 0.3; }
+  100% { transform: scale(1); opacity: 0.2; }
 }
 
-.neural-glow {
+.trader-glow {
   position: absolute;
-  filter: blur(100px);
+  filter: blur(120px);
   z-index: -1;
-  animation: pulse-glow 8s infinite ease-in-out;
+  background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+  animation: bincane-pulse 10s infinite ease-in-out;
+}
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.ticker-wrap {
+  @apply w-full overflow-hidden bg-[#1E2329]/50 border-y border-white/5 py-3 whitespace-nowrap;
+}
+
+.ticker-content {
+  @apply inline-block animate-[ticker-scroll_30s_linear_infinite];
 }
