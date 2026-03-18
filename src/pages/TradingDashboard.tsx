@@ -251,17 +251,17 @@ const TradingDashboard: React.FC = () => {
             <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-4">
                 <span className="text-3xl font-mono font-black text-white italic tracking-tighter">
-                  ${currentTicker?.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                 </span>
                 <span className={`px-4 py-1.5 rounded-xl text-sm font-black flex items-center italic shadow-lg ${currentTicker && currentTicker.change >= 0 ? 'bg-accent/20 text-accent' : 'bg-error/20 text-error'}`}>
                   {currentTicker && currentTicker.change >= 0 ? <TrendingUp size={16} className="mr-2" /> : <TrendingDown size={16} className="mr-2" />}
-                  {currentTicker?.change >= 0 ? '+' : ''}{currentTicker?.change.toFixed(2)}%
+                  {(currentTicker?.change ?? 0) >= 0 ? '+' : ''}{currentTicker?.change?.toFixed(2) || '0.00'}%
                 </span>
               </div>
               <div className="hidden md:flex items-center space-x-6 border-l border-white/10 pl-6 h-10">
                 <div>
                   <p className="text-[10px] font-black text-slate-500 uppercase italic">Neural Volatility</p>
-                  <p className="text-xs font-bold text-white">{(currentTicker?.volume || 0 / 1e6).toFixed(2)}M USDC</p>
+                  <p className="text-xs font-bold text-white">{(currentTicker?.volume ? currentTicker.volume / 1e6 : 0).toFixed(2)}M USDC</p>
                 </div>
               </div>
             </div>
@@ -298,11 +298,11 @@ const TradingDashboard: React.FC = () => {
                 <div className="hidden md:flex items-center space-x-8">
                   <div className="flex flex-col">
                     <span className="text-[9px] font-black text-slate-600 uppercase italic">Neural High</span>
-                    <span className="text-sm font-mono font-bold text-white">${currentTicker?.high.toLocaleString()}</span>
+                    <span className="text-sm font-mono font-bold text-white">${currentTicker?.high?.toLocaleString() || '0.00'}</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[9px] font-black text-slate-600 uppercase italic">Neural Low</span>
-                    <span className="text-sm font-mono font-bold text-white">${currentTicker?.low.toLocaleString()}</span>
+                    <span className="text-sm font-mono font-bold text-white">${currentTicker?.low?.toLocaleString() || '0.00'}</span>
                   </div>
                 </div>
               </div>
