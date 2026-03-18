@@ -31,9 +31,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 border-t-2 border-primary rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(139,92,246,0.2)]" />
-        <h2 className="text-2xl font-black text-white uppercase tracking-[0.3em] italic animate-pulse">Initializing Protocol</h2>
+      <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 border-t-2 border-primary rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(243,186,47,0.2)]" />
+        <h2 className="text-xl font-black text-white uppercase tracking-[0.3em] italic animate-pulse">Synchronizing Data</h2>
       </div>
     );
   }
@@ -139,22 +139,18 @@ const App: React.FC = () => {
 
     const initAuth = async () => {
       try {
-        console.log("Initializing Auth Protocol...");
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log("Synchronizing Identity...");
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (error) throw error;
-
         if (mounted) {
           if (session?.user) {
             setUser(session.user);
             await fetchProfile(session.user.id);
           } else {
-            console.log("No active session found.");
             setLoading(false);
           }
         }
       } catch (err) {
-        console.error("Auth init fatal error:", err);
         if (mounted) setLoading(false);
       } finally {
         if (mounted) clearTimeout(authTimeout);
@@ -164,16 +160,17 @@ const App: React.FC = () => {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Auth Event Detected: ${event}`);
+      console.log(`Auth Event: ${event}`);
       if (mounted) {
         if (session?.user) {
           setUser(session.user);
-          // Only fetch if it's a structural change or if loading is still true
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || (event === 'INITIAL_SESSION' && loading)) {
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
             await fetchProfile(session.user.id);
-          } else if (event === 'TOKEN_REFRESHED') {
-            // Just ensure loading is false if it was somehow stuck
-            setLoading(false);
+          } else if (event === 'INITIAL_SESSION') {
+            // Already handled by initAuth but keeping it as backup
+            if (!useAuthStore.getState().profile) {
+              await fetchProfile(session.user.id);
+            }
           }
         } else {
           setUser(null);
@@ -214,9 +211,9 @@ const App: React.FC = () => {
       }
 
     } catch (error) {
-      console.error('Core hydration error:', error);
+      console.error('Hydration error:', error);
     } finally {
-      if (loading) setLoading(false);
+      setLoading(false);
     }
   };
 

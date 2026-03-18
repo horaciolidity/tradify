@@ -26,14 +26,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   setWallet: (wallet) => set({ wallet }),
   signOut: async () => {
     try {
-      if (import.meta.env.VITE_SUPABASE_URL) {
-        await supabase.auth.signOut();
-      }
+      // Explicitly sign out from Supabase
+      await supabase.auth.signOut();
+      // Clear persistence just in case
+      localStorage.removeItem('supabase.auth.token');
     } catch (e) {
-      console.warn("SignOut failed or Supabase not configured");
+      console.error("SignOut Protocol Error:", e);
+    } finally {
+      // Emergency state reset
+      set({ user: null, profile: null, wallet: null, loading: false });
+      // Hard redirect to clear all memory states
+      window.location.href = '/login';
     }
-    set({ user: null, profile: null, wallet: null });
-    window.location.href = '/login';
   },
   updateBalance: (amount) => set((state) => {
     if (state.wallet) {
