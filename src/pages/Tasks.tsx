@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckSquare, Star, Zap, Users, Wallet, Trophy, ChevronRight, Check } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 
 const initialTasks = [
   { id: 1, title: 'Daily Login', reward: 0.10, description: 'Log in to your account every day.', icon: Zap, status: 'claim', progress: [1, 1] },
@@ -14,6 +15,7 @@ import { supabase } from '../services/supabase';
 
 const Tasks: React.FC = () => {
   const { profile, wallet, setWallet } = useAuthStore();
+  const { addNotification } = useNotificationStore();
   const [tasks, setTasks] = useState<any[]>([]);
   const [claimingId, setClaimingId] = useState<number | null>(null);
 
@@ -58,6 +60,15 @@ const Tasks: React.FC = () => {
       });
 
       setWallet({ ...wallet, balance_usdc: newBalance });
+      
+      // 4. Send Notification
+      await addNotification(
+        profile.id,
+        'Reward Claimed',
+        `Successfully claimed ${reward} USDC from task. Network confirmed.`,
+        'success'
+      );
+
       setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'completed' } : t));
     } catch (error) {
       console.error('Claim error:', error);

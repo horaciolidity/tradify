@@ -19,6 +19,7 @@ import {
   Sun
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const navigation = [
@@ -36,6 +37,13 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { profile, wallet, signOut } = useAuthStore();
+  const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
+
+  React.useEffect(() => {
+    if (profile) {
+      fetchNotifications(profile.id);
+    }
+  }, [profile]);
 
   return (
     <div className="min-h-screen bg-dark text-slate-200">
@@ -128,17 +136,79 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Moon size={20} className="block dark:hidden" />
             </button>
             
-            <div className="hidden sm:flex flex-col items-end mr-2">
-              <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Balance</span>
-              <span className="text-lg font-bold text-accent">
-                {wallet?.balance_usdc.toLocaleString() ?? '0.00'} <span className="text-xs font-normal">USDC</span>
+            <div className="hidden sm:flex flex-col items-end mr-2 text-right">
+              <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">Live Balance</span>
+              <span className="text-xl font-black text-accent italic tracking-tighter">
+                {wallet?.balance_usdc.toLocaleString() ?? '0.00'} <span className="text-xs font-normal text-slate-500">USDC</span>
               </span>
             </div>
             
-            <button className="p-2 hover:bg-white/5 rounded-full relative">
-              <Bell size={20} className="text-slate-400" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
-            </button>
+            <div className="relative group/notif">
+              <button className="p-2.5 hover:bg-white/5 rounded-full relative transition-all active:scale-95 group-hover/notif:bg-white/10">
+                <Bell size={22} className="text-slate-400 group-hover/notif:text-white transition-colors" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full border-2 border-dark flex items-center justify-center animate-bounce">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              
+              {/* Notification Dropdown */}
+              <div className="absolute right-0 mt-2 w-[400px] bg-dark-lighter border border-white/10 rounded-3xl shadow-2xl opacity-0 translate-y-4 pointer-events-none group-hover/notif:opacity-100 group-hover/notif:translate-y-0 group-hover/notif:pointer-events-auto transition-all duration-300 z-50 overflow-hidden backdrop-blur-2xl">
+                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
+                  <h3 className="font-black text-white uppercase tracking-tighter italic">Neural Updates</h3>
+                  <button 
+                    onClick={() => profile && markAllAsRead(profile.id)}
+                    className="text-[10px] font-black text-primary hover:text-white uppercase tracking-[0.2em] transition-colors"
+                  >
+                    Clear All
+                  </button>
+                </div>
+                
+                <div className="max-h-[450px] overflow-y-auto scrollbar-hide divide-y divide-white/5">
+                  {notifications.length > 0 ? (
+                    notifications.map((n) => (
+                      <div 
+                        key={n.id} 
+                        onClick={() => markAsRead(n.id)}
+                        className={`p-6 hover:bg-white/2 transition-all cursor-pointer relative group/item ${!n.is_read ? 'bg-primary/5' : ''}`}
+                      >
+                        {!n.is_read && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />}
+                        <div className="flex items-start space-x-4">
+                          <div className={`mt-1 p-2 rounded-xl ${
+                            n.type === 'success' ? 'bg-accent/10 text-accent' : 
+                            n.type === 'error' ? 'bg-rose-500/10 text-rose-500' : 
+                            'bg-primary/10 text-primary'
+                          }`}>
+                            <Bell size={16} />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <p className="text-xs font-black text-white uppercase tracking-wide">{n.title}</p>
+                              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{new Date(n.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed group-hover/item:text-slate-300 transition-colors">
+                              {n.message}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-12 text-center space-y-4">
+                      <Bell size={40} className="mx-auto text-slate-800" />
+                      <p className="text-slate-500 font-medium italic text-sm">No neural signals detected. Stay sharp.</p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-4 border-t border-white/5 bg-white/2">
+                  <button className="w-full py-3 text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-[0.3em] transition-all">
+                    Syncing Protocol 1.0.4
+                  </button>
+                </div>
+              </div>
+            </div>
             
             <Link to="/profile" className="flex items-center space-x-3 p-1 rounded-full border border-white/10 hover:border-primary/50 transition-all bg-white/5">
               <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden">

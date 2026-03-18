@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layout/MainLayout';
 import TradingDashboard from './pages/TradingDashboard';
+import Dashboard from './pages/Dashboard';
 import Investments from './pages/Investments';
 import Wallet from './pages/Wallet';
 import AdminPanel from './pages/AdminPanel';
@@ -106,7 +107,7 @@ const App: React.FC = () => {
         <Route path="/" element={
           <ProtectedRoute>
             <MainLayout>
-              <TradingDashboard />
+              <Dashboard />
             </MainLayout>
           </ProtectedRoute>
         } />

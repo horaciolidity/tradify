@@ -12,13 +12,15 @@ import {
 } from 'lucide-react';
 import type { Plan, Investment } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
-
+import { useNotificationStore } from '../store/useNotificationStore';
 import { supabase } from '../services/supabase';
 
 const Investments: React.FC = () => {
   const { wallet, profile, setWallet } = useAuthStore();
+  const { addNotification } = useNotificationStore();
   const [activeTab, setActiveTab] = useState<'plans' | 'active' | 'history'>('plans');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [poolBalance, setPoolBalance] = useState<number>(500000);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [activeInvestments, setActiveInvestments] = useState<Investment[]>([]);
   const [investmentAmount, setInvestmentAmount] = useState<string>('');
@@ -26,8 +28,21 @@ const Investments: React.FC = () => {
 
   React.useEffect(() => {
     fetchPlans();
+    fetchPoolStats();
     if (profile) fetchActiveInvestments();
   }, [profile]);
+
+  const fetchPoolStats = async () => {
+    const { data } = await supabase
+      .from('admin_settings')
+      .select('value')
+      .eq('key', 'pool_guaranteed')
+      .single();
+    
+    if (data?.value?.amount) {
+      setPoolBalance(data.value.amount);
+    }
+  };
 
   const fetchPlans = async () => {
     const { data, error } = await supabase.from('plans').select('*').eq('is_active', true);
@@ -93,14 +108,21 @@ const Investments: React.FC = () => {
         status: 'completed'
       });
 
-      // 4. Handle Referral Rewards (3 Levels)
+      // 4. Send Notification
+      await addNotification(
+        profile.id,
+        'Investment Active',
+        `Successfully staked ${amount} USDC in ${selectedPlan.name}. Neural synchronization complete.`,
+        'success'
+      );
+
+      // 5. Handle Referral Rewards (3 Levels)
       await handleReferralRewards(profile.id, amount);
 
       setWallet({ ...wallet, balance_usdc: newBalance });
       setSelectedPlan(null);
       setInvestmentAmount('');
       fetchActiveInvestments();
-      alert('Investment successful!');
     } catch (error) {
       console.error('Investment error:', error);
       alert('Failed to create investment');
@@ -170,6 +192,14 @@ const Investments: React.FC = () => {
               commission_earned: commission,
               level: lvl.level
             });
+
+            // 4. Send Notification to Referrer
+            await addNotification(
+              referrerId,
+              'Referral Commission',
+              `Level ${lvl.level} commission of ${commission} USDC received from your network.`,
+              'referral'
+            );
           }
         }
         
@@ -237,13 +267,13 @@ const Investments: React.FC = () => {
               </div>
               <div className="flex flex-col items-end">
                 <span className="text-sm text-slate-500 font-medium">Pool Balance</span>
-                <span className="text-4xl font-bold text-white tracking-tight">500,000.00 <span className="text-lg font-normal text-slate-500">USDC</span></span>
+                <span className="text-4xl font-black text-white tracking-tight italic">{poolBalance.toLocaleString()} <span className="text-lg font-normal text-slate-500">USDC</span></span>
                 <div className="w-full h-2 bg-white/5 rounded-full mt-4 overflow-hidden border border-white/5">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: '85%' }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="h-full bg-primary shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                    className="h-full bg-primary shadow-[0_0_15px_rgba(var(--color-primary),0.5)]"
                   />
                 </div>
               </div>

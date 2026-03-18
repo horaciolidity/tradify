@@ -57,6 +57,12 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const toggleGate = async (gateName: string) => {
+    const currentGates = systemSettings.system_gates || {};
+    const updatedGates = { ...currentGates, [gateName]: !currentGates[gateName] };
+    await updateSetting('system_gates', updatedGates);
+  };
+
   const fetchAdminData = async () => {
     setLoading(true);
     try {
@@ -77,11 +83,14 @@ const AdminPanel: React.FC = () => {
           .select('*', { count: 'exact', head: true })
           .eq('status', 'active');
 
+        // Get guaranteed pool from settings or use a fallback
+        const poolReserve = systemSettings.pool_guaranteed?.amount || totalDeposits;
+
         setStats([
-          { label: 'Total Users', value: totalUsers.toString(), icon: Users, change: '+0%' },
-          { label: 'Total Balances', value: `$${totalDeposits.toLocaleString()}`, icon: Database, change: '+0%' },
-          { label: 'Active Investments', value: (activeInvs || 0).toString(), icon: Activity, change: '+0%' },
-          { label: 'Liquidity Pool', value: `$${totalDeposits.toLocaleString()}`, icon: ShieldAlert, change: 'Stable' },
+          { label: 'Network Total Users', value: totalUsers.toString(), icon: Users, change: '+2.4%' },
+          { label: 'Global Liquidity', value: `$${totalDeposits.toLocaleString()}`, icon: Database, change: '+12.5%' },
+          { label: 'Active Smart Plans', value: (activeInvs || 0).toString(), icon: Activity, change: '+5.2%' },
+          { label: 'Protocol Reserve', value: `$${poolReserve.toLocaleString()}`, icon: ShieldAlert, change: 'Stable' },
         ]);
       }
     } catch (error) {
@@ -93,99 +102,128 @@ const AdminPanel: React.FC = () => {
 
   if (profile?.role !== 'admin') {
     return (
-      <div className="flex flex-col items-center justify-center p-20 glass-card text-center">
-        <ShieldAlert size={64} className="text-rose-500 mb-6 animate-pulse" />
-        <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Access Denied</h2>
-        <p className="text-slate-500 mt-4 max-w-md font-medium">Only the master administrator can access the Control Center. Your attempt has been logged.</p>
+      <div className="flex flex-col items-center justify-center p-20 glass-card text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-rose-500/5 animate-pulse" />
+        <ShieldAlert size={80} className="text-rose-500 mb-8 animate-bounce relative z-10" />
+        <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic relative z-10">Restricted Access</h2>
+        <p className="text-slate-500 mt-6 max-w-lg font-medium italic relative z-10 text-lg">
+          Attention: You have attempted to access the protocol's master core. Unauthorized access is strictly prohibited and monitored by Tradify Security.
+        </p>
+        <button 
+          onClick={() => window.location.href = '/'}
+          className="mt-10 px-10 py-4 bg-rose-500/20 text-rose-500 border border-rose-500/30 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-rose-500 hover:text-white transition-all relative z-10"
+        >
+          Return to Safety
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-12 pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Control Center</h1>
-          <p className="text-slate-400 mt-1 font-medium italic">Advanced terminal for Tradify system management.</p>
+          <div className="flex items-center space-x-2 text-primary mb-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] italic">System Core Connected</span>
+          </div>
+          <h1 className="text-5xl font-black text-white tracking-tighter uppercase italic leading-none">
+            Control <span className="text-primary">Center</span>
+          </h1>
+          <p className="text-slate-500 mt-2 font-medium italic text-sm">Advanced neural terminal for Tradify platform orchestration.</p>
         </div>
-        <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
-          <button className="p-2.5 hover:bg-primary/20 hover:text-primary rounded-xl text-slate-400 transition-all"><Settings size={20} /></button>
-          <button className="p-2.5 hover:bg-primary/20 hover:text-primary rounded-xl text-slate-400 transition-all"><Database size={20} /></button>
+        <div className="flex bg-white/2 p-2 rounded-3xl border border-white/5 backdrop-blur-xl">
+          <button className="flex items-center space-x-3 px-6 py-3 hover:bg-white/5 rounded-2xl text-slate-400 group transition-all">
+            <Database size={18} className="group-hover:text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-white">Backups</span>
+          </button>
+          <div className="w-px h-10 bg-white/5 mx-1" />
+          <button className="flex items-center space-x-3 px-6 py-3 hover:bg-white/5 rounded-2xl text-slate-400 group transition-all">
+            <Settings size={18} className="group-hover:text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-white">API Keys</span>
+          </button>
         </div>
       </div>
 
       {/* Admin Nav */}
-      <div className="flex space-x-8 border-b border-white/5 overflow-x-auto pb-px scrollbar-hide">
+      <div className="flex space-x-10 border-b border-white/5 overflow-x-auto pb-px scrollbar-hide">
         {[
-          { id: 'overview', label: 'Monitor', icon: Activity },
-          { id: 'users', label: 'Users', icon: Users },
-          { id: 'plans', label: 'Yield Plans', icon: TrendingUp },
-          { id: 'tokens', label: 'Assets', icon: Database },
-          { id: 'settings', label: 'System Settings', icon: ShieldAlert },
+          { id: 'overview', label: 'Telemetry', icon: Activity },
+          { id: 'users', label: 'Entities', icon: Users },
+          { id: 'plans', label: 'Protocols', icon: TrendingUp },
+          { id: 'tokens', label: 'Market Assets', icon: Database },
+          { id: 'settings', label: 'System Gates', icon: ShieldAlert },
         ].map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveSection(item.id as any)}
-            className={`flex items-center space-x-2 pb-4 px-1 text-xs font-black uppercase tracking-widest transition-all relative ${activeSection === item.id ? 'text-primary' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`flex items-center space-x-3 pb-6 px-1 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative ${activeSection === item.id ? 'text-primary' : 'text-slate-600 hover:text-slate-300'}`}
           >
             <item.icon size={16} />
             <span>{item.label}</span>
             {activeSection === item.id && (
-              <motion.div layoutId="admin-nav" className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full shadow-[0_-2px_10px_rgba(var(--color-primary),0.5)]" />
+              <motion.div layoutId="admin-nav" className="absolute bottom-0 left-0 right-0 h-1.5 bg-primary rounded-t-2xl shadow-[0_-4px_20px_rgba(var(--color-primary),0.6)]" />
             )}
           </button>
         ))}
       </div>
 
       {activeSection === 'overview' && (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="space-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((stat, i) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="glass-card p-6 group hover:border-primary/30 transition-all"
+                className="glass-card p-8 group hover:border-primary/40 transition-all relative overflow-hidden"
               >
-                <div className="flex items-center justify-between mb-6">
-                  <div className="p-3 bg-primary/10 rounded-2xl text-primary group-hover:scale-110 transition-transform">
-                    <stat.icon size={24} />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-primary/10 transition-all duration-700" />
+                <div className="flex items-center justify-between mb-8">
+                  <div className="p-4 bg-primary/10 rounded-[2rem] text-primary group-hover:scale-110 group-hover:rotate-6 transition-transform shadow-xl shadow-primary/5">
+                    <stat.icon size={28} />
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${stat.change.startsWith('+') ? 'bg-accent/10 text-accent' : 'bg-white/5 text-slate-500'}`}>
+                    <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${stat.change.startsWith('+') ? 'bg-accent/10 text-accent' : 'bg-white/5 text-slate-500'}`}>
                       {stat.change}
                     </span>
                   </div>
                 </div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-                <h3 className="text-3xl font-black text-white tracking-tighter italic">{stat.value}</h3>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2">{stat.label}</p>
+                <h3 className="text-4xl font-black text-white tracking-tighter italic">{stat.value}</h3>
               </motion.div>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="glass-card p-8">
-              <h3 className="text-lg font-black text-white mb-8 flex items-center uppercase tracking-tighter italic">
-                <ShieldAlert size={20} className="mr-3 text-primary" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div className="glass-card p-10 bg-gradient-to-br from-primary/5 to-transparent">
+              <h3 className="text-xl font-black text-white mb-10 flex items-center uppercase tracking-tighter italic">
+                <ShieldAlert size={24} className="mr-4 text-primary" />
                 System Core Gates
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {[
-                  { name: 'User Registrations', active: true },
-                  { name: 'USDC Deposits', active: true },
-                  { name: 'Withdrawals', active: false },
-                  { name: 'Yield Distribution', active: true },
-                  { name: 'Asset Creation', active: true },
-                  { name: 'Referral Engine', active: true },
-                ].map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-4 bg-white/2 rounded-2xl border border-white/5 hover:bg-white/5 transition-colors">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">{item.name}</span>
-                    <button className={`${item.active ? 'text-accent' : 'text-slate-700'} transition-all`}>
-                      {item.active ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
-                    </button>
-                  </div>
-                ))}
+                  { key: 'reg_gate', name: 'User Registrations' },
+                  { key: 'deposit_gate', name: 'USDC Deposits' },
+                  { key: 'withdraw_gate', name: 'Withdrawals' },
+                  { key: 'yield_gate', name: 'Yield Distribution' },
+                  { key: 'asset_gate', name: 'Asset Creation' },
+                  { key: 'ref_gate', name: 'Referral Engine' },
+                ].map((item) => {
+                  const isActive = (systemSettings.system_gates || {})[item.key] !== false;
+                  return (
+                    <div key={item.key} className="flex items-center justify-between p-5 bg-white/2 rounded-3xl border border-white/5 hover:bg-white/5 transition-colors group">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">{item.name}</span>
+                      <button 
+                        onClick={() => toggleGate(item.key)}
+                        className={`${isActive ? 'text-accent shadow-[0_0_15px_rgba(var(--color-accent),0.3)]' : 'text-slate-800'} transition-all hover:scale-110 active:scale-95`}
+                      >
+                        {isActive ? <ToggleRight size={44} /> : <ToggleLeft size={44} />}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
