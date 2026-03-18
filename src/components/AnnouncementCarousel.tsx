@@ -55,7 +55,7 @@ const AnnouncementCarousel: React.FC = () => {
   const active = announcements[activeIndex];
 
   return (
-    <div className="relative h-64 md:h-80 rounded-[2.5rem] overflow-hidden group shadow-2xl glass-card border-white/5">
+    <div className="relative h-56 md:h-80 rounded-2xl md:rounded-[2.5rem] overflow-hidden group shadow-2xl glass-card border-white/5">
       <AnimatePresence mode="wait">
         <motion.div
           key={activeIndex}
@@ -70,7 +70,7 @@ const AnnouncementCarousel: React.FC = () => {
             alt={active.title} 
             className="w-full h-full object-cover brightness-[0.4] transition-transform duration-1000 group-hover:scale-105" 
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent flex flex-col justify-center px-12 md:px-20">
+          <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/60 to-transparent flex flex-col justify-center px-8 md:px-20">
             <div className="flex items-center space-x-3 mb-4">
               <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] italic ${
                 active.type === 'pre_launch' ? 'bg-amber-500/20 text-amber-500' : 
@@ -85,20 +85,20 @@ const AnnouncementCarousel: React.FC = () => {
               </div>
             </div>
             
-            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic leading-none mb-6 max-w-2xl">
+            <h2 className="text-xl md:text-5xl font-black text-white tracking-tighter uppercase italic leading-tight mb-4 md:mb-6 max-w-2xl">
               {active.title}
             </h2>
             
-            <p className="text-slate-400 text-sm font-medium italic max-w-md leading-relaxed mb-8">
+            <p className="text-slate-400 text-[10px] md:text-sm font-medium italic max-w-md leading-relaxed mb-6 md:mb-8 line-clamp-2 md:line-clamp-none">
               {active.content}
             </p>
 
-            <div className="flex items-center space-x-4">
-              <button className="px-8 py-3 bg-primary text-black font-black uppercase tracking-widest text-[10px] italic rounded-xl hover:bg-white transition-all transform hover:-translate-y-1 shadow-xl shadow-primary/20">
-                Explore Protocol
+            <div className="flex items-center space-x-3 md:space-x-4">
+              <button className="px-6 md:px-8 py-2 md:py-3 bg-primary text-black font-black uppercase tracking-widest text-[8px] md:text-[10px] italic rounded-lg md:rounded-xl hover:bg-white transition-all transform hover:-translate-y-1 shadow-xl shadow-primary/20">
+                Explore
               </button>
-              <button className="p-3 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-all border border-white/5">
-                <Info size={18} />
+              <button className="p-2 md:p-3 bg-white/5 hover:bg-white/10 rounded-lg md:rounded-xl text-white transition-all border border-white/5">
+                <Info className="w-4 h-4 md:w-[18px] md:h-[18px]" />
               </button>
             </div>
           </div>
