@@ -127,34 +127,53 @@ const App: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
+    let authTimeout: any;
+
+    // Safety timeout: If initialization takes more than 5 seconds, force loading to false
+    authTimeout = setTimeout(() => {
+      if (mounted && useAuthStore.getState().loading) {
+        console.warn("Auth initialization timed out. Forcing UI to ready state.");
+        setLoading(false);
+      }
+    }, 5000);
 
     const initAuth = async () => {
       try {
-        setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log("Initializing Auth Protocol...");
+        const { data: { session }, error } = await supabase.auth.getSession();
         
+        if (error) throw error;
+
         if (mounted) {
           if (session?.user) {
             setUser(session.user);
             await fetchProfile(session.user.id);
           } else {
+            console.log("No active session found.");
             setLoading(false);
           }
         }
       } catch (err) {
-        console.error("Auth init error:", err);
+        console.error("Auth init fatal error:", err);
         if (mounted) setLoading(false);
+      } finally {
+        if (mounted) clearTimeout(authTimeout);
       }
     };
 
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`Auth Event Detected: ${event}`);
       if (mounted) {
         if (session?.user) {
           setUser(session.user);
-          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          // Only fetch if it's a structural change or if loading is still true
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || (event === 'INITIAL_SESSION' && loading)) {
             await fetchProfile(session.user.id);
+          } else if (event === 'TOKEN_REFRESHED') {
+            // Just ensure loading is false if it was somehow stuck
+            setLoading(false);
           }
         } else {
           setUser(null);
@@ -167,31 +186,37 @@ const App: React.FC = () => {
 
     return () => {
       mounted = false;
+      clearTimeout(authTimeout);
       subscription.unsubscribe();
     };
   }, []);
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      console.log("Fetching core identity data...");
+      
+      // Parallel fetch for speed
+      const [profileResponse, walletResponse] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', userId).single(),
+        supabase.from('wallets').select('*').eq('user_id', userId).single()
+      ]);
 
-      if (profileData) setProfile(profileData);
+      if (profileResponse.data) {
+        setProfile(profileResponse.data);
+      } else if (profileResponse.error) {
+        console.warn("Profile fetch warning:", profileResponse.error.message);
+      }
 
-      const { data: walletData } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      if (walletResponse.data) {
+        setWallet(walletResponse.data);
+      } else if (walletResponse.error) {
+        console.warn("Wallet fetch warning:", walletResponse.error.message);
+      }
 
-      if (walletData) setWallet(walletData);
     } catch (error) {
       console.error('Core hydration error:', error);
     } finally {
-      setLoading(false);
+      if (loading) setLoading(false);
     }
   };
 
