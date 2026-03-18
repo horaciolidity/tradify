@@ -15,6 +15,8 @@ import {
 import { useAuthStore } from '../store/useAuthStore';
 import { supabase } from '../services/supabase';
 import { Link } from 'react-router-dom';
+import MarketTicker from '../components/MarketTicker';
+import AnnouncementCarousel from '../components/AnnouncementCarousel';
 
 const Dashboard: React.FC = () => {
   const { profile, wallet } = useAuthStore();
@@ -70,7 +72,18 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-12 pb-20">
+    <div className="space-y-12 pb-20 -mt-6">
+      {/* Dynamic Market Ticker */}
+      <div className="-mx-12 mb-12">
+        <div className="px-12 mb-4">
+          <div className="flex items-center space-x-3 text-primary">
+            <TrendingUp size={16} className="text-primary animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Global Ledger Updates / Syncing</span>
+          </div>
+        </div>
+        <MarketTicker />
+      </div>
+
       {/* Welcome Hero */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div className="space-y-4">
@@ -104,8 +117,14 @@ const Dashboard: React.FC = () => {
               {wallet?.balance_usdc.toLocaleString() || '0.00'} <span className="text-sm font-normal text-slate-500 not-italic uppercase tracking-widest ml-1">USDC</span>
             </p>
           </div>
-          <ChevronRight size={24} className="text-slate-800 ml-4 group-hover:text-primary transition-all group-hover:translate-x-1" />
+            <ChevronRight size={24} className="text-slate-800 ml-4 group-hover:text-primary transition-all group-hover:translate-x-1" />
         </Link>
+      </div>
+
+      {/* Announcement Segment */}
+      <div className="relative group">
+        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+        <AnnouncementCarousel />
       </div>
 
       {/* Stats Display */}

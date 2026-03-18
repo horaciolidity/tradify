@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, Clock, Maximize2, Settings, ShieldCheck, Zap,
 import { motion, AnimatePresence } from 'framer-motion';
 import TradingChat from '../components/TradingChat';
 import AnnouncementCarousel from '../components/AnnouncementCarousel';
+import MarketTicker from '../components/MarketTicker';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { supabase } from '../services/supabase';
@@ -89,11 +90,15 @@ const TradingDashboard: React.FC = () => {
     MarketService.startSimulation();
     const unsubscribe = MarketService.subscribe((data) => {
       setTickers(data);
-      const active = data.find(t => t.symbol === selectedSymbol);
-      if (active) setCurrentTicker(active);
     });
     return () => { unsubscribe(); };
-  }, [selectedSymbol]);
+  }, []);
+
+  // Update currentTicker when tickers or selectedSymbol changes
+  useEffect(() => {
+    const active = tickers.find(t => t.symbol === selectedSymbol);
+    if (active) setCurrentTicker(active);
+  }, [tickers, selectedSymbol]);
 
   // Fetch Asset Balance
   useEffect(() => {
@@ -219,18 +224,8 @@ const TradingDashboard: React.FC = () => {
   return (
     <div className="space-y-8 pb-10">
       {/* Ticker Tape */}
-      <div className="ticker-wrap -mx-10 px-10">
-        <div className="ticker-content flex space-x-12">
-          {tickers.map(t => (
-            <div key={t.symbol} className="flex items-center space-x-3 group cursor-pointer hover:bg-white/2 px-4 py-1 rounded-xl transition-all">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.symbol}</span>
-              <span className="text-xs font-mono font-bold text-white italic">${t.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              <span className={`text-[10px] font-black ${t.change >= 0 ? 'text-accent' : 'text-error'}`}>
-                {t.change >= 0 ? '+' : ''}{t.change.toFixed(2)}%
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="-mx-12">
+        <MarketTicker />
       </div>
 
       {/* Asset Header */}
