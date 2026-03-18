@@ -9,22 +9,24 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#6366f1',
-          dark: '#4f46e5',
-        },
-        secondary: {
-          DEFAULT: '#ec4899',
-          dark: '#db2777',
-        },
-        dark: {
-          DEFAULT: '#0f172a',
-          lighter: '#1e293b',
-          lightest: '#334155',
+          DEFAULT: '#F3BA2F',
+          dark: '#C99400',
         },
         accent: {
-          DEFAULT: '#10b981',
+          DEFAULT: '#0ECB81',
           dark: '#059669',
+        },
+        dark: {
+          DEFAULT: '#0B0E11',
+          lighter: '#1E2329',
+          lightest: '#2B3139',
+        },
+        error: {
+          DEFAULT: '#F6465D',
         }
+      },
+      opacity: {
+        '2': '0.02',
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
