@@ -34,7 +34,6 @@ const Dashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // 1. Fetch Investment Stats
       const { data: investments } = await supabase
         .from('investments')
         .select('amount, status')
@@ -43,7 +42,6 @@ const Dashboard: React.FC = () => {
       const totalInvested = investments?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
       const activeCount = investments?.filter(i => i.status === 'active').length || 0;
 
-      // 2. Fetch Referral Stats
       const { data: referrals } = await supabase
         .from('referrals')
         .select('commission_earned')
@@ -51,7 +49,6 @@ const Dashboard: React.FC = () => {
       
       const totalRef = referrals?.reduce((acc, curr) => acc + Number(curr.commission_earned), 0) || 0;
 
-      // 3. Fetch Recent Transactions
       const { data: txs } = await supabase
         .from('transactions')
         .select('*')
@@ -66,154 +63,173 @@ const Dashboard: React.FC = () => {
         recentTransactions: txs || []
       });
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('Core sync error:', error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-10 pb-10">
-      {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center space-x-2 text-primary mb-2">
-            <LayoutDashboard size={18} />
-            <span className="text-xs font-black uppercase tracking-[0.2em] italic">Member Portal</span>
+    <div className="space-y-12 pb-20">
+      {/* Welcome Hero */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3 text-primary">
+            <div className="w-10 h-[2px] bg-primary/30 rounded-full" />
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Neural Protocol / 1.0.4</span>
           </div>
-          <h1 className="text-4xl font-black text-white uppercase tracking-tighter italic">
-            Welcome, <span className="text-primary">{profile?.full_name?.split(' ')[0] || 'Trader'}</span>
+          <h1 className="text-6xl md:text-7xl font-black text-white tracking-tighter italic leading-none">
+            Welcome, <br />
+            <span className="bg-gradient-to-r from-primary via-indigo-400 to-accent bg-clip-text text-transparent">
+              {profile?.full_name?.split(' ')[0] || 'Member'}
+            </span>
           </h1>
-          <p className="text-slate-500 mt-1 font-medium italic">Your crypto empire at a glance.</p>
+          <p className="text-slate-500 font-bold italic tracking-wide flex items-center">
+            <Zap size={16} className="text-accent mr-2" />
+            System status: Synchronized & Secured
+          </p>
         </div>
         
         <Link 
           to="/wallet" 
-          className="glass-card flex items-center space-x-4 p-4 pr-6 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/50 transition-all group"
+          className="glass-card flex items-center space-x-6 p-6 pr-10 hover:border-primary/40 transition-all group relative overflow-hidden bg-white/2"
         >
-          <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-            <Wallet size={24} />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="w-16 h-16 bg-primary/20 rounded-[1.5rem] flex items-center justify-center text-primary group-hover:scale-110 group-hover:rotate-6 transition-all shadow-[0_0_30px_rgba(139,92,246,0.2)]">
+            <Wallet size={28} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Available Balance</p>
-            <p className="text-2xl font-black text-white italic tracking-tighter">
-              {wallet?.balance_usdc.toLocaleString() || '0.00'} <span className="text-xs font-normal text-slate-500">USDC</span>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-1">Treasury Balance</p>
+            <p className="text-4xl font-black text-white italic tracking-tighter">
+              {wallet?.balance_usdc.toLocaleString() || '0.00'} <span className="text-sm font-normal text-slate-500 not-italic uppercase tracking-widest ml-1">USDC</span>
             </p>
           </div>
-          <ChevronRight size={20} className="text-slate-700 ml-4 group-hover:text-primary transition-colors" />
+          <ChevronRight size={24} className="text-slate-800 ml-4 group-hover:text-primary transition-all group-hover:translate-x-1" />
         </Link>
       </div>
 
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Display */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {[
-          { label: 'Total Invested', value: `$${stats.totalInvested.toLocaleString()}`, icon: TrendingUp, color: 'text-primary' },
-          { label: 'Active Plans', value: stats.activeInvestments, icon: Zap, color: 'text-accent' },
-          { label: 'Network Rewards', value: `$${stats.totalReferralEarned.toLocaleString()}`, icon: Users, color: 'text-indigo-400' },
-          { label: 'Safety Score', value: '98%', icon: ShieldCheck, color: 'text-emerald-400' },
-        ].map((stat, i) => (
+          { label: 'Total Capital', value: `$${stats.totalInvested.toLocaleString()}`, icon: TrendingUp, color: 'text-primary', delay: 0 },
+          { label: 'Neural Nodes', value: stats.activeInvestments, icon: Zap, color: 'text-accent', delay: 0.1 },
+          { label: 'Network Yield', value: `$${stats.totalReferralEarned.toLocaleString()}`, icon: Users, color: 'text-indigo-400', delay: 0.2 },
+          { label: 'Safety Integrity', value: '99.9%', icon: ShieldCheck, color: 'text-emerald-400', delay: 0.3 },
+        ].map((stat) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="glass-card p-6 relative overflow-hidden group hover:border-white/20 transition-all"
+            transition={{ delay: stat.delay, duration: 0.6 }}
+            className="glass-card p-10 relative overflow-hidden group hover:border-white/20 transition-all border-white/5"
           >
-            <div className={`absolute top-0 right-0 w-24 h-24 bg-current/5 blur-[40px] rounded-full -mr-12 -mt-12 transition-all group-hover:bg-current/10 ${stat.color}`} />
-            <div className={`p-3 bg-white/2 rounded-2xl w-fit mb-6 ${stat.color}`}>
-              <stat.icon size={24} />
+            <div className={`absolute -top-10 -right-10 w-40 h-40 bg-current/5 blur-[80px] rounded-full transition-all group-hover:bg-current/10 ${stat.color}`} />
+            <div className={`p-4 bg-white/2 rounded-2xl w-fit mb-8 border border-white/5 ${stat.color} group-hover:scale-110 transition-transform`}>
+              <stat.icon size={28} />
             </div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-            <h3 className="text-3xl font-black text-white italic tracking-tighter">{stat.value}</h3>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2">{stat.label}</p>
+            <h3 className="text-4xl font-black text-white italic tracking-tighter leading-none">{stat.value}</h3>
           </motion.div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Activity */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Recent Activity</h3>
-            <Link to="/wallet" className="text-xs font-black text-primary hover:text-white transition-colors uppercase tracking-widest">Full Log</Link>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 space-y-8">
+          <div className="flex items-center justify-between px-4">
+            <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic flex items-center">
+              <Clock size={24} className="text-primary mr-3" />
+              Transaction Stream
+            </h3>
+            <Link to="/wallet" className="text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-[0.3em] border-b border-primary/20 pb-1">Historical Archive</Link>
           </div>
           
-          <div className="glass-card overflow-hidden">
+          <div className="glass-card overflow-hidden bg-white/2 border-white/5">
             {stats.recentTransactions.length > 0 ? (
               <div className="divide-y divide-white/5">
-                {stats.recentTransactions.map((tx) => (
-                  <div key={tx.id} className="p-5 flex items-center justify-between hover:bg-white/2 transition-colors">
-                    <div className="flex items-center space-x-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                {stats.recentTransactions.map((tx, idx) => (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + (idx * 0.1) }}
+                    key={tx.id} 
+                    className="p-8 flex items-center justify-between hover:bg-white/5 transition-all group cursor-default"
+                  >
+                    <div className="flex items-center space-x-6">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:rotate-12 ${
                         tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' 
-                          ? 'bg-accent/10 text-accent' 
-                          : 'bg-rose-500/10 text-rose-500'
+                          ? 'bg-accent/10 text-accent border border-accent/20' 
+                          : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
                       }`}>
-                        {tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
+                        {tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' ? <ArrowUpRight size={24} /> : <ArrowDownRight size={24} />}
                       </div>
                       <div>
-                        <p className="text-sm font-black text-white uppercase tracking-wide">{tx.type}</p>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest opacity-60">
-                          {new Date(tx.created_at).toLocaleDateString()} • {tx.description?.slice(0, 30)}...
+                        <p className="text-sm font-black text-white uppercase tracking-widest italic">{tx.type} Sequence</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-60">
+                          {new Date(tx.created_at).toLocaleDateString()} • ID: {tx.id.slice(0,8)}
                         </p>
                       </div>
                     </div>
-                    <p className={`text-lg font-black italic tracking-tighter ${
-                      tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral'
-                        ? 'text-accent'
-                        : 'text-white'
-                    }`}>
-                      {tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' ? '+' : '-'}{tx.amount.toLocaleString()} <span className="text-[10px] font-normal text-slate-500">USDC</span>
-                    </p>
-                  </div>
+                    <div className="text-right">
+                      <p className={`text-2xl font-black italic tracking-tighter ${
+                        tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral'
+                          ? 'text-accent'
+                          : 'text-white'
+                      }`}>
+                        {tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' ? '+' : '-'}{tx.amount.toLocaleString()} <span className="text-xs font-normal text-slate-500 not-italic ml-1">USDC</span>
+                      </p>
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Protocol Confirmed</span>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
-              <div className="p-10 text-center space-y-4">
-                <Clock size={40} className="mx-auto text-slate-800" />
-                <p className="text-slate-500 font-medium italic">No recent protocols found. Execute your first investment to start tracking.</p>
+              <div className="p-20 text-center space-y-6">
+                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/5">
+                  <Clock size={40} className="text-slate-800" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-white font-black uppercase tracking-widest italic">Stream Offline</p>
+                  <p className="text-slate-500 font-medium italic text-xs max-w-xs mx-auto">Execute your first neural investment plan to initiate the tracking sequence.</p>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Quick Links / Status */}
-        <div className="space-y-8">
-          <div className="glass-card p-8 bg-gradient-to-br from-indigo-500/5 to-transparent relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[50px] rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/20 transition-all duration-700" />
-            <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tighter italic">Platform Status</h3>
+        <div className="space-y-10">
+          <motion.div 
+            whileHover={{ y: -5 }}
+            className="glass-card p-10 bg-gradient-to-br from-primary/10 via-transparent to-transparent relative overflow-hidden group border-primary/20"
+          >
+            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/20 blur-[60px] rounded-full -mr-20 -mt-20 group-hover:bg-primary/30 transition-all duration-700" />
+            <div className="flex items-center space-x-3 mb-8">
+              <ShieldCheck size={20} className="text-primary" />
+              <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Platform Node Status</h3>
+            </div>
             <div className="space-y-4">
               {[
-                { label: 'Exchange Protocol', active: true },
-                { label: 'Investment Gateway', active: true },
-                { label: 'Withdrawal Port', active: true },
-                { label: 'Referral Engine', active: true },
+                { label: 'Market Engine', active: true },
+                { label: 'USDC Bridge', active: true },
+                { label: 'Neural Trading', active: true },
+                { label: 'Referral Mesh', active: true },
               ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between p-4 bg-white/2 rounded-2xl border border-white/5">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.label}</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(var(--color-accent),0.5)] animate-pulse" />
-                    <span className="text-[10px] font-black text-accent uppercase tracking-widest">Active</span>
+                <div key={item.label} className="flex items-center justify-between p-5 bg-white/2 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 rounded-full bg-accent shadow-[0_0_15px_rgba(16,185,129,0.8)] animate-pulse" />
+                    <span className="text-[9px] font-black text-accent uppercase tracking-[0.2em]">Active</span>
                   </div>
                 </div>
               ))}
             </div>
-            <Link to="/investments" className="mt-8 block w-full primary-button py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center shadow-2xl shadow-primary/30">
-              New Investment Plan
-            </Link>
-          </div>
-
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
-            className="glass-card p-8 border-primary/20 bg-primary/5 cursor-pointer relative group"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <TrendingUp size={24} className="text-primary group-hover:scale-110 transition-transform" />
-              <ArrowUpRight size={20} className="text-slate-700 group-hover:text-primary" />
-            </div>
-            <h3 className="text-lg font-black text-white uppercase tracking-tighter italic">Market Pulse</h3>
-            <p className="text-xs text-slate-400 mt-2 font-medium">BTC is currently up 2.4% in the last 24h. Perfect conditions for T-Series plans.</p>
-            <Link to="/trading" className="absolute inset-0" />
           </motion.div>
+
+          <Link to="/investments" className="block p-10 glass-card bg-primary text-white relative overflow-hidden group text-center shadow-[0_20px_40px_rgba(139,92,246,0.3)] border-none">
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <Zap size={40} className="mx-auto mb-4 group-hover:scale-110 group-hover:rotate-12 transition-transform" />
+            <span className="text-xs font-black uppercase tracking-[0.4em]">Initialize</span>
+            <h4 className="text-3xl font-black italic tracking-tighter mt-1">NEW INVESTMENT</h4>
+          </Link>
         </div>
       </div>
     </div>

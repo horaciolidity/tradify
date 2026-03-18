@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import MainLayout from './layout/MainLayout';
 import TradingDashboard from './pages/TradingDashboard';
 import Dashboard from './pages/Dashboard';
@@ -13,15 +14,26 @@ import Tasks from './pages/Tasks';
 import { useAuthStore } from './store/useAuthStore';
 import { supabase } from './services/supabase';
 
+const PageTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.4, ease: "easeOut" }}
+    className="h-full"
+  >
+    {children}
+  </motion.div>
+);
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuthStore();
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6" />
-        <h2 className="text-xl font-bold text-white uppercase tracking-widest">Loading Tradify</h2>
-        <p className="text-slate-500 mt-2">Connecting to secure servers...</p>
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 border-t-2 border-primary rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(139,92,246,0.2)]" />
+        <h2 className="text-2xl font-black text-white uppercase tracking-[0.3em] italic animate-pulse">Initializing Protocol</h2>
       </div>
     );
   }
@@ -33,28 +45,114 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  const { profile } = useAuthStore();
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {/* Public Routes */}
+        <Route path="/login" element={<PageTransition><Auth mode="login" /></PageTransition>} />
+        <Route path="/register" element={<PageTransition><Auth mode="register" /></PageTransition>} />
+
+        {/* Protected Routes */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PageTransition><Dashboard /></PageTransition>
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/trading" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PageTransition><TradingDashboard /></PageTransition>
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/referrals" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PageTransition><Referrals /></PageTransition>
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/tasks" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PageTransition><Tasks /></PageTransition>
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/custom-token" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PageTransition><CustomTokens /></PageTransition>
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/investments" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PageTransition><Investments /></PageTransition>
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/wallet" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PageTransition><Wallet /></PageTransition>
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            {profile?.role === 'admin' ? (
+              <MainLayout>
+                <PageTransition><AdminPanel /></PageTransition>
+              </MainLayout>
+            ) : <Navigate to="/" />}
+          </ProtectedRoute>
+        } />
+
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </AnimatePresence>
+  );
+};
+
 const App: React.FC = () => {
-  const { setUser, setProfile, setWallet, profile, loading, setLoading } = useAuthStore();
+  const { setUser, setProfile, setWallet, loading, setLoading } = useAuthStore();
 
   useEffect(() => {
     const initAuth = async () => {
+      setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      
       if (session?.user) {
+        setUser(session.user);
         await fetchProfile(session.user.id);
       } else {
+        // Check for Web3 Auto-auth possibility if Ethereum is available
+        const accounts = await window.ethereum?.request({ method: 'eth_accounts' }).catch(() => []);
+        if (accounts && accounts.length > 0) {
+          console.log("Web3 account detected:", accounts[0]);
+          // Here we could try to find a guest session or prompt, 
+          // but for now we just finish loading
+        }
         setLoading(false);
       }
     };
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        setLoading(true);
-        fetchProfile(session.user.id);
+        setUser(session.user);
+        await fetchProfile(session.user.id);
       } else {
+        setUser(null);
         setProfile(null);
         setWallet(null);
         setLoading(false);
@@ -64,33 +162,25 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string, retries = 3) => {
+  const fetchProfile = async (userId: string) => {
     try {
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (profileError && profileError.code === 'PGRST116' && retries > 0) {
-        setTimeout(() => fetchProfile(userId, retries - 1), 1000);
-        return;
-      }
+      if (profileData) setProfile(profileData);
 
-      if (profileError && profileError.code !== 'PGRST116') throw profileError;
-
-      let { data: walletData, error: walletError } = await supabase
+      const { data: walletData } = await supabase
         .from('wallets')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      if (walletError && walletError.code !== 'PGRST116') throw walletError;
-
-      if (profileData) setProfile(profileData);
       if (walletData) setWallet(walletData);
     } catch (error) {
-      console.error('Error fetching real data:', error);
+      console.error('Core hydration error:', error);
     } finally {
       setLoading(false);
     }
@@ -98,74 +188,7 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<Auth mode="login" />} />
-        <Route path="/register" element={<Auth mode="register" />} />
-
-        {/* Protected Routes */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Dashboard />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/trading" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <TradingDashboard />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/referrals" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Referrals />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/tasks" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Tasks />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/custom-token" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <CustomTokens />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/investments" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Investments />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/wallet" element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Wallet />
-            </MainLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            {profile?.role === 'admin' ? (
-              <MainLayout>
-                <AdminPanel />
-              </MainLayout>
-            ) : <Navigate to="/" />}
-          </ProtectedRoute>
-        } />
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <AnimatedRoutes />
     </BrowserRouter>
   );
 };

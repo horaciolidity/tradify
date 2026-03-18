@@ -32,7 +32,7 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
           },
         });
         if (signUpError) throw signUpError;
-        alert('Registration successful! Please sign in.');
+        alert('Access Protocol Initialized! Please sign in.');
         navigate('/login');
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -43,61 +43,95 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
         navigate('/');
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during authentication');
+      setError(err.message || 'Protocol Failure: Invalid Credentials');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const connectWallet = async () => {
+    if (!window.ethereum) {
+      alert('Neural Wallet (Metamask) not detected.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      console.log('Connected to:', accounts[0]);
+      // Simulation of wallet-based auth linking
+      alert('Wallet Sync Intent Detected. Please sign in with your email to link this node.');
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-dark flex flex-col md:flex-row overflow-hidden">
+    <div className="min-h-screen bg-black flex flex-col md:flex-row overflow-hidden font-sans">
+      {/* Dynamic Background Glows */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[150px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-accent/20 blur-[150px] rounded-full animate-pulse [animation-delay:2s]" />
+      </div>
+
       {/* Visual Side */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary relative items-center justify-center p-20">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-primary to-secondary opacity-90" />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20" />
+      <div className="hidden lg:flex lg:w-3/5 relative items-center justify-center p-24">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-black to-black opacity-90" />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
         
-        <div className="relative z-10 space-y-8 max-w-lg">
+        <div className="relative z-10 space-y-12 max-w-2xl">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20 shadow-2xl"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-24 h-24 bg-white/5 backdrop-blur-3xl rounded-[2rem] flex items-center justify-center border border-white/10 shadow-[0_0_50px_rgba(139,92,246,0.3)]"
           >
-            <TrendingUp size={32} className="text-white" />
+            <TrendingUp size={48} className="text-primary group-hover:rotate-12 transition-transform" />
           </motion.div>
           
-          <div className="space-y-4">
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+          <div className="space-y-6">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-6xl font-black text-white leading-none tracking-tighter"
+              className="flex items-center space-x-3 text-primary text-sm font-black uppercase tracking-[0.5em] italic"
             >
-              INVEST IN THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">FUTURE.</span>
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
+              <div className="w-12 h-[2px] bg-primary" />
+              <span>Tradify Protocol 1.0.4</span>
+            </motion.div>
+            <motion.h1 
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-primary-lighter text-xl font-medium leading-relaxed opacity-80"
+              className="text-8xl font-black text-white leading-[0.85] tracking-tighter italic"
             >
-              Access high-yield crypto investment plans with compound interest and guaranteed liquidity.
+              THE ART OF <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-indigo-400 to-accent">PRECISION.</span>
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-slate-500 text-2xl font-bold leading-relaxed max-w-lg italic opacity-80"
+            >
+              Secure high-yield neural assets with the most advanced trading ecosystem on the block.
             </motion.p>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 pt-10">
+          <div className="flex items-center space-x-10 p-8 glass-card border-white/5 bg-white/2 w-fit">
             {[
-              { label: 'Users', value: '10K+' },
-              { label: 'Volume', value: '$500M+' },
+              { label: 'Uptime', value: '100%' },
+              { label: 'Nodes', value: '1,240' },
+              { label: 'TVL', value: '$84M' },
             ].map((stat, i) => (
               <motion.div 
                 key={stat.label}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3 + (i * 0.1) }}
-                className="p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + (i * 0.1) }}
               >
-                <p className="text-4xl font-black text-white">{stat.value}</p>
-                <p className="text-sm font-bold text-white/60 uppercase tracking-widest">{stat.label}</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{stat.label}</p>
+                <p className="text-2xl font-black text-white italic tracking-tighter">{stat.value}</p>
               </motion.div>
             ))}
           </div>
@@ -105,105 +139,132 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
       </div>
 
       {/* Form Side */}
-      <div className="flex-1 flex flex-col justify-center p-8 md:p-16 lg:p-24 bg-dark relative">
-        <div className="max-w-md w-full mx-auto space-y-10">
-          <div className="lg:hidden flex items-center space-x-3 mb-12">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-              <TrendingUp className="text-white w-6 h-6" />
+      <div className="flex-1 flex flex-col justify-center p-8 md:p-16 lg:p-24 relative z-10">
+        <div className="max-w-md w-full mx-auto space-y-12">
+          <div className="flex items-center space-x-4 mb-2">
+            <div className="w-14 h-14 bg-primary/20 rounded-[1.2rem] flex items-center justify-center border border-primary/20">
+              <TrendingUp className="text-primary w-8 h-8" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-white italic">Tradify</span>
+            <div>
+              <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase">Tradify</h2>
+              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Access Point: Alpha-01</p>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <h2 className="text-4xl font-bold text-white tracking-tight">
-              {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+          <div className="space-y-3">
+            <h2 className="text-5xl font-black text-white tracking-tighter italic leading-none">
+              {mode === 'login' ? 'RE-SYNC' : 'REGISTER'}
             </h2>
-            <p className="text-slate-500 font-medium">
-              {mode === 'login' ? 'Enter your credentials to access your dashboard.' : 'Join Tradify and start growing your crypto portfolio.'}
+            <p className="text-slate-500 font-bold italic text-sm">
+              {mode === 'login' ? 'Authenticate your credentials to access the node.' : 'Initialize your personal neural node in the ecosystem.'}
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handleAuth}>
-            {error && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-500 text-sm font-medium">
-                {error}
-              </div>
-            )}
+          <div className="space-y-8">
+            <form className="space-y-6" onSubmit={handleAuth}>
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-500 text-xs font-black uppercase tracking-widest italic flex items-center"
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-3 animate-pulse" />
+                  {error}
+                </motion.div>
+              )}
 
-            {mode === 'register' && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Full Name</label>
-                <div className="relative group">
-                  <User className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
-                  <input 
-                    type="text" 
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="John Doe" 
-                    required
-                    className="input-field w-full pl-12 py-3.5 bg-white/2 hover:bg-white/5"
-                  />
+              <div className="space-y-6">
+                {mode === 'register' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Identity Name</label>
+                    <div className="relative group">
+                      <User className="absolute left-5 top-5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
+                      <input 
+                        type="text" 
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Neural Participant" 
+                        required
+                        className="input-field w-full pl-14 py-5 bg-white/2 hover:bg-white/5 border-white/5 rounded-3xl text-sm font-bold placeholder:opacity-30"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">E-Mail Interface</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-5 top-5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
+                    <input 
+                      type="email" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="node@tradify.network" 
+                      required
+                      className="input-field w-full pl-14 py-5 bg-white/2 hover:bg-white/5 border-white/5 rounded-3xl text-sm font-bold placeholder:opacity-30"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Access Cipher</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-5 top-5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
+                    <input 
+                      type="password" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••" 
+                      required
+                      className="input-field w-full pl-14 py-5 bg-white/2 hover:bg-white/5 border-white/5 rounded-3xl text-sm font-bold placeholder:opacity-30"
+                    />
+                  </div>
                 </div>
               </div>
-            )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Email Address</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com" 
-                  required
-                  className="input-field w-full pl-12 py-3.5 bg-white/2 hover:bg-white/5"
-                />
+              <button 
+                disabled={loading}
+                className="w-full primary-button py-6 text-xs font-black flex items-center justify-center space-x-3 shadow-[0_20px_40px_rgba(139,92,246,0.3)] group overflow-hidden relative rounded-3xl"
+              >
+                <span className="relative z-10">
+                  {loading ? 'INITIALIZING...' : (mode === 'login' ? 'AUTHORIZE ACCESS' : 'CREATE CORE NODE')}
+                </span>
+                {!loading && <ArrowRight size={20} className="relative z-10 group-hover:translate-x-2 transition-transform duration-500" />}
+                <div className="absolute inset-x-0 bottom-0 h-[2px] bg-white opacity-20 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-1000" />
+              </button>
+            </form>
+
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/5"></div>
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Password</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••" 
-                  required
-                  className="input-field w-full pl-12 py-3.5 bg-white/2 hover:bg-white/5"
-                />
+              <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest italic">
+                <span className="bg-black px-4 text-slate-600">Secure Bridge</span>
               </div>
             </div>
 
             <button 
+              onClick={connectWallet}
               disabled={loading}
-              className="w-full primary-button py-4 text-sm font-bold flex items-center justify-center space-x-2 shadow-2xl shadow-primary/40 group overflow-hidden relative"
+              className="w-full py-5 border border-white/5 bg-white/2 hover:bg-white/5 rounded-3xl flex items-center justify-center space-x-4 transition-all group active:scale-95"
             >
-              <span className="relative z-10">
-                {loading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Get Started')}
-              </span>
-              {!loading && <ArrowRight size={18} className="relative z-10 group-hover:translate-x-1 transition-transform" />}
-              <div className="absolute inset-0 bg-white/10 -translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
+              <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center border border-orange-500/20 group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(249,115,22,0.1)]">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Alpha_Color.svg" alt="Metamask" className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-black text-slate-400 group-hover:text-white uppercase tracking-widest transition-colors">Connect Neural Wallet</span>
             </button>
-          </form>
+          </div>
 
-          <div className="text-center space-y-6">
-            <p className="text-sm font-medium text-slate-500">
-              {mode === 'login' ? "Don't have an account?" : "Already have an account?"} {' '}
+          <div className="text-center space-y-8 pt-6">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+              {mode === 'login' ? "New to the ecosystem?" : "Already part of the network?"} {' '}
               <Link 
                 to={mode === 'login' ? '/register' : '/login'} 
-                className="text-primary hover:text-primary-dark font-bold underline underline-offset-4"
+                className="text-primary hover:text-white transition-colors underline underline-offset-8 decoration-primary/30 ml-2"
               >
-                {mode === 'login' ? 'Sign up' : 'Sign in'}
+                {mode === 'login' ? 'INITIALIZE NEW NODE' : 'LOGIN TO NODE'}
               </Link>
             </p>
-
-            <div className="flex items-center justify-center space-x-3 py-4 bg-white/2 rounded-2xl border border-white/5">
-              <ShieldCheck size={18} className="text-accent" />
-              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Secured by Supabase Auth</span>
-            </div>
           </div>
         </div>
       </div>

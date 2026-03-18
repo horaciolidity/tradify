@@ -3,89 +3,103 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --card: #f8fafc;
-  --card-border: rgba(0, 0, 0, 0.05);
-  --text-muted: #64748b;
-  --primary: #6366f1;
-  --primary-dark: #4f46e5;
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: rgba(13, 13, 18, 0.45);
+  --card-border: rgba(255, 255, 255, 0.05);
+  --text-muted: #888888;
+  --primary: #8b5cf6;
+  --primary-dark: #7c3aed;
   --accent: #10b981;
-}
-
-.dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: rgba(255, 255, 255, 0.05);
-  --card-border: rgba(255, 255, 255, 0.1);
-  --text-muted: #94a3b8;
+  --secondary: #1e1b4b;
 }
 
 @layer base {
   body {
-    @apply transition-colors duration-300 antialiased selection:bg-primary/30;
-    background-color: var(--background);
+    @apply transition-all duration-1000 antialiased selection:bg-primary/40 overflow-x-hidden;
+    background: radial-gradient(circle at 50% 0%, #17153b 0%, #000000 100%);
     color: var(--foreground);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.02em;
   }
 }
 
 @layer components {
   .glass-card {
-    background-color: var(--card);
-    backdrop-filter: blur(12px);
+    background: var(--card);
+    backdrop-filter: blur(40px) saturate(200%);
     border: 1px solid var(--card-border);
-    @apply rounded-2xl;
+    @apply rounded-[2.5rem] shadow-2xl transition-all duration-500;
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
   }
   
   .glass-button {
-    @apply px-4 py-2 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+    @apply px-8 py-4 rounded-[1.8rem] transition-all duration-500 active:scale-90 disabled:opacity-30 disabled:pointer-events-none font-black uppercase tracking-[0.2em] text-[10px] italic;
   }
 
   .primary-button {
-    @apply glass-button bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/20;
+    background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+    @apply glass-button text-white shadow-[0_15px_40px_rgba(139,92,246,0.3)] hover:shadow-[0_20px_50px_rgba(139,92,246,0.5)] hover:-translate-y-1;
   }
 
   .secondary-button {
-    background-color: var(--card);
-    @apply glass-button hover:opacity-80 border border-white/10;
+    background: rgba(255, 255, 255, 0.02);
+    @apply glass-button hover:bg-white/5 border border-white/5 text-slate-400 hover:text-white;
   }
 
   .input-field {
-    background-color: var(--card);
-    border: 1px solid var(--card-border);
-    @apply rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all;
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    @apply rounded-[1.8rem] px-8 py-5 focus:outline-none focus:ring-4 focus:ring-primary/20 transition-all font-bold;
     color: var(--foreground);
   }
 
   .sidebar-link {
-    @apply flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white;
+    @apply flex items-center space-x-4 px-6 py-5 rounded-[1.5rem] transition-all duration-500 text-slate-500 hover:text-white hover:bg-white/5 font-black uppercase tracking-[0.25em] text-[9px] italic;
   }
 
   .sidebar-link.active {
-    @apply bg-primary/10 text-primary border border-primary/20;
-  }
-
-  .text-muted {
-    color: var(--text-muted);
+    background: linear-gradient(to right, rgba(139, 92, 246, 0.1), transparent);
+    @apply text-primary border-r-4 border-primary;
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Futuristic Minimal */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-white/10 rounded-full hover:bg-slate-400 dark:hover:bg-white/20 transition-all;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  transition: all 0.5s;
 }
 
-/* TradingView Chart Customization */
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+  box-shadow: 0 0 10px var(--primary);
+}
+
+/* TradingView Chart Glow */
 .tv-lightweight-charts {
-  @apply rounded-xl overflow-hidden border border-white/10;
+  @apply rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl;
+  box-shadow: 0 0 50px rgba(139, 92, 246, 0.05);
+}
+
+/* Glow Animation */
+@keyframes pulse-glow {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.1); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 0.3; }
+}
+
+.neural-glow {
+  position: absolute;
+  filter: blur(100px);
+  z-index: -1;
+  animation: pulse-glow 8s infinite ease-in-out;
 }
