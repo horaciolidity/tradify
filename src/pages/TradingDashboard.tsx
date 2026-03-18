@@ -240,12 +240,12 @@ const TradingDashboard: React.FC = () => {
           </div>
           <div className="flex-1">
             <div className="flex items-center space-x-2 md:space-x-3 mb-0.5 md:mb-1">
-              <h1 className="text-xl md:text-4xl font-black text-white italic uppercase tracking-tighter">{selectedSymbol}</h1>
+              <h1 className="text-xl md:text-4xl font-black text-white italic uppercase tracking-tighter font-display">{selectedSymbol}</h1>
               <span className="text-[8px] md:text-[10px] font-black px-2 md:px-4 py-0.5 md:py-1 bg-primary/10 text-primary rounded-full border border-primary/20 uppercase tracking-[0.2em] italic">Spot</span>
             </div>
             <div className="flex items-center space-x-4 md:space-x-6">
               <div className="flex items-center space-x-3 md:space-x-4">
-                <span className="text-xl md:text-3xl font-mono font-black text-white italic tracking-tighter">
+                <span className="text-xl md:text-3xl font-mono font-black text-white italic tracking-tighter font-display">
                   ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                 </span>
                 <span className={`px-2 py-0.5 md:px-4 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-sm font-black flex items-center italic shadow-lg ${currentTicker && currentTicker.change >= 0 ? 'bg-accent/20 text-accent' : 'bg-error/20 text-error'}`}>

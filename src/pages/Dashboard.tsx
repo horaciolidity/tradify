@@ -91,7 +91,7 @@ const Dashboard: React.FC = () => {
             <div className="w-8 md:w-10 h-[2px] bg-primary/30 rounded-full" />
             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Trading Dashboard</span>
           </div>
-          <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter italic leading-tight md:leading-none">
+          <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter italic leading-tight md:leading-none font-display">
             Welcome, <br className="hidden md:block" />
             <span className="bg-gradient-to-r from-primary via-indigo-400 to-accent bg-clip-text text-transparent">
               {profile?.full_name?.split(' ')[0] || 'Member'}
