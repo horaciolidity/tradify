@@ -212,7 +212,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </div>
             </div>
             
-            <Link to="/profile" className="flex items-center space-x-3 p-1 rounded-full border border-white/10 hover:border-primary/50 transition-all bg-white/5">
+            <Link to="/profile" className="flex items-center space-x-2 md:space-x-3 p-1 pr-2 md:pr-4 rounded-full border border-white/10 hover:border-primary/50 transition-all bg-white/5">
               <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
@@ -220,13 +220,21 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   <span className="text-xs font-bold text-primary">{profile?.full_name?.charAt(0) || profile?.email?.charAt(0).toUpperCase()}</span>
                 )}
               </div>
-              <span className="hidden sm:inline-block text-sm font-semibold pr-3">{profile?.full_name || 'User'}</span>
+              <span className="hidden sm:inline-block text-xs md:text-sm font-semibold">{profile?.full_name?.split(' ')[0] || 'Profile'}</span>
             </Link>
+
+            <button 
+              onClick={() => signOut()}
+              className="p-2 md:p-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-full border border-rose-500/20 transition-all active:scale-90"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
           </div>
         </header>
 
         {/* Page Content */}
-        <section className="p-6 lg:p-12 flex-1 pb-32 lg:pb-12 max-w-7xl mx-auto w-full">
+        <section className="p-4 md:p-8 lg:p-12 flex-1 pb-32 lg:pb-12 max-w-7xl mx-auto w-full">
           {children}
         </section>
 
