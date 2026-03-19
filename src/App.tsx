@@ -145,52 +145,24 @@ const App: React.FC = () => {
     }, 20000);
 
     const setupAuth = async () => {
+      // 1. Proactive check for existing session on page load
+      console.log("Core: Checking initial session integrity...");
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      
+      if (initialSession?.user && mounted) {
+        console.log("Core: Active session recovered from cache.");
+        setUser(initialSession.user);
+        syncIdentity(initialSession, 'INITIAL_SESSION');
+      }
+
+      // 2. Monitor for all subsequent state changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (!mounted) return;
         console.log(`Core Auth Event: ${event}`);
 
         if (session?.user) {
           setUser(session.user);
-          
-          try {
-             // Sequential fetch with Timeout protection
-             const fetchWithTimeout = async (query: Promise<any>, timeoutMs: number) => {
-               return Promise.race([
-                 query,
-                 new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs))
-               ]);
-             };
-
-             console.log("Phase 1: Fetching Profile...");
-             const { data: pData, error: pErr } = await fetchWithTimeout(
-                supabase.from('profiles').select('*').eq('id', session.user.id).single() as any,
-                6000
-             );
-             
-             if (pErr) throw pErr;
-             if (pData) setProfile(pData);
-
-             console.log("Phase 2: Fetching Wallet...");
-             const { data: wData } = await fetchWithTimeout(
-                supabase.from('wallets').select('*').eq('user_id', session.user.id).single() as any,
-                6000
-             ).catch(() => ({ data: null })); // Wallet failure shouldn't block profile
-
-             if (wData) setWallet(wData);
-
-             console.log("Core: Synchronization Complete.");
-          } catch (e: any) {
-             console.error("Core Synchronization Failed:", e.message);
-             // ONLY kick out if it's a critical missing profile error on a new sign-in
-             // On INITIAL_SESSION, we prefer to stay logged in if possible
-             if (event === 'SIGNED_IN') {
-                console.warn("Ghost Session during SignIn. Resetting.");
-                await useAuthStore.getState().signOut();
-                return;
-             }
-          } finally {
-             if (mounted) setLoading(false);
-          }
+          syncIdentity(session, event);
         } else {
           console.log("Core: Clean state (No session).");
           if (mounted) {
@@ -202,6 +174,41 @@ const App: React.FC = () => {
         }
       });
       return subscription;
+    };
+
+    const syncIdentity = async (session: any, event: string) => {
+      try {
+         // Sequential fetch with Timeout protection
+         const fetchWithTimeout = async (query: Promise<any>, timeoutMs: number) => {
+           return Promise.race([
+             query,
+             new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs))
+           ]);
+         };
+
+         console.log("Phase 1: Fetching Profile...");
+         const { data: pData, error: pErr } = await fetchWithTimeout(
+            supabase.from('profiles').select('*').eq('id', session.user.id).single() as any,
+            8000
+         );
+         
+         if (pErr) throw pErr;
+         if (pData) setProfile(pData);
+
+         console.log("Phase 2: Fetching Wallet...");
+         const { data: wData } = await fetchWithTimeout(
+            supabase.from('wallets').select('*').eq('user_id', session.user.id).single() as any,
+            8000
+         ).catch(() => ({ data: null }));
+
+         if (wData) setWallet(wData);
+
+         console.log("Core: Identity Synchronized.");
+      } catch (e: any) {
+         console.warn("Core: Identity Fetch Issue -", e.message);
+      } finally {
+         if (mounted) setLoading(false);
+      }
     };
 
     const subPromise = setupAuth();
