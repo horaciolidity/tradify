@@ -190,7 +190,7 @@ const App: React.FC = () => {
 
              console.log("Phase 1: Fetching Profile...");
              const { data: pData, error: pErr } = await fetchWithTimeout(
-                supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+                supabase.from('profiles').select('*').eq('id', session.user.id).single() as any,
                 6000
              );
              
@@ -199,7 +199,7 @@ const App: React.FC = () => {
 
              console.log("Phase 2: Fetching Wallet...");
              const { data: wData } = await fetchWithTimeout(
-                supabase.from('wallets').select('*').eq('user_id', session.user.id).single(),
+                supabase.from('wallets').select('*').eq('user_id', session.user.id).single() as any,
                 6000
              ).catch(() => ({ data: null })); // Wallet failure shouldn't block profile
 
