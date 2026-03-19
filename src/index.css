@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Outfit:wght@300;400;600;700;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
 :root {
   --background: #0B0E11;
   --foreground: #EAECEF;
@@ -13,6 +15,11 @@
   --accent: #0ECB81;
   --error: #F6465D;
   --secondary: #1E2329;
+
+  --font-main: 'Inter', sans-serif;
+  --font-display: 'Sora', sans-serif;
+  --font-accent: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 @layer base {
@@ -20,12 +27,17 @@
     @apply transition-all duration-1000 antialiased selection:bg-primary/20 overflow-x-hidden;
     background: #0B0E11;
     color: var(--foreground);
-    font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    font-family: var(--font-main);
     letter-spacing: -0.01em;
   }
 
-  h1, h2, h3, h4, .font-trader {
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
     @apply tracking-tighter;
+  }
+
+  .font-accent {
+    font-family: var(--font-accent);
   }
 }
 

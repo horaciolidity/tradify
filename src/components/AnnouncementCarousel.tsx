@@ -69,12 +69,14 @@ const AnnouncementCarousel: React.FC = () => {
         >
           {active.media_type === 'video' ? (
             <video
+              key={active.image_url}
               src={active.image_url}
               autoPlay
               muted
               loop
               playsInline
-              className="w-full h-full object-cover brightness-[0.4] transition-transform duration-1000 group-hover:scale-105"
+              preload="auto"
+              className="w-full h-full object-cover brightness-[0.4] transition-transform duration-1000 group-hover:scale-105 shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]"
             />
           ) : (
             <img 
