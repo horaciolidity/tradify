@@ -27,7 +27,7 @@ const PageTransition: React.FC<{ children: React.ReactNode }> = ({ children }) =
 );
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { loading, signOut } = useAuthStore();
+  const { user, loading, signOut } = useAuthStore();
   const [showRescue, setShowRescue] = React.useState(false);
 
   React.useEffect(() => {
