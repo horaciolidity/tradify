@@ -27,13 +27,14 @@ const PageTransition: React.FC<{ children: React.ReactNode }> = ({ children }) =
 );
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading, signOut } = useAuthStore();
+  const { loading, signOut } = useAuthStore();
   const [showRescue, setShowRescue] = React.useState(false);
 
   React.useEffect(() => {
+    // If we're still loading after 3 seconds, show the escape hatch
     const timer = setTimeout(() => {
       if (loading) setShowRescue(true);
-    }, 10000);
+    }, 3000);
     return () => clearTimeout(timer);
   }, [loading]);
   
@@ -46,15 +47,25 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }}
-            className="mt-8 space-y-4"
+            className="mt-12 space-y-6 max-w-sm"
           >
-            <p className="text-rose-500 text-xs font-bold italic">Synchronization is taking longer than usual.</p>
-            <button 
-              onClick={() => signOut()}
-              className="px-6 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl border border-rose-500/20 text-xs font-black uppercase tracking-widest transition-all"
-            >
-              Force Logout & Reset
-            </button>
+            <p className="text-slate-500 text-xs font-bold leading-relaxed">
+              Synchronization is taking longer than usual. This might be due to a poor network connection or a session error.
+            </p>
+            <div className="flex flex-col space-y-3">
+              <button 
+                onClick={() => window.location.reload()}
+                className="w-full px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-[10px] font-black uppercase tracking-widest transition-all"
+              >
+                Retry Connection
+              </button>
+              <button 
+                onClick={() => signOut()}
+                className="w-full px-6 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl border border-rose-500/20 text-[10px] font-black uppercase tracking-widest transition-all"
+              >
+                Emergency Logout
+              </button>
+            </div>
           </motion.div>
         )}
       </div>
@@ -152,51 +163,48 @@ const App: React.FC = () => {
     let mounted = true;
     let authTimeout: any;
 
-    // Safety timeout: Forced UI reset after 8s
+    // Safety timeout: Forced UI reset after 15s to prevent blank screens
     authTimeout = setTimeout(() => {
       if (mounted && useAuthStore.getState().loading) {
-        console.warn("Session Recovery: Timeout. Resetting state.");
+        console.warn("Session Recovery: Force Ready. This is a failsafe.");
         setLoading(false);
       }
-    }, 8000);
+    }, 15000);
 
     const setupAuth = async () => {
-      console.log("Session Initialization: Monitoring state change...");
-      
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log(`Session Event: ${event}`);
         if (!mounted) return;
+        console.log(`Core Auth Event: ${event}`);
 
         if (session?.user) {
-          console.log(`Session Detected: ${session.user.email}. Synchronizing identity...`);
           setUser(session.user);
           
           try {
-             // In-block fetch for profiling
-             const [pRes, wRes] = await Promise.all([
-               supabase.from('profiles').select('*').eq('id', session.user.id).single(),
-               supabase.from('wallets').select('*').eq('user_id', session.user.id).single()
-             ]);
+             // Sequential fetch for reliability over raw parallel speed
+             console.log("Phase 1: Fetching Profile...");
+             const { data: pData, error: pErr } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+             
+             if (pErr) throw pErr;
+             if (pData) setProfile(pData);
 
-             if (pRes.data) {
-               setProfile(pRes.data);
-               setWallet(wRes.data || null);
-             } else {
-               console.error("Session Integrity Violation: Profile missing.");
-               // Session belongs to identity but has no mapping
-               if (event !== 'SIGNED_IN') {
-                 console.log("Ghost Session: Expelling...");
-                 await useAuthStore.getState().signOut();
-                 return;
-               }
+             console.log("Phase 2: Fetching Wallet...");
+             const { data: wData } = await supabase.from('wallets').select('*').eq('user_id', session.user.id).single();
+             if (wData) setWallet(wData);
+
+             console.log("Core: Synchronization Complete.");
+          } catch (e: any) {
+             console.error("Core Synchronization Failed:", e.message);
+             // If we can't get a profile but we have a session, it's a corrupted state
+             if (event === 'INITIAL_SESSION') {
+                console.warn("Ghost Session detected. Forcing reset.");
+                await useAuthStore.getState().signOut();
+                return;
              }
-          } catch (e) {
-             console.error("Identity Synchronization Error:", e);
           } finally {
              if (mounted) setLoading(false);
           }
         } else {
-          console.log("No session detected.");
+          console.log("Core: Clean state (No session).");
           if (mounted) {
             setUser(null);
             setProfile(null);
@@ -205,7 +213,6 @@ const App: React.FC = () => {
           }
         }
       });
-
       return subscription;
     };
 
