@@ -248,174 +248,15 @@ const TradingDashboard: React.FC = () => {
                 <span className="text-xl md:text-3xl font-mono font-black text-white italic tracking-tighter font-display">
                   ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                 </span>
-                <span className={`px-2 py-0.5 md:px-4 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-sm font-black flex items-center italic shadow-lg ${currentTicker && currentTicker.change >= 0 ? 'bg-accent/20 text-accent' : 'bg-error/20 text-error'}`}>
-                  {currentTicker && currentTicker.change >= 0 ? <TrendingUp size={12} className="mr-1 md:mr-2" /> : <TrendingDown size={12} className="mr-1 md:mr-2" />}
+                <span className={`px-2 py-0.5 md:px-4 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-sm font-black flex items-center italic shadow-lg ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/20 text-accent' : 'bg-error/20 text-error'}`}>
+                  {(currentTicker?.change || 0) >= 0 ? <TrendingUp size={12} className="mr-1 md:mr-2" /> : <TrendingDown size={12} className="mr-1 md:mr-2" />}
                   {(currentTicker?.change ?? 0) >= 0 ? '+' : ''}{currentTicker?.change?.toFixed(2) || '0.00'}%
                 </span>
               </div>
               <div className="hidden lg:flex items-center space-x-6 border-l border-white/10 pl-6 h-10">
                 <div>
                   <p className="text-[10px] font-black text-slate-500 uppercase italic">Volatility</p>
-                  <p className="text-xs font-bold text-white">{(currentTicker?.volume ? currentTicker.volume / 1e6 : 0).toFixed(2)}M</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-1 md:space-x-3 bg-white/2 p-1.5 md:p-2 rounded-xl md:rounded-2xl border border-white/5 relative z-10 self-start md:self-end overflow-x-auto no-scrollbar max-w-full">
-          {timeframes.map(tf => (
-            <button
-              key={tf}
-              onClick={() => setSelectedTimeframe(tf)}
-              className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em] md:tracking-[0.2em] italic transition-all shrink-0 ${selectedTimeframe === tf ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-white'}`}
-            >
-              {tf}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 md:gap-8">
-        {/* Main Chart Area */}
-        <div className="lg:col-span-3 space-y-6 md:space-y-8 order-1">
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-4 md:p-8 h-[350px] md:h-[650px] flex flex-col"
-          >
-            <div className="flex items-center justify-between mb-4 md:mb-8 px-1 md:px-2 border-b border-white/5 pb-3 md:pb-6">
-              <div className="flex items-center space-x-4 md:space-x-8">
-                <div className="flex items-center text-[8px] md:text-[10px] font-black uppercase italic tracking-widest text-slate-500 space-x-2">
-                  <Activity size={12} className="text-primary animate-pulse" />
-                  <span>Real-time</span>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 text-primary mb-4 md:mb-6">
-          <div className="w-12 h-0.5 bg-primary/30" />
-          <span className="text-[10px] md:text-sm font-black uppercase tracking-[0.4em] italic opacity-70">Trading Terminal</span>
-        </div>
-              <div className="flex items-center space-x-4 md:space-x-8">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase italic">High</span>
-                    <span className="text-[10px] md:text-sm font-mono font-bold text-white">${currentTicker?.high?.toLocaleString() || '0.00'}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase italic">Low</span>
-                    <span className="text-[10px] md:text-sm font-mono font-bold text-white">${currentTicker?.low?.toLocaleString() || '0.00'}</span>
-                  </div>
-                </div>
-              <div className="hidden md:flex items-center space-x-3">
-                <button className="p-2 md:p-3 bg-white/2 hover:bg-white/5 rounded-lg md:rounded-xl text-slate-500 transition-all border border-white/5"><Settings size={16} /></button>
-                <button className="p-2 md:p-3 bg-white/2 hover:bg-white/5 rounded-lg md:rounded-xl text-slate-500 transition-all border border-white/5"><Maximize2 size={16} /></button>
-              </div>
-            </div>
-            <div ref={chartContainerRef} className="flex-1 w-full" />
-          </motion.div>
-
-          {/* Trade Panel - Appears BEFORE other stuff on mobile */}
-          <div className="block lg:hidden order-2">
-            <TradePanelWidget />
-          </div>
-
-          <div className="order-3">
-            <AnnouncementCarousel />
-          </div>
-
-          {/* Detailed Market Information - Compact for mobile */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 order-4">
-            <div className="glass-card p-6 border-white/5 group hover:border-primary/20 transition-all">
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="p-3 bg-primary/20 rounded-2xl text-primary"><ShieldCheck size={24} /></div>
-                <div>
-                  <h4 className="font-black text-xs uppercase tracking-widest italic text-white">Security Protocol</h4>
-                  <p className="text-[10px] font-bold text-slate-500">Tier 4 Neural Protection Active</p>
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium italic leading-relaxed">
-                Platform liquidity is safeguarded by segregated neural assets. All transactions are logged on the private Tradify ledger.
-              </p>
-            </div>
-            <div className="glass-card p-6 border-white/5 group hover:border-accent/20 transition-all">
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="p-3 bg-accent/20 rounded-2xl text-accent"><Zap size={24} /></div>
-                <div>
-                  <h4 className="font-black text-xs uppercase tracking-widest italic text-white">Execution Engine</h4>
-                  <p className="text-[10px] font-bold text-slate-500">High-Frequency Node Selected</p>
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium italic leading-relaxed">
-                Millisecond order execution with dynamic routing to ensure zero slippage on all Tradify custom protocol assets.
-              </p>
-            </div>
-            <div className="glass-card p-6 border-white/5 group hover:border-primary/20 transition-all">
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="p-3 bg-indigo-500/20 rounded-2xl text-indigo-400"><Clock size={24} /></div>
-                <div>
-                  <h4 className="font-black text-xs uppercase tracking-widest italic text-white">Settlement System</h4>
-                  <p className="text-[10px] font-bold text-slate-500">Instant T+0 Neural Matching</p>
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium italic leading-relaxed">
-                Profit realization is settle instantly to your primary USDC wallet upon order completion. Withdraw anytime.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar Controls - Desktop only or moved */}
-        <div className="hidden lg:block space-y-8 lg:sticky lg:top-8 self-start order-5">
-          {/* Market Chat */}
-          <TradingChat />
-          <TradePanelWidget />
-          <MarketListWidget />
-        </div>
-
-        {/* Mobile Market List & Chat at bottom */}
-        <div className="lg:hidden space-y-6 order-6">
-          <MarketListWidget />
-          <TradingChat />
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="space-y-4 md:space-y-8 pb-10 -mt-2 md:mt-0">
-      {/* Ticker Tape - Desktop only or very subtle */}
-      <div className="hidden md:block -mx-12">
-        <MarketTicker />
-      </div>
-
-      {/* Asset Header - Compact for mobile */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 bg-dark-lighter/30 md:bg-[#17153b]/10 p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] border border-white/5 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[100px] rounded-full -mr-32 -mt-32 animate-pulse" />
-        
-        <div className="flex items-center space-x-4 md:space-x-6 relative z-10">
-          <div className="hidden sm:block p-3 md:p-4 bg-primary/20 rounded-2xl md:rounded-[2rem] border border-primary/20">
-            <div className="w-8 h-8 md:w-12 md:h-12 bg-primary rounded-xl md:rounded-[1.5rem] flex items-center justify-center text-black font-black text-lg md:text-xl italic shadow-2xl">
-              {selectedSymbol.split('/')[0].charAt(0)}
-            </div>
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center space-x-2 md:space-x-3 mb-0.5 md:mb-1">
-              <h1 className="text-xl md:text-4xl font-black text-white italic uppercase tracking-tighter font-display">{selectedSymbol}</h1>
-              <span className="text-[8px] md:text-[10px] font-black px-2 md:px-4 py-0.5 md:py-1 bg-primary/10 text-primary rounded-full border border-primary/20 uppercase tracking-[0.2em] italic">Spot</span>
-            </div>
-            <div className="flex items-center space-x-4 md:space-x-6">
-              <div className="flex items-center space-x-3 md:space-x-4">
-                <span className="text-xl md:text-3xl font-mono font-black text-white italic tracking-tighter font-display">
-                  ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                </span>
-                <span className={`px-2 py-0.5 md:px-4 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-sm font-black flex items-center italic shadow-lg ${currentTicker && currentTicker.change >= 0 ? 'bg-accent/20 text-accent' : 'bg-error/20 text-error'}`}>
-                  {currentTicker && currentTicker.change >= 0 ? <TrendingUp size={12} className="mr-1 md:mr-2" /> : <TrendingDown size={12} className="mr-1 md:mr-2" />}
-                  {(currentTicker?.change ?? 0) >= 0 ? '+' : ''}{currentTicker?.change?.toFixed(2) || '0.00'}%
-                </span>
-              </div>
-              <div className="hidden lg:flex items-center space-x-6 border-l border-white/10 pl-6 h-10">
-                <div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase italic">Volatility</p>
-                  <p className="text-xs font-bold text-white">{(currentTicker?.volume ? currentTicker.volume / 1e6 : 0).toFixed(2)}M</p>
+                  <p className="text-xs font-bold text-white">{(currentTicker?.volume ? (currentTicker.volume / 1e6).toFixed(2) : '0.00')}M</p>
                 </div>
               </div>
             </div>
@@ -689,6 +530,5 @@ function MarketListWidget({ tickers, selectedSymbol, setSelectedSymbol }: any) {
     </motion.div>
   );
 }
-};
 
 export default TradingDashboard;
