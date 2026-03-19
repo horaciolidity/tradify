@@ -180,23 +180,37 @@ const App: React.FC = () => {
           setUser(session.user);
           
           try {
-             // Sequential fetch for reliability over raw parallel speed
+             // Sequential fetch with Timeout protection
+             const fetchWithTimeout = async (query: Promise<any>, timeoutMs: number) => {
+               return Promise.race([
+                 query,
+                 new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs))
+               ]);
+             };
+
              console.log("Phase 1: Fetching Profile...");
-             const { data: pData, error: pErr } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+             const { data: pData, error: pErr } = await fetchWithTimeout(
+                supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+                6000
+             );
              
              if (pErr) throw pErr;
              if (pData) setProfile(pData);
 
              console.log("Phase 2: Fetching Wallet...");
-             const { data: wData } = await supabase.from('wallets').select('*').eq('user_id', session.user.id).single();
+             const { data: wData } = await fetchWithTimeout(
+                supabase.from('wallets').select('*').eq('user_id', session.user.id).single(),
+                6000
+             ).catch(() => ({ data: null })); // Wallet failure shouldn't block profile
+
              if (wData) setWallet(wData);
 
              console.log("Core: Synchronization Complete.");
           } catch (e: any) {
              console.error("Core Synchronization Failed:", e.message);
-             // If we can't get a profile but we have a session, it's a corrupted state
-             if (event === 'INITIAL_SESSION') {
-                console.warn("Ghost Session detected. Forcing reset.");
+             // Ghost session cleanup
+             if (event === 'INITIAL_SESSION' || e.message === 'TIMEOUT') {
+                console.warn("Ghost Session detected or Fetch Hung. Resetting.");
                 await useAuthStore.getState().signOut();
                 return;
              }

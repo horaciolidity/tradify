@@ -25,19 +25,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   setProfile: (profile) => set({ profile }),
   setWallet: (wallet) => set({ wallet }),
   signOut: async () => {
+    // 1. CLEAR LOCAL STORAGE IMMEDIATELY
+    // This is the only way to definitely break the "ghost session" Loop
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // 2. Clear state locally
+    set({ user: null, profile: null, wallet: null, loading: false });
+
+    // 3. Try to notify Supabase (best effort)
     try {
-      // Explicitly sign out from Supabase
-      await supabase.auth.signOut();
-      // Clear persistence just in case
-      localStorage.removeItem('supabase.auth.token');
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((_, reject) => setTimeout(() => reject('Timeout'), 2000))
+      ]);
     } catch (e) {
-      console.error("SignOut Protocol Error:", e);
-    } finally {
-      // Emergency state reset
-      set({ user: null, profile: null, wallet: null, loading: false });
-      // Hard redirect to clear all memory states
-      window.location.href = '/login';
+      console.warn("SignOut: Server call failed or timed out, but local state was cleared.");
     }
+
+    // 4. FORCE HARD RELOAD AND REDIRECT
+    window.location.href = '/login';
   },
   updateBalance: (amount) => set((state) => {
     if (state.wallet) {
