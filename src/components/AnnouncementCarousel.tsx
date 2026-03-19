@@ -8,6 +8,7 @@ interface Announcement {
   title: string;
   content: string;
   image_url: string;
+  media_type: 'image' | 'video';
   type: 'announcement' | 'pre_launch' | 'update';
   created_at: string;
 }
@@ -36,6 +37,7 @@ const AnnouncementCarousel: React.FC = () => {
         title: "Tradify Protocol 2.0",
         content: "New neural liquidity engine is now live. Experience 0% fee on spot trades during this week.",
         image_url: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=1200",
+        media_type: 'image',
         type: 'announcement',
         created_at: new Date().toISOString()
       }]);
@@ -65,7 +67,7 @@ const AnnouncementCarousel: React.FC = () => {
           transition={{ duration: 0.6, ease: "easeInOut" }}
           className="absolute inset-0"
         >
-          {active.image_url?.match(/\.(mp4|webm|ogg|mov)$|^data:video/i) || active.image_url?.includes('/video/') ? (
+          {active.media_type === 'video' ? (
             <video
               src={active.image_url}
               autoPlay

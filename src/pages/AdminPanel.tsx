@@ -239,6 +239,7 @@ const AdminPanel: React.FC = () => {
       .from('announcements')
       .upsert({
         ...announceData,
+        media_type: announceData.media_type || 'image',
         created_at: announceData.created_at || new Date().toISOString()
       });
     
@@ -963,7 +964,7 @@ const AdminPanel: React.FC = () => {
             {announcements.map((ann) => (
               <div key={ann.id} className="glass-card p-6 border-white/5 hover:border-primary/30 transition-all group overflow-hidden">
                 <div className="relative h-32 -mx-6 -mt-6 mb-6 overflow-hidden">
-                  {ann.image_url?.match(/\.(mp4|webm|ogg|mov)$|^data:video/i) ? (
+                  {ann.media_type === 'video' ? (
                     <video src={ann.image_url} className="w-full h-full object-cover brightness-50" autoPlay muted loop playsInline />
                   ) : (
                     <img src={ann.image_url} alt={ann.title} className="w-full h-full object-cover brightness-50" />
@@ -1003,22 +1004,28 @@ const AdminPanel: React.FC = () => {
                       className="input-field w-full p-4 bg-white/2"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Content / Body</label>
-                    <textarea 
-                      value={editingAnnouncement.content}
-                      onChange={(e) => setEditingAnnouncement({...editingAnnouncement, content: e.target.value})}
-                      className="input-field w-full p-4 bg-white/2 h-32 resize-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Media URL (Image or Video)</label>
-                    <input 
-                      type="text" 
-                      value={editingAnnouncement.image_url}
-                      onChange={(e) => setEditingAnnouncement({...editingAnnouncement, image_url: e.target.value})}
-                      className="input-field w-full p-4 bg-white/2"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Media Type</label>
+                       <select 
+                         value={editingAnnouncement.media_type || 'image'}
+                         onChange={(e) => setEditingAnnouncement({...editingAnnouncement, media_type: e.target.value})}
+                         className="input-field w-full p-4 bg-black/40 font-bold"
+                       >
+                         <option value="image">Static Image</option>
+                         <option value="video">Motion Video</option>
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Imagery Identity</label>
+                       <input 
+                         type="text" 
+                         value={editingAnnouncement.image_url}
+                         onChange={(e) => setEditingAnnouncement({...editingAnnouncement, image_url: e.target.value})}
+                         className="input-field w-full p-4 bg-white/2"
+                         placeholder="URL (Image/IPFS/Video)"
+                       />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
