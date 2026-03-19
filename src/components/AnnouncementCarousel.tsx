@@ -65,11 +65,22 @@ const AnnouncementCarousel: React.FC = () => {
           transition={{ duration: 0.6, ease: "easeInOut" }}
           className="absolute inset-0"
         >
-          <img 
-            src={active.image_url} 
-            alt={active.title} 
-            className="w-full h-full object-cover brightness-[0.4] transition-transform duration-1000 group-hover:scale-105" 
-          />
+          {active.image_url?.match(/\.(mp4|webm|ogg|mov)$|^data:video/i) || active.image_url?.includes('/video/') ? (
+            <video
+              src={active.image_url}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full h-full object-cover brightness-[0.4] transition-transform duration-1000 group-hover:scale-105"
+            />
+          ) : (
+            <img 
+              src={active.image_url} 
+              alt={active.title} 
+              className="w-full h-full object-cover brightness-[0.4] transition-transform duration-1000 group-hover:scale-105" 
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/60 to-transparent flex flex-col justify-center px-8 md:px-20">
             <div className="flex items-center space-x-3 mb-4">
               <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] italic ${

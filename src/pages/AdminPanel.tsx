@@ -963,7 +963,11 @@ const AdminPanel: React.FC = () => {
             {announcements.map((ann) => (
               <div key={ann.id} className="glass-card p-6 border-white/5 hover:border-primary/30 transition-all group overflow-hidden">
                 <div className="relative h-32 -mx-6 -mt-6 mb-6 overflow-hidden">
-                  <img src={ann.image_url} alt={ann.title} className="w-full h-full object-cover brightness-50" />
+                  {ann.image_url?.match(/\.(mp4|webm|ogg|mov)$|^data:video/i) ? (
+                    <video src={ann.image_url} className="w-full h-full object-cover brightness-50" autoPlay muted loop playsInline />
+                  ) : (
+                    <img src={ann.image_url} alt={ann.title} className="w-full h-full object-cover brightness-50" />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1e2329]/90 to-transparent" />
                 </div>
                 <div className="flex items-center justify-between mb-4">
@@ -1008,7 +1012,7 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Imagery URL</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Media URL (Image or Video)</label>
                     <input 
                       type="text" 
                       value={editingAnnouncement.image_url}
