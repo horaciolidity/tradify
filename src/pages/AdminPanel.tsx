@@ -206,11 +206,22 @@ const AdminPanel: React.FC = () => {
 
   const handleTokenSave = async (tokenData: any) => {
     const payload = {
-      ...tokenData,
+      name: tokenData.name,
+      symbol: tokenData.symbol,
       current_price: tokenData.current_price || 1,
+      volatility: tokenData.volatility || 0.05,
+      trend_direction: tokenData.trend_direction || 'neutral',
+      simulation_type: tokenData.simulation_type || 'random',
+      token_type: tokenData.token_type || 'custom',
       status: tokenData.status || 'active',
+      liquidity: tokenData.liquidity || 0,
+      volume_24h: tokenData.volume_24h || 0,
+      is_listed: tokenData.is_listed !== false,
+      manual_price: tokenData.manual_price !== false,
       updated_at: new Date().toISOString()
     };
+    
+    if (tokenData.id) (payload as any).id = tokenData.id;
     
     const { error } = await supabase
       .from('custom_tokens')
@@ -745,7 +756,7 @@ const AdminPanel: React.FC = () => {
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Market Assets Management</h3>
             <button 
-              onClick={() => setEditingToken({ name: '', symbol: '', price: 1, supply: 1000000, type: 'custom', simulation_type: 'random', trend_direction: 'neutral', volatility: 0.05 })}
+              onClick={() => setEditingToken({ name: '', symbol: '', current_price: 1, token_type: 'custom', simulation_type: 'random', trend_direction: 'neutral', volatility: 0.05 })}
               className="flex items-center space-x-3 px-6 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-primary/40 hover:scale-105 transition-all"
             >
               <Plus size={18} />
@@ -772,7 +783,7 @@ const AdminPanel: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-white/2 rounded-xl border border-white/5">
                     <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Price</p>
-                    <p className="text-sm font-black text-white italic">${token.price.toLocaleString()}</p>
+                    <p className="text-sm font-black text-white italic">${token.current_price?.toLocaleString() || '1.00'}</p>
                   </div>
                   <div className="p-3 bg-white/2 rounded-xl border border-white/5">
                     <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Volatitity</p>
@@ -845,7 +856,7 @@ const AdminPanel: React.FC = () => {
                         <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Base Price</label>
                         <input 
                           type="number" 
-                          value={editingToken.current_price || editingToken.price || 1}
+                          value={editingToken.current_price || 1}
                           onChange={(e) => setEditingToken({...editingToken, current_price: parseFloat(e.target.value)})}
                           className="input-field w-full p-4 bg-white/2 font-black italic"
                         />
