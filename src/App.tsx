@@ -40,34 +40,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 border-t-2 border-primary rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(243,186,47,0.2)]" />
-        <h2 className="text-xl font-black text-white uppercase tracking-[0.3em] italic animate-pulse">Synchronizing Data</h2>
-        {showRescue && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }}
-            className="mt-12 space-y-6 max-w-sm"
-          >
-            <p className="text-slate-500 text-xs font-bold leading-relaxed">
-              Synchronization is taking longer than usual. This might be due to a poor network connection or a session error.
-            </p>
-            <div className="flex flex-col space-y-3">
-              <button 
-                onClick={() => window.location.reload()}
-                className="w-full px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-[10px] font-black uppercase tracking-widest transition-all"
-              >
-                Retry Connection
-              </button>
-              <button 
-                onClick={() => signOut()}
-                className="w-full px-6 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl border border-rose-500/20 text-[10px] font-black uppercase tracking-widest transition-all"
-              >
-                Emergency Logout
-              </button>
-            </div>
-          </motion.div>
-        )}
+      <div className="min-h-screen bg-dark flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-t-2 border-primary rounded-full animate-spin shadow-[0_0_30px_rgba(243,186,47,0.15)]" />
       </div>
     );
   }
@@ -163,13 +137,12 @@ const App: React.FC = () => {
     let mounted = true;
     let authTimeout: any;
 
-    // Safety timeout: Forced UI reset after 15s to prevent blank screens
+    // Safety failsafe: If state is truly stuck, force ready after 20s
     authTimeout = setTimeout(() => {
       if (mounted && useAuthStore.getState().loading) {
-        console.warn("Session Recovery: Force Ready. This is a failsafe.");
         setLoading(false);
       }
-    }, 15000);
+    }, 20000);
 
     const setupAuth = async () => {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -208,9 +181,10 @@ const App: React.FC = () => {
              console.log("Core: Synchronization Complete.");
           } catch (e: any) {
              console.error("Core Synchronization Failed:", e.message);
-             // Ghost session cleanup
-             if (event === 'INITIAL_SESSION' || e.message === 'TIMEOUT') {
-                console.warn("Ghost Session detected or Fetch Hung. Resetting.");
+             // ONLY kick out if it's a critical missing profile error on a new sign-in
+             // On INITIAL_SESSION, we prefer to stay logged in if possible
+             if (event === 'SIGNED_IN') {
+                console.warn("Ghost Session during SignIn. Resetting.");
                 await useAuthStore.getState().signOut();
                 return;
              }
