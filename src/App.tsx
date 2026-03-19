@@ -147,112 +147,76 @@ const AnimatedRoutes = () => {
 
 const App: React.FC = () => {
   const { setUser, setProfile, setWallet, loading, setLoading } = useAuthStore();
-  const fetchInProgress = React.useRef(false);
 
   useEffect(() => {
     let mounted = true;
     let authTimeout: any;
 
-    // Safety timeout: If initialization takes more than 5 seconds, force loading to false
+    // Safety timeout: Forced UI reset after 8s
     authTimeout = setTimeout(() => {
       if (mounted && useAuthStore.getState().loading) {
-        console.warn("Auth initialization timed out. Forcing UI to ready state.");
+        console.warn("Session Recovery: Timeout. Resetting state.");
         setLoading(false);
       }
-    }, 5000);
+    }, 8000);
 
-    const initAuth = async () => {
-      if (fetchInProgress.current) return;
-      try {
-        fetchInProgress.current = true;
-        setLoading(true);
-        console.log("Core: Phase 1 - Initializing session...");
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (mounted && session?.user) {
-          console.log("Core: Session active. Phase 2 - Hydrating identity...");
+    const setupAuth = async () => {
+      console.log("Session Initialization: Monitoring state change...");
+      
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(`Session Event: ${event}`);
+        if (!mounted) return;
+
+        if (session?.user) {
+          console.log(`Session Detected: ${session.user.email}. Synchronizing identity...`);
           setUser(session.user);
-          await fetchProfile(session.user.id);
-        } else if (mounted) {
-          console.log("Core: No active session.");
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("Core Init Failure:", err);
-        if (mounted) setLoading(false);
-      } finally {
-        fetchInProgress.current = false;
-      }
-    };
+          
+          try {
+             // In-block fetch for profiling
+             const [pRes, wRes] = await Promise.all([
+               supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+               supabase.from('wallets').select('*').eq('user_id', session.user.id).single()
+             ]);
 
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Core Event: ${event}`);
-      if (!mounted) return;
-
-      if (session?.user) {
-        setUser(session.user);
-        
-        // Prevent re-fetching if profile is already loaded for non-auth events
-        if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-          await fetchProfile(session.user.id);
-        } else if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
-          if (!useAuthStore.getState().profile && !useAuthStore.getState().loading) {
-            await fetchProfile(session.user.id);
+             if (pRes.data) {
+               setProfile(pRes.data);
+               setWallet(wRes.data || null);
+             } else {
+               console.error("Session Integrity Violation: Profile missing.");
+               // Session belongs to identity but has no mapping
+               if (event !== 'SIGNED_IN') {
+                 console.log("Ghost Session: Expelling...");
+                 await useAuthStore.getState().signOut();
+                 return;
+               }
+             }
+          } catch (e) {
+             console.error("Identity Synchronization Error:", e);
+          } finally {
+             if (mounted) setLoading(false);
+          }
+        } else {
+          console.log("No session detected.");
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+            setWallet(null);
+            setLoading(false);
           }
         }
-      } else {
-        console.log("Core: Session Terminated.");
-        setUser(null);
-        setProfile(null);
-        setWallet(null);
-        setLoading(false);
-      }
-    });
+      });
+
+      return subscription;
+    };
+
+    const subPromise = setupAuth();
 
     return () => {
       mounted = false;
       clearTimeout(authTimeout);
-      subscription.unsubscribe();
+      subPromise.then(sub => sub.unsubscribe());
     };
   }, []);
-
-  const fetchProfile = async (userId: string) => {
-    try {
-      console.log("Fetching core identity data...");
-      
-      // Parallel fetch for speed
-      const [profileResponse, walletResponse] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', userId).single(),
-        supabase.from('wallets').select('*').eq('user_id', userId).single()
-      ]);
-
-      if (profileResponse.error) {
-        console.error("CRITICAL: Profile fetch failed.", profileResponse.error);
-        // If we have a user but no profile, the session is corrupted
-        await supabase.auth.signOut();
-        return;
-      }
-
-      if (profileResponse.data) {
-        setProfile(profileResponse.data);
-      } else {
-        console.warn("Core: Missing profile metadata. Resetting...");
-        await supabase.auth.signOut();
-        return;
-      }
-      
-      if (walletResponse.data) {
-        setWallet(walletResponse.data);
-      }
-
-    } catch (error) {
-      console.error('Hydration error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <BrowserRouter>
