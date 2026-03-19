@@ -114,7 +114,7 @@ const TradingDashboard: React.FC = () => {
       .select('balance')
       .eq('user_id', profile?.id)
       .eq('symbol', symbolOnly)
-      .single();
+      .maybeSingle();
     
     if (data) setAssetBalance(data.balance);
     else setAssetBalance(0);
@@ -151,7 +151,7 @@ const TradingDashboard: React.FC = () => {
           .select('*')
           .eq('user_id', profile.id)
           .eq('symbol', symbolOnly)
-          .single();
+          .maybeSingle();
         
         if (existingAsset) {
           await supabase
