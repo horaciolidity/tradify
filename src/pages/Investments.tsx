@@ -355,11 +355,11 @@ const Investments: React.FC = () => {
               <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Daily Profit</p>
-                  <p className="text-sm font-bold text-accent">+${(inv.amount * (inv.plan?.interest_rate || 0) / 100 / (inv.plan?.interest_period_days || 15)).toFixed(2)}</p>
+                  <p className="text-sm font-bold text-accent">+${((inv.amount * (inv.plan?.interest_rate || 0) / 100 / (inv.plan?.interest_period_days || 15)) || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Total Payout</p>
-                  <p className="text-sm font-bold text-white">${(inv.amount * (1 + (inv.plan?.interest_rate || 0) / 100 * (inv.plan?.duration_days || 60) / (inv.plan?.interest_period_days || 15))).toFixed(2)}</p>
+                  <p className="text-sm font-bold text-white">${((inv.amount * (1 + (inv.plan?.interest_rate || 0) / 100 * (inv.plan?.duration_days || 60) / (inv.plan?.interest_period_days || 15))) || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Next Payout</p>

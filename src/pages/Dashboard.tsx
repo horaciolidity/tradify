@@ -114,7 +114,7 @@ const Dashboard: React.FC = () => {
           <div>
             <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-0.5 md:mb-1">Available Balance</p>
             <p className="text-2xl md:text-4xl font-black text-white italic tracking-tighter">
-              {wallet?.balance_usdc.toLocaleString() || '0.00'} <span className="text-[10px] md:text-sm font-normal text-slate-500 not-italic uppercase tracking-widest ml-1">USDC</span>
+              {(wallet?.balance_usdc || 0).toLocaleString()} <span className="text-[10px] md:text-sm font-normal text-slate-500 not-italic uppercase tracking-widest ml-1">USDC</span>
             </p>
           </div>
             <ChevronRight size={20} className="text-slate-800 ml-auto md:ml-4 group-hover:text-primary transition-all group-hover:translate-x-1" />
@@ -196,7 +196,7 @@ const Dashboard: React.FC = () => {
                           ? 'text-accent'
                           : 'text-white'
                       }`}>
-                        {tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' ? '+' : '-'}{tx.amount.toLocaleString()} <span className="text-[8px] md:text-xs font-normal text-slate-500 not-italic ml-0.5">USDC</span>
+                        {tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' ? '+' : '-'}{(tx.amount || 0).toLocaleString()} <span className="text-[8px] md:text-xs font-normal text-slate-500 not-italic ml-0.5">USDC</span>
                       </p>
                     </div>
                   </motion.div>

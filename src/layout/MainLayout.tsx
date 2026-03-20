@@ -141,7 +141,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="hidden sm:flex flex-col items-end mr-2 text-right">
               <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">Live Balance</span>
               <span className="text-xl font-black text-accent italic tracking-tighter">
-                {wallet?.balance_usdc.toLocaleString() ?? '0.00'} <span className="text-xs font-normal text-slate-500">USDC</span>
+                {(wallet?.balance_usdc ?? 0).toLocaleString()} <span className="text-xs font-normal text-slate-500">USDC</span>
               </span>
             </div>
             

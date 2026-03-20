@@ -46,7 +46,7 @@ const MarketTicker: React.FC = () => {
                 </span>
                 <div className={`flex items-center text-[10px] font-black ${t.change >= 0 ? 'text-accent' : 'text-rose-500'}`}>
                   {t.change >= 0 ? <TrendingUp size={12} className="mr-1" /> : <TrendingDown size={12} className="mr-1" />}
-                  {t.change >= 0 ? '+' : ''}{t.change.toFixed(2)}%
+                  {(t.change || 0) >= 0 ? '+' : ''}${(t.change || 0).toFixed(2)}%
                 </div>
               </div>
             </div>

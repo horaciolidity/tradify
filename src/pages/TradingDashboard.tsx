@@ -516,8 +516,8 @@ function LiveFlashPositionCard({ position, currentPrice }: any) {
             </div>
             <div className="text-right">
                <span className="text-[11px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Unrealized Edge</span>
-               <span className={`text-4xl font-mono font-black italic tracking-tighter ${pnlPct >= 0 ? 'text-accent' : 'text-error'}`}>
-                  {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%
+               <span className={`text-4xl font-mono font-black italic tracking-tighter ${(pnlPct || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+                  {(pnlPct || 0) >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(2)}%
                </span>
             </div>
          </div>
@@ -534,8 +534,8 @@ function LiveFlashPositionCard({ position, currentPrice }: any) {
       <div className="mt-8 pt-8 border-t border-white/5 flex justify-between items-center relative z-10">
          <div className="flex items-center space-x-4">
             <span className="text-[12px] font-black text-slate-500 uppercase italic tracking-widest">Net Realization:</span>
-            <span className={`text-2xl font-black italic tracking-tighter font-display ${pnlUsdc >= 0 ? 'text-accent' : 'text-error'}`}>
-               {pnlUsdc >= 0 ? '+' : ''}${pnlUsdc.toFixed(2)}
+            <span className={`text-2xl font-black italic tracking-tighter font-display ${(pnlUsdc || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+               {(pnlUsdc || 0) >= 0 ? '+' : ''}${(pnlUsdc || 0).toFixed(2)}
             </span>
          </div>
          <div className="flex space-x-2">
@@ -565,7 +565,7 @@ function SettlementArchive({ orders }: any) {
          {orders.map((order: any) => (
            <div key={order.id} className="p-10 border-b border-white/5 flex items-center justify-between hover:bg-white/5 transition-all relative group">
               <div className="flex items-center space-x-8">
-                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black italic text-xl ${order.pnl_realized >= 0 ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-error/10 text-error border border-error/20'}`}>
+                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black italic text-xl ${(order.pnl_realized || 0) >= 0 ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-error/10 text-error border border-error/20'}`}>
                     {order.type === 'long' ? 'L' : 'S'}
                  </div>
                  <div>
@@ -579,8 +579,8 @@ function SettlementArchive({ orders }: any) {
               <div className="text-right">
                  <div className="mb-2">
                    <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest block">Assettled Result</span>
-                   <p className={`text-4xl font-mono font-black italic tracking-tighter ${order.pnl_realized >= 0 ? 'text-accent' : 'text-error'}`}>
-                      {order.pnl_realized >= 0 ? '+' : ''}${order.pnl_realized.toFixed(2)}
+                   <p className={`text-4xl font-mono font-black italic tracking-tighter ${(order.pnl_realized || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+                      {(order.pnl_realized || 0) >= 0 ? '+' : ''}${(order.pnl_realized || 0).toFixed(2)}
                    </p>
                  </div>
                  <div className="px-4 py-1.5 bg-white/5 rounded-full inline-block border border-white/10">
@@ -617,13 +617,13 @@ function GlobalNodeTable({ tickers, selectedSymbol, onSelect }: any) {
               </div>
               <div className="text-left">
                 <p className="text-2xl font-black text-white italic leading-none mb-2">{ticker.symbol}</p>
-                <p className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest">${(ticker.volume / 1000).toFixed(1)}k STREAM VOL</p>
+                <p className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest">${((ticker.volume || 0) / 1000).toFixed(1)}k STREAM VOL</p>
               </div>
             </div>
             <div className="text-right">
               <p className="text-2xl font-mono font-bold text-white italic tracking-tighter leading-none mb-2">${ticker.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-              <div className={`flex items-center justify-end space-x-2 ${ticker.change >= 0 ? 'text-accent' : 'text-error'}`}>
-                 <span className="text-[12px] font-black italic tracking-widest uppercase">{ticker.change >= 0 ? '+' : ''}{ticker.change.toFixed(2)}%</span>
+              <div className={`flex items-center justify-end space-x-2 ${(ticker.change || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+                 <span className="text-[12px] font-black italic tracking-widest uppercase">{(ticker.change || 0) >= 0 ? '+' : ''}{(ticker.change || 0).toFixed(2)}%</span>
               </div>
             </div>
           </button>
