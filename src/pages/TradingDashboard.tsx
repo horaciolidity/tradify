@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, ISeriesApi } from 'lightweight-charts';
+import { createChart, ColorType, ISeriesApi, PriceLineOptions } from 'lightweight-charts';
 import { MarketService, TickerData } from '../services/market';
-import { TrendingUp, TrendingDown, Clock, Maximize2, Settings, ShieldCheck, Zap, Activity, ChevronRight, History, PieChart, ArrowUpRight, ArrowDownLeft, Target, PlayCircle, StopCircle, Info, LayoutDashboard } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Maximize2, Settings, ShieldCheck, Zap, Activity, ChevronRight, History, PieChart, ArrowUpRight, ArrowDownLeft, Target, LayoutDashboard, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TradingChat from '../components/TradingChat';
 import AnnouncementCarousel from '../components/AnnouncementCarousel';
@@ -16,6 +16,7 @@ const TradingDashboard: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const priceLinesRef = useRef<{ [key: string]: any }>({});
   
   const [selectedSymbol, setSelectedSymbol] = useState('BTC/USDC');
   const [selectedTimeframe, setSelectedTimeframe] = useState('15m');
@@ -25,9 +26,10 @@ const TradingDashboard: React.FC = () => {
   const { profile, wallet, setWallet } = useAuthStore();
   const { addNotification } = useNotificationStore();
   const [currentTicker, setCurrentTicker] = useState<TickerData | null>(null);
-  const [assetBalance, setAssetBalance] = useState(0);
   const [activePositions, setActivePositions] = useState<any[]>([]);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const settlingIds = useRef<Set<string>>(new Set());
+
   const symbolOnly = selectedSymbol.split('/')[0];
 
   // Initialize Chart
@@ -38,6 +40,7 @@ const TradingDashboard: React.FC = () => {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: '#848E9C',
+        fontFamily: 'JetBrains Mono',
       },
       grid: {
         vertLines: { color: 'rgba(255, 255, 255, 0.02)' },
@@ -51,6 +54,7 @@ const TradingDashboard: React.FC = () => {
       },
       rightPriceScale: {
         borderColor: 'rgba(255, 255, 255, 0.05)',
+        scaleMargins: { top: 0.1, bottom: 0.2 },
       }
     });
 
@@ -86,6 +90,46 @@ const TradingDashboard: React.FC = () => {
     };
   }, [selectedSymbol, selectedTimeframe]);
 
+  // Update Price Lines on Chart
+  useEffect(() => {
+    if (!candlestickSeriesRef.current) return;
+
+    // Remove old lines
+    Object.values(priceLinesRef.current).forEach(line => {
+      candlestickSeriesRef.current?.removePriceLine(line);
+    });
+    priceLinesRef.current = {};
+
+    // Add lines for active positions
+    activePositions.forEach(pos => {
+      if (pos.symbol === selectedSymbol && pos.status === 'active') {
+        const line = candlestickSeriesRef.current?.createPriceLine({
+          price: pos.price_at_execution,
+          color: pos.type === 'long' ? '#0ECB81' : '#F6465D',
+          lineWidth: 2,
+          lineStyle: 2, // Dashed
+          axisLabelVisible: true,
+          title: `ENTRY ${pos.type.toUpperCase()}`,
+        });
+        priceLinesRef.current[pos.id] = line;
+      }
+    });
+
+    // Add markers
+    const markers = activePositions
+      .filter(p => p.symbol === selectedSymbol && p.status === 'active')
+      .map(p => ({
+        time: Math.floor(new Date(p.created_at).getTime() / 1000),
+        position: p.type === 'long' ? 'belowBar' : 'aboveBar',
+        color: p.type === 'long' ? '#0ECB81' : '#F6465D',
+        shape: p.type === 'long' ? 'arrowUp' : 'arrowDown',
+        text: 'OPEN NODE',
+      }));
+    
+    candlestickSeriesRef.current.setMarkers(markers as any);
+
+  }, [activePositions, selectedSymbol]);
+
   // Subscribe to Tickers
   useEffect(() => {
     MarketService.startSimulation();
@@ -101,7 +145,7 @@ const TradingDashboard: React.FC = () => {
     if (active) setCurrentTicker(active);
   }, [tickers, selectedSymbol]);
 
-  // Fetch Position and Data
+  // Data Fetching
   useEffect(() => {
     if (profile && selectedSymbol) {
       fetchData();
@@ -109,15 +153,6 @@ const TradingDashboard: React.FC = () => {
   }, [profile, selectedSymbol]);
 
   const fetchData = async () => {
-    const { data: assetData } = await supabase
-      .from('user_assets')
-      .select('balance')
-      .eq('user_id', profile?.id)
-      .eq('symbol', symbolOnly)
-      .maybeSingle();
-    
-    setAssetBalance(assetData?.balance || 0);
-
     const { data: ordersData } = await supabase
       .from('orders')
       .select('*')
@@ -130,54 +165,67 @@ const TradingDashboard: React.FC = () => {
     }
   };
 
-  // --- AUTO-SETTLEMENT LOGIC (1 MIN FLASH) ---
+  // --- BULLETPROOF AUTO-SETTLEMENT ---
   useEffect(() => {
-    const interval = setInterval(() => {
+    const settlementInterval = setInterval(async () => {
       const now = new Date();
-      activePositions.forEach(async (pos) => {
+      
+      for (const pos of activePositions) {
         const expiry = new Date(pos.expires_at);
-        if (now >= expiry && pos.status === 'active' && currentTicker) {
-          await settleOrder(pos);
+        if (now >= expiry && pos.status === 'active' && !settlingIds.current.has(pos.id)) {
+           settlingIds.current.add(pos.id);
+           await settleOrder(pos);
         }
-      });
-    }, 1000); // Check every second
-    return () => clearInterval(interval);
-  }, [activePositions, currentTicker]);
+      }
+    }, 1000);
+
+    return () => clearInterval(settlementInterval);
+  }, [activePositions, currentTicker, wallet, profile]);
 
   const settleOrder = async (order: any) => {
-    if (!currentTicker || !profile || !wallet) return;
-
-    const entryPrice = order.price_at_execution;
-    const exitPrice = currentTicker.price;
-    const amount = order.amount_usdc;
-    
-    // Profit Calculation: If it went UP and you went LONG
-    const priceChangePct = (exitPrice - entryPrice) / entryPrice;
-    let profit = 0;
-    
-    if (order.type === 'long') {
-      profit = amount * (1 + priceChangePct); // Long wins if direction is positive
-    } else {
-      profit = amount * (1 - priceChangePct); // Short wins if direction is negative
+    if (!currentTicker || !profile || !wallet) {
+       settlingIds.current.delete(order.id);
+       return;
     }
 
-    // Update Wallet
-    const newBalance = wallet.balance_usdc + profit;
-    await supabase.from('wallets').update({ balance_usdc: newBalance }).eq('user_id', profile.id);
-    setWallet({ ...wallet, balance_usdc: newBalance });
+    const currentPriceForSettle = currentTicker.price; // Capture current price
+    const entryPrice = order.price_at_execution;
+    const amount = order.amount_usdc;
+    
+    // Final PnL logic
+    const priceChangePct = (currentPriceForSettle - entryPrice) / entryPrice;
+    let profit = 0;
+    if (order.type === 'long') {
+      profit = amount * (1 + priceChangePct); 
+    } else {
+      profit = amount * (1 - priceChangePct);
+    }
 
-    // Mark order as completed
-    await supabase.from('orders').update({
-      status: 'completed',
-      exit_price: exitPrice,
-      pnl_realized: profit - amount
-    }).eq('id', order.id);
+    try {
+      // Atomic updates
+      const newBalance = wallet.balance_usdc + profit;
+      
+      const { error: walletError } = await supabase.from('wallets').update({ balance_usdc: newBalance }).eq('user_id', profile.id);
+      if (walletError) throw walletError;
 
-    // Notification
-    const isWin = profit >= amount;
-    addNotification(profile.id, 'Flash Trade Expired', `Realized ${isWin ? 'profit' : 'loss'} of $${Math.abs(profit - amount).toFixed(2)}`, isWin ? 'success' : 'transaction');
+      const { error: orderError } = await supabase.from('orders').update({
+        status: 'completed',
+        exit_price: currentPriceForSettle,
+        pnl_realized: profit - amount
+      }).eq('id', order.id);
+      if (orderError) throw orderError;
 
-    fetchData();
+      setWallet({ ...wallet, balance_usdc: newBalance });
+      
+      const isWin = profit >= amount;
+      addNotification(profile.id, 'Flash Node Settled', `Result: ${isWin ? 'PROFIT' : 'LOSS'} of $${Math.abs(profit - amount).toFixed(2)}`, isWin ? 'success' : 'transaction');
+
+      await fetchData();
+    } catch (err) {
+      console.error("Settlement error:", err);
+    } finally {
+       settlingIds.current.delete(order.id);
+    }
   };
 
   const openFlashTrade = async (type: 'long' | 'short') => {
@@ -185,21 +233,19 @@ const TradingDashboard: React.FC = () => {
     
     const amount = parseFloat(tradeAmount);
     if (isNaN(amount) || amount <= 0 || amount > wallet.balance_usdc) {
-      alert('Insufficient funds or invalid amount');
+      alert('Insufficient neural flux');
       return;
     }
 
     setProcessing(true);
     const entryPrice = currentTicker.price;
-    const expiresAt = new Date(Date.now() + 60 * 1000).toISOString(); // 1 Minute
+    const expiresAt = new Date(Date.now() + 60 * 1000).toISOString();
 
     try {
-      // 1. Deduct cost from wallet
       const newBalance = wallet.balance_usdc - amount;
       await supabase.from('wallets').update({ balance_usdc: newBalance }).eq('user_id', profile.id);
       setWallet({ ...wallet, balance_usdc: newBalance });
 
-      // 2. Create Order
       const { data, error } = await supabase.from('orders').insert({
         user_id: profile.id,
         symbol: selectedSymbol,
@@ -213,11 +259,11 @@ const TradingDashboard: React.FC = () => {
 
       if (error) throw error;
 
-      addNotification(profile.id, 'Synchronization Active', `Synchronized ${type.toUpperCase()} node for 60s.`, 'success');
+      addNotification(profile.id, 'Flash Node Synchronized', `Entry @ $${entryPrice.toLocaleString()}`, 'success');
       setTradeAmount('');
-      fetchData();
+      await fetchData();
     } catch (err: any) {
-      alert(err.message || 'Node Error: Transmission Interrupted');
+      alert(err.message || 'Signal Lost');
     } finally {
       setProcessing(false);
     }
@@ -229,39 +275,43 @@ const TradingDashboard: React.FC = () => {
         <MarketTicker />
       </div>
 
-      {/* Asset Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 bg-[#0B0E11]/80 backdrop-blur-3xl p-4 md:p-8 rounded-[1.5rem] border border-white/5 shadow-2xl relative overflow-hidden group">
-        <div className="flex items-center space-x-6 relative z-10">
-          <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20">
-            <div className="w-10 h-10 md:w-16 md:h-16 bg-primary rounded-xl flex items-center justify-center text-black font-black text-2xl italic shadow-2xl">
+      {/* High Fidelity Asset Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 bg-[#0B0E11] p-4 md:p-10 rounded-[2rem] border border-white/5 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+        
+        <div className="flex items-center space-x-8 relative z-10">
+          <div className="p-6 bg-primary/10 rounded-3xl border border-primary/20 backdrop-blur-xl">
+            <div className="w-12 h-12 md:w-20 md:h-20 bg-primary rounded-2xl flex items-center justify-center text-black font-black text-3xl italic shadow-[0_10px_40px_rgba(252,186,44,0.3)]">
               {selectedSymbol.split('/')[0].charAt(0)}
             </div>
           </div>
           <div className="flex-1">
-             <div className="flex items-center space-x-4 mb-1">
-                <h1 className="text-3xl md:text-6xl font-black text-white italic uppercase tracking-tighter font-display leading-none">{selectedSymbol}</h1>
-                <div className="flex space-x-2">
-                   <span className="text-[10px] font-black px-4 py-1.5 bg-accent/20 text-accent rounded-full border border-accent/30 uppercase tracking-[0.2em] italic">Instant Execution</span>
-                   <span className="text-[10px] font-black px-4 py-1.5 bg-primary/10 text-primary rounded-full border border-primary/30 uppercase tracking-[0.2em] italic">High Liquidity</span>
+             <div className="flex items-center space-x-6 mb-2">
+                <h1 className="text-4xl md:text-7xl font-black text-white italic uppercase tracking-tighter font-display leading-none">{selectedSymbol}</h1>
+                <div className="px-5 py-2 bg-primary/20 border border-primary/40 rounded-full animate-pulse">
+                   <span className="text-[12px] font-black text-primary uppercase tracking-[0.4em] italic">Hyper-Speed Flash</span>
                 </div>
              </div>
-             <div className="flex items-center space-x-8">
-                <span className="text-3xl md:text-5xl font-mono font-black text-white italic tracking-tighter font-display">
-                  ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                </span>
-                <span className={`px-4 py-1.5 rounded-xl text-[14px] font-black flex items-center italic shadow-lg ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/20 text-accent' : 'bg-error/20 text-error'}`}>
-                   {(currentTicker?.change || 0) >= 0 ? <TrendingUp size={18} className="mr-2" /> : <TrendingDown size={18} className="mr-2" />}
-                   {(currentTicker?.change || 0) >= 0 ? '+' : ''}{currentTicker?.change?.toFixed(2) || '0.00'}%
-                </span>
+             <div className="flex items-center space-x-12">
+                <div className="flex flex-col">
+                   <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest mb-1">Live Price (INDEX)</span>
+                   <span className="text-3xl md:text-5xl font-mono font-black text-white italic tracking-tighter font-display">
+                     ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                   </span>
+                </div>
+                <div className={`px-5 py-2.5 rounded-2xl text-[16px] font-black flex items-center italic shadow-2xl ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/20 text-accent border border-accent/20' : 'bg-error/20 text-error border border-error/20'}`}>
+                   {(currentTicker?.change || 0) >= 0 ? <TrendingUp size={20} className="mr-3" /> : <TrendingDown size={20} className="mr-3" />}
+                   {((currentTicker?.change || 0) >= 0 ? '+' : '') + (currentTicker?.change || 0).toFixed(2)}%
+                </div>
              </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-1 md:space-x-3 bg-white/2 p-2 rounded-2xl border border-white/5 relative z-10">
+        <div className="flex items-center space-x-2 bg-white/5 p-2 rounded-3xl border border-white/10 relative z-10 overflow-x-auto no-scrollbar">
           {timeframes.map(tf => (
             <button
               key={tf} onClick={() => setSelectedTimeframe(tf)}
-              className={`px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] italic transition-all shrink-0 ${selectedTimeframe === tf ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-white'}`}
+              className={`px-8 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] italic transition-all shrink-0 ${selectedTimeframe === tf ? 'bg-primary text-black shadow-[0_10px_30px_rgba(252,186,44,0.2)]' : 'text-slate-500 hover:text-white'}`}
             >
               {tf}
             </button>
@@ -271,55 +321,55 @@ const TradingDashboard: React.FC = () => {
 
       <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 md:gap-8">
         <div className="lg:col-span-3 space-y-6 md:space-y-8 order-1">
-          {/* Main Chart with Bybit-style Floating Stats */}
+          {/* Main Chart */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-4 md:p-8 h-[450px] md:h-[750px] flex flex-col relative group"
+            className="glass-card p-4 md:p-10 h-[500px] md:h-[800px] flex flex-col relative group overflow-hidden"
           >
-            <div className="absolute top-8 right-8 z-20 flex flex-col items-end space-y-4">
-               {activePositions.length > 0 && (
-                 <div className="bg-primary/90 text-black p-4 rounded-2xl shadow-2xl backdrop-blur-md border border-white/20 animate-pulse">
-                    <div className="flex items-center space-x-3 mb-1">
-                       <Clock size={16} className="animate-spin-slow" />
-                       <span className="text-[10px] font-black uppercase tracking-widest italic">Node Active (60s)</span>
-                    </div>
-                    <p className="text-sm font-black italic">AUTO-SETTLE SEQUENCE INITIALIZED</p>
-                 </div>
-               )}
-            </div>
-
-            <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-8">
-               <div className="flex space-x-12">
-                  <div className="flex flex-col">
-                     <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest mb-1">Index Price</span>
-                     <span className="text-xl font-mono font-black text-white italic tracking-tighter">${currentTicker?.price?.toLocaleString() || '0.00'}</span>
+            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[150px] pointer-events-none" />
+            
+            <div className="flex items-center justify-between mb-10 border-b border-white/5 pb-10">
+               <div className="flex space-x-16">
+                  <div>
+                     <span className="text-[12px] font-black text-slate-600 uppercase italic tracking-widest mb-2 block">Alpha Engine Status</span>
+                     <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
+                        <span className="text-sm font-black text-white italic tracking-widest uppercase">Streaming V4</span>
+                     </div>
                   </div>
-                  <div className="flex flex-col">
-                     <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest mb-1">24h Vol (USDC)</span>
-                     <span className="text-xl font-mono font-black text-slate-300 italic tracking-tighter">${(currentTicker?.volume ? currentTicker.volume / 1e6 : 0).toFixed(2)}M</span>
+                  <div className="hidden md:block">
+                     <span className="text-[12px] font-black text-slate-600 uppercase italic tracking-widest mb-2 block">Mark Liquidity</span>
+                     <span className="text-sm font-black text-primary italic tracking-widest uppercase">99.9% DEPTH</span>
                   </div>
                </div>
-               <div className="flex items-center space-x-4">
-                  <Activity size={24} className="text-primary animate-pulse" />
-                  <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-widest">Mark Streaming Verified</span>
+               <div className="flex items-center space-x-6">
+                  <div className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
+                     <span className="text-[10px] font-black text-primary italic tracking-[0.3em] uppercase">Node ID: {profile?.id?.substring(0,8)}</span>
+                  </div>
                </div>
             </div>
             <div ref={chartContainerRef} className="flex-1 w-full" />
           </motion.div>
 
-          {/* Active Positions (The "Flash Trade" View) */}
-          <div className="space-y-6">
-            <h3 className="text-sm font-black text-white italic tracking-[0.4em] uppercase ml-4">Live Positions ({activePositions.length})</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* ACTIVE FLASH POSITIONS (BYBIT STYLE) */}
+          <div className="space-y-8">
+            <div className="flex items-center justify-between px-4">
+               <h3 className="text-xl font-black text-white italic tracking-[0.4em] uppercase font-display">Active Flash Nodes ({activePositions.length})</h3>
+               <div className="flex items-center space-x-2 text-slate-500">
+                  <Info size={14} />
+                  <span className="text-[10px] font-black italic uppercase tracking-widest">Automatic T+0 Settlement</span>
+               </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <AnimatePresence>
                  {activePositions.map((pos) => (
-                   <LivePositionCard key={pos.id} position={pos} currentPrice={currentTicker?.price || 0} />
+                   <LiveFlashPositionCard key={pos.id} position={pos} currentPrice={currentTicker?.price || 0} />
                  ))}
                </AnimatePresence>
                {activePositions.length === 0 && (
-                 <div className="md:col-span-2 glass-card p-12 flex flex-col items-center justify-center border-dashed text-slate-600">
-                    <LayoutDashboard size={40} className="mb-4 opacity-20" />
-                    <p className="text-[10px] font-black uppercase italic tracking-[0.2em]">No active nodes discovered. Execute a Flash Trade below.</p>
+                 <div className="md:col-span-2 glass-card p-20 flex flex-col items-center justify-center border-dashed border-white/10 text-slate-600 transform hover:scale-[1.01] transition-all">
+                    <Zap size={64} className="mb-6 opacity-10 animate-pulse" />
+                    <p className="text-sm font-black uppercase italic tracking-[0.3em] text-center max-w-md">No Neural Signals detected. Synchronize a trade node above.</p>
                  </div>
                )}
             </div>
@@ -329,74 +379,76 @@ const TradingDashboard: React.FC = () => {
             <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
           </div>
 
-          <OrderHistoryLog orders={recentOrders} />
+          <SettlementArchive orders={recentOrders} />
         </div>
 
         <div className="hidden lg:block space-y-8 lg:sticky lg:top-8 self-start order-2">
           <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
           <TradingChat />
-          <MarketPulse tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
+          <GlobalNodeTable tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
         </div>
       </div>
     </div>
   );
 };
 
-// --- FLASH TRADE UI PANELS ---
+// --- FLASH COMPONENTS ---
 
 function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOpen }: any) {
   return (
-    <div className="bg-[#1C2023] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-2xl">
-      <div className="p-6 bg-[#252930] flex items-center justify-between border-b border-white/5">
-         <h3 className="font-black text-xs uppercase tracking-[0.3em] italic text-primary font-display flex items-center">
-            <Zap size={16} className="mr-3" />
-            Neural-S Execution
-         </h3>
-         <div className="px-3 py-1 bg-primary/10 rounded-lg text-[9px] font-black text-primary italic border border-primary/20">60s WINDOW</div>
+    <div className="bg-[#1C2023] rounded-[2rem] border border-white/10 overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.5)]">
+      <div className="p-8 bg-gradient-to-r from-primary/10 to-transparent flex items-center justify-between border-b border-white/5">
+         <div className="flex items-center space-x-4">
+            <div className="p-3 bg-primary/20 rounded-xl border border-primary/30">
+               <Zap size={20} className="text-primary" />
+            </div>
+            <h3 className="font-black text-sm uppercase tracking-[0.4em] italic text-white font-display">Flash Core</h3>
+         </div>
+         <div className="bg-primary/95 text-black px-4 py-1.5 rounded-full text-[10px] font-black italic tracking-widest">HIGH SPEED</div>
       </div>
-      <div className="p-8 space-y-8">
-         <div className="space-y-3">
-            <div className="flex justify-between px-1">
-               <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-widest">Entry Exposure</span>
-               <span className="text-[10px] font-bold text-white italic">Available: ${(wallet?.balance_usdc || 0).toLocaleString()} USDC</span>
+      <div className="p-10 space-y-10">
+         <div className="space-y-4">
+            <div className="flex justify-between px-2">
+               <span className="text-[12px] font-black text-slate-500 uppercase italic tracking-widest">Input Flux (USDC)</span>
+               <span className="text-[12px] font-bold text-white italic tracking-widest">Core: ${(wallet?.balance_usdc || 0).toLocaleString()}</span>
             </div>
             <div className="relative group">
                <input 
                  type="number" value={tradeAmount} onChange={(e) => setTradeAmount(e.target.value)}
-                 className="w-full bg-[#0B0E11] p-6 pr-20 rounded-2xl border border-white/10 text-xl font-black italic font-display focus:border-primary/50 focus:ring-0 transition-all"
+                 className="w-full bg-[#0B0E11] p-8 pr-24 rounded-3xl border border-white/10 text-3xl font-black italic font-display focus:border-primary/50 focus:ring-0 transition-all shadow-inner"
                  placeholder="0.00"
                />
-               <span className="absolute right-6 top-6 text-xs font-black text-slate-600 italic tracking-[0.2em]">USDC</span>
+               <span className="absolute right-8 top-8 text-sm font-black text-slate-600 italic tracking-[0.3em]">USDC</span>
             </div>
          </div>
 
-         <div className="grid grid-cols-2 gap-6">
+         <div className="grid grid-cols-2 gap-8">
             <button 
               onClick={() => onOpen('long')} disabled={processing}
-              className="flex flex-col items-center justify-center p-8 bg-[#0ECB81] hover:bg-[#12e291] text-black rounded-3xl shadow-xl transition-all hover:scale-[1.05] group"
+              className="group relative flex flex-col items-center justify-center p-10 bg-[#0ECB81] hover:bg-[#12e291] text-black rounded-[2.5rem] shadow-[0_20px_40px_rgba(14,203,129,0.2)] transition-all hover:translate-y-[-4px] overflow-hidden"
             >
-               <TrendingUp size={32} className="mb-2 group-hover:-translate-y-1 transition-transform" />
-               <span className="text-sm font-black italic tracking-widest uppercase">Open Long</span>
-               <span className="text-[8px] font-black opacity-60 uppercase tracking-widest mt-1">Bullish Node</span>
+               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+               <TrendingUp size={48} className="mb-4 relative z-10" />
+               <span className="text-base font-black italic tracking-[0.2em] uppercase relative z-10">Long-S</span>
             </button>
             <button 
               onClick={() => onOpen('short')} disabled={processing}
-              className="flex flex-col items-center justify-center p-8 bg-[#F6465D] hover:bg-[#ff5d72] text-white rounded-3xl shadow-xl transition-all hover:scale-[1.05] group"
+              className="group relative flex flex-col items-center justify-center p-10 bg-[#F6465D] hover:bg-[#ff5d72] text-white rounded-[2.5rem] shadow-[0_20px_40px_rgba(246,70,93,0.2)] transition-all hover:translate-y-[-4px] overflow-hidden"
             >
-               <TrendingDown size={32} className="mb-2 group-hover:translate-y-1 transition-transform" />
-               <span className="text-sm font-black italic tracking-widest uppercase">Open Short</span>
-               <span className="text-[8px] font-black opacity-60 uppercase tracking-widest mt-1">Bearish Node</span>
+               <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+               <TrendingDown size={48} className="mb-4 relative z-10" />
+               <span className="text-base font-black italic tracking-[0.2em] uppercase relative z-10">Short-S</span>
             </button>
          </div>
 
-         <div className="p-5 bg-white/2 rounded-2xl border border-white/5 space-y-4">
-            <div className="flex justify-between text-[10px] font-black italic tracking-widest">
-               <span className="text-slate-500 uppercase">Settlement Period</span>
-               <span className="text-primary italic">INSTANT 60s T+0</span>
+         <div className="p-6 bg-white/2 rounded-3xl border border-white/5 space-y-4 backdrop-blur-sm">
+            <div className="flex justify-between text-[11px] font-black italic tracking-widest">
+               <span className="text-slate-500 uppercase">Settlement Window</span>
+               <span className="text-primary italic">LOCKED (60s)</span>
             </div>
-            <div className="flex justify-between text-[10px] font-black italic tracking-widest">
-               <span className="text-slate-500 uppercase">Flash Protocol</span>
-               <span className="text-accent italic">BYBIT ALPHA V4</span>
+            <div className="flex justify-between text-[11px] font-black italic tracking-widest">
+               <span className="text-slate-500 uppercase">Execution Node</span>
+               <span className="text-accent italic">ALPHA v4.2</span>
             </div>
          </div>
       </div>
@@ -404,8 +456,9 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
   );
 }
 
-function LivePositionCard({ position, currentPrice }: any) {
+function LiveFlashPositionCard({ position, currentPrice }: any) {
   const [timeLeft, setTimeLeft] = useState(60);
+  const [pricePulse, setPricePulse] = useState<number[]>([]);
   const entryPrice = position.price_at_execution;
   const isLong = position.type === 'long';
   const priceChange = (currentPrice - entryPrice) / entryPrice;
@@ -413,93 +466,126 @@ function LivePositionCard({ position, currentPrice }: any) {
   const pnlUsdc = position.amount_usdc * (pnlPct / 100);
 
   useEffect(() => {
-    const start = new Date(position.created_at).getTime();
     const expiry = new Date(position.expires_at).getTime();
     const timer = setInterval(() => {
-      const now = Date.now();
-      const diff = Math.max(0, Math.floor((expiry - now) / 1000));
-      setTimeLeft(diff);
-    }, 1000);
+      setTimeLeft(Math.max(0, Math.floor((expiry - Date.now()) / 1000)));
+    }, 100);
     return () => clearInterval(timer);
   }, [position]);
 
+  // Record price pulse for visual effect
+  useEffect(() => {
+    setPricePulse(prev => [...prev.slice(-15), currentPrice]);
+  }, [currentPrice]);
+
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="glass-card p-6 border-white/10 relative overflow-hidden group"
+      initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9, y: -20 }}
+      className="bg-[#171A1E] p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden group shadow-2xl"
     >
-      <div className={`absolute top-0 right-0 w-2 h-full ${pnlPct >= 0 ? 'bg-accent shadow-[0_0_20px_var(--accent)]' : 'bg-error shadow-[0_0_20px_var(--error)]'}`} />
-      <div className="flex justify-between items-start mb-6">
-         <div className="flex items-center space-x-4">
-            <div className={`p-4 rounded-2xl ${isLong ? 'bg-accent/10 border-accent/20' : 'bg-error/10 border-error/20'} border`}>
-               {isLong ? <ArrowUpRight className={isLong ? 'text-accent' : 'text-error'} size={24} /> : <ArrowDownLeft className={isLong ? 'text-accent' : 'text-error'} size={24} />}
+      <div className={`absolute top-0 right-0 w-3 h-full ${pnlPct >= 0 ? 'bg-[#0ECB81] shadow-[0_0_30px_#0ECB81]' : 'bg-[#F6465D] shadow-[0_0_30px_#F6465D]'}`} />
+      
+      <div className="flex justify-between items-start mb-10">
+         <div className="flex items-center space-x-6">
+            <div className={`p-5 rounded-3xl ${isLong ? 'bg-accent/10 border-accent/20' : 'bg-error/10 border-error/20'} border shadow-inner`}>
+               {isLong ? <ArrowUpRight className="text-accent" size={32} /> : <ArrowDownLeft className="text-error" size={32} />}
             </div>
             <div>
-               <h4 className="text-base font-black text-white italic uppercase tracking-tighter">{position.symbol} <span className={isLong ? 'text-accent' : 'text-error'}>{position.type.toUpperCase()}</span></h4>
-               <p className="text-[10px] font-black text-slate-500 italic uppercase tracking-widest">Entry: ${entryPrice.toLocaleString()}</p>
+               <h4 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">{position.symbol}</h4>
+               <div className="flex items-center space-x-3">
+                  <span className={`text-[12px] font-black uppercase italic tracking-widest ${isLong ? 'text-accent' : 'text-error'}`}>{position.type.toUpperCase()} NODE</span>
+                  <span className="text-[10px] font-bold text-slate-600 uppercase">Entry: ${entryPrice.toLocaleString()}</span>
+               </div>
             </div>
          </div>
-         <div className="text-right">
-            <div className="flex items-center justify-end space-x-2 text-primary font-black italic">
-               <Clock size={14} className="animate-spin-slow" />
-               <span className="text-sm font-mono">{timeLeft}s</span>
+         <div className="text-right flex flex-col items-end">
+            <div className="flex items-center space-x-3 px-4 py-2 bg-white/5 rounded-2xl border border-white/10">
+               <Clock size={16} className="text-primary animate-spin-slow" />
+               <span className="text-2xl font-mono font-black text-white italic">{timeLeft}s</span>
             </div>
-            <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mt-1 italic">TIME REMAINING</p>
+            {timeLeft <= 10 && <span className="text-[10px] font-black text-error animate-pulse uppercase tracking-[0.2em] mt-2 italic">SETTLING SOON...</span>}
          </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 bg-black/40 p-5 rounded-2xl border border-white/5">
-         <div>
-            <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Exposure</span>
-            <span className="text-lg font-mono font-black text-white italic">${(position.amount_usdc || 0).toFixed(2)}</span>
+      <div className="space-y-6 relative z-10">
+         <div className="grid grid-cols-2 gap-8 bg-black/40 p-8 rounded-[2rem] border border-white/5">
+            <div>
+               <span className="text-[11px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Mark Flux (Live)</span>
+               <span className="text-3xl font-mono font-black text-white italic tracking-tighter">${currentPrice.toLocaleString()}</span>
+            </div>
+            <div className="text-right">
+               <span className="text-[11px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Unrealized Edge</span>
+               <span className={`text-4xl font-mono font-black italic tracking-tighter ${pnlPct >= 0 ? 'text-accent' : 'text-error'}`}>
+                  {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%
+               </span>
+            </div>
          </div>
-         <div className="text-right">
-            <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Unrealized PnL</span>
-            <span className={`text-lg font-mono font-black italic ${pnlPct >= 0 ? 'text-accent' : 'text-error'}`}>
-               {pnlPct >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(2)}%
+
+         {/* Price Fluctuation Visualizer (Bybit style) */}
+         <div className="flex items-end space-x-1 h-12 px-4 opacity-40">
+            {pricePulse.map((p, i) => {
+               const height = 10 + ((p - entryPrice) / entryPrice * 1000); // scaled
+               return <div key={i} className={`flex-1 rounded-full ${p >= entryPrice ? 'bg-accent' : 'bg-error'}`} style={{ height: `${Math.abs(height)}%`, maxHeight: '100%', minHeight: '10%' }} />;
+            })}
+         </div>
+      </div>
+
+      <div className="mt-8 pt-8 border-t border-white/5 flex justify-between items-center relative z-10">
+         <div className="flex items-center space-x-4">
+            <span className="text-[12px] font-black text-slate-500 uppercase italic tracking-widest">Net Realization:</span>
+            <span className={`text-2xl font-black italic tracking-tighter font-display ${pnlUsdc >= 0 ? 'text-accent' : 'text-error'}`}>
+               {pnlUsdc >= 0 ? '+' : ''}${pnlUsdc.toFixed(2)}
             </span>
          </div>
-      </div>
-
-      <div className="mt-6 flex justify-between items-center relative z-10">
-         <div className="flex items-center space-x-3 text-[10px] font-black italic uppercase tracking-widest">
-            <span className="text-slate-500">Net Return:</span>
-            <span className={pnlUsdc >= 0 ? 'text-accent' : 'text-error'}>{pnlUsdc >= 0 ? '+' : ''}${(pnlUsdc || 0).toFixed(2)}</span>
+         <div className="flex space-x-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
+            <span className="text-[10px] font-black text-primary uppercase italic tracking-widest">TRANSMITTING...</span>
          </div>
-         <span className="text-[8px] font-black text-primary uppercase italic tracking-[0.3em] animate-pulse">TRANSMITTING...</span>
       </div>
     </motion.div>
   );
 }
 
-function OrderHistoryLog({ orders }: any) {
+function SettlementArchive({ orders }: any) {
   return (
-    <div className="glass-card overflow-hidden">
-      <div className="p-6 bg-white/2 border-b border-white/5 flex justify-between items-center">
-         <div className="flex items-center space-x-3">
-            <History className="text-primary" size={18} />
-            <h3 className="text-xs font-black uppercase tracking-[0.4em] italic text-white font-display">Neural Settlement Archive</h3>
+    <div className="glass-card overflow-hidden rounded-[2.5rem]">
+      <div className="p-10 bg-[#252930] flex items-center justify-between border-b border-white/10">
+         <div className="flex items-center space-x-6">
+            <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20">
+               <History className="text-primary" size={24} />
+            </div>
+            <div>
+               <h3 className="text-xl font-black uppercase tracking-[0.4em] italic text-white font-display">Neural Settlement Archive</h3>
+               <p className="text-[10px] font-black text-slate-500 uppercase italic tracking-[0.2em] mt-1">Institutional Order Verification active</p>
+            </div>
          </div>
       </div>
-      <div className="flex-1 overflow-y-auto max-h-[350px] no-scrollbar">
+      <div className="max-h-[500px] overflow-y-auto no-scrollbar bg-[#0B0E11]/40">
          {orders.map((order: any) => (
-           <div key={order.id} className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/2 transition-all">
-              <div className="flex items-center space-x-4">
-                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black italic text-[10px] ${order.pnl_realized >= 0 ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-error/10 text-error border border-error/20'}`}>
+           <div key={order.id} className="p-10 border-b border-white/5 flex items-center justify-between hover:bg-white/5 transition-all relative group">
+              <div className="flex items-center space-x-8">
+                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black italic text-xl ${order.pnl_realized >= 0 ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-error/10 text-error border border-error/20'}`}>
                     {order.type === 'long' ? 'L' : 'S'}
                  </div>
                  <div>
-                    <h5 className="text-sm font-black text-white italic uppercase tracking-tighter">{order.symbol}</h5>
-                    <p className="text-[9px] font-black text-slate-500 uppercase italic tracking-widest">{new Date(order.created_at).toLocaleString()}</p>
+                    <h5 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none mb-2">{order.symbol}</h5>
+                    <div className="flex items-center space-x-4">
+                       <span className="text-sm font-mono font-bold text-slate-500 uppercase">${order.price_at_execution?.toLocaleString()}</span>
+                       <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest">{new Date(order.created_at).toLocaleString()}</span>
+                    </div>
                  </div>
               </div>
               <div className="text-right">
-                 <p className={`text-base font-mono font-black italic tracking-tighter ${order.pnl_realized >= 0 ? 'text-accent' : 'text-error'}`}>
-                    {order.pnl_realized >= 0 ? '+' : ''}${(order.pnl_realized || 0).toFixed(2)}
-                 </p>
-                 <p className="text-[9px] font-black text-slate-600 uppercase italic tracking-widest">Entry: ${order.price_at_execution?.toLocaleString()}</p>
+                 <div className="mb-2">
+                   <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest block">Assettled Result</span>
+                   <p className={`text-4xl font-mono font-black italic tracking-tighter ${order.pnl_realized >= 0 ? 'text-accent' : 'text-error'}`}>
+                      {order.pnl_realized >= 0 ? '+' : ''}${order.pnl_realized.toFixed(2)}
+                   </p>
+                 </div>
+                 <div className="px-4 py-1.5 bg-white/5 rounded-full inline-block border border-white/10">
+                    <span className="text-[10px] font-black text-slate-400 uppercase italic tracking-widest">TRANSACTION VERIFIED</span>
+                 </div>
               </div>
            </div>
          ))}
@@ -508,37 +594,37 @@ function OrderHistoryLog({ orders }: any) {
   );
 }
 
-function MarketPulse({ tickers, selectedSymbol, onSelect }: any) {
+function GlobalNodeTable({ tickers, selectedSymbol, onSelect }: any) {
   return (
-    <div className="glass-card overflow-hidden border-white/10 shadow-2xl">
-      <div className="p-6 bg-[#252930] flex items-center justify-between border-b border-white/10">
-         <h3 className="font-black text-xs uppercase tracking-[0.3em] italic text-white flex items-center">Market Streaming</h3>
-         <div className="flex items-center space-x-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-            <span className="text-[8px] font-black text-slate-500 uppercase italic tracking-widest">Live</span>
+    <div className="bg-[#1C2023] rounded-[2rem] border border-white/10 overflow-hidden shadow-2xl">
+      <div className="p-8 bg-[#252930] flex items-center justify-between border-b border-white/10">
+         <h3 className="font-black text-sm uppercase tracking-[0.4em] italic text-white flex items-center font-display">Neural Streams</h3>
+         <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
+            <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-widest">LIVE FEED</span>
          </div>
       </div>
-      <div className="max-h-[450px] overflow-y-auto no-scrollbar">
+      <div className="max-h-[500px] overflow-y-auto no-scrollbar">
         {tickers.map((ticker: any) => (
           <button
             key={ticker.symbol} onClick={() => onSelect(ticker.symbol)}
-            className={`w-full flex items-center justify-between px-6 py-5 hover:bg-white/5 transition-all relative group ${selectedSymbol === ticker.symbol ? 'bg-primary/5' : ''}`}
+            className={`w-full flex items-center justify-between px-10 py-8 hover:bg-white/5 transition-all relative group ${selectedSymbol === ticker.symbol ? 'bg-primary/10' : ''}`}
           >
-            {selectedSymbol === ticker.symbol && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_15px_var(--primary)]" />}
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-sm font-black italic border border-white/5 group-hover:border-primary/20 transition-all font-display">
+            {selectedSymbol === ticker.symbol && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary shadow-[0_0_30px_rgba(252,186,44,0.8)]" />}
+            <div className="flex items-center space-x-6">
+              <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center text-xl font-black italic border border-white/10 group-hover:border-primary/20 transition-all font-display">
                 {ticker.symbol.charAt(0)}
               </div>
               <div className="text-left">
-                <p className="text-base font-black text-white italic leading-none mb-1">{ticker.symbol}</p>
-                <p className="text-[9px] font-black text-slate-600 uppercase italic tracking-widest">${(ticker.volume / 1000 || 0).toFixed(1)}k VOL</p>
+                <p className="text-2xl font-black text-white italic leading-none mb-2">{ticker.symbol}</p>
+                <p className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest">${(ticker.volume / 1000).toFixed(1)}k STREAM VOL</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-base font-mono font-bold text-white italic tracking-tighter leading-none mb-1">${(ticker.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-              <p className={`text-[10px] font-black italic ${ticker.change >= 0 ? 'text-accent' : 'text-error'}`}>
-                {ticker.change >= 0 ? '+' : ''}{(ticker.change || 0).toFixed(2)}%
-              </p>
+              <p className="text-2xl font-mono font-bold text-white italic tracking-tighter leading-none mb-2">${ticker.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <div className={`flex items-center justify-end space-x-2 ${ticker.change >= 0 ? 'text-accent' : 'text-error'}`}>
+                 <span className="text-[12px] font-black italic tracking-widest uppercase">{ticker.change >= 0 ? '+' : ''}{ticker.change.toFixed(2)}%</span>
+              </div>
             </div>
           </button>
         ))}
