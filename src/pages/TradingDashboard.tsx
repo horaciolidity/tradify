@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, ISeriesApi } from 'lightweight-charts';
 import { MarketService, TickerData } from '../services/market';
-import { TrendingUp, TrendingDown, Clock, Maximize2, Settings, ShieldCheck, Zap, Activity, ChevronRight, History, PieChart, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Maximize2, Settings, ShieldCheck, Zap, Activity, ChevronRight, History, PieChart, ArrowUpRight, ArrowDownLeft, Target, TrendingUp as ProfitIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TradingChat from '../components/TradingChat';
 import AnnouncementCarousel from '../components/AnnouncementCarousel';
@@ -27,6 +27,7 @@ const TradingDashboard: React.FC = () => {
   const { addNotification } = useNotificationStore();
   const [currentTicker, setCurrentTicker] = useState<TickerData | null>(null);
   const [assetBalance, setAssetBalance] = useState(0);
+  const [avgEntryPrice, setAvgEntryPrice] = useState(0);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const symbolOnly = selectedSymbol.split('/')[0];
 
@@ -113,13 +114,18 @@ const TradingDashboard: React.FC = () => {
     const symbolOnly = selectedSymbol.split('/')[0];
     const { data } = await supabase
       .from('user_assets')
-      .select('balance')
+      .select('balance, avg_entry_price')
       .eq('user_id', profile?.id)
       .eq('symbol', symbolOnly)
       .maybeSingle();
     
-    if (data) setAssetBalance(data.balance);
-    else setAssetBalance(0);
+    if (data) {
+      setAssetBalance(data.balance);
+      setAvgEntryPrice(data.avg_entry_price || 0);
+    } else {
+      setAssetBalance(0);
+      setAvgEntryPrice(0);
+    }
   };
 
   const fetchOrders = async () => {
@@ -151,7 +157,11 @@ const TradingDashboard: React.FC = () => {
 
         const assetReceived = cost / currentPrice;
 
-        // 1. Log order and transaction first (safety)
+        // 1. Calculate and update new Avg Entry
+        const newBalanceTotal = assetBalance + assetReceived;
+        const newAvgEntry = ((assetBalance * avgEntryPrice) + (assetReceived * currentPrice)) / newBalanceTotal;
+
+        // 2. Database writes
         const { error: orderError } = await supabase.from('orders').insert({
           user_id: profile.id,
           symbol: selectedSymbol,
@@ -171,16 +181,12 @@ const TradingDashboard: React.FC = () => {
           status: 'completed'
         });
 
-        // 2. Update USDC Balance
+        // Update USDC
         const newUsdcBalance = wallet.balance_usdc - cost;
-        await supabase
-          .from('wallets')
-          .update({ balance_usdc: newUsdcBalance })
-          .eq('user_id', profile.id);
-        
+        await supabase.from('wallets').update({ balance_usdc: newUsdcBalance }).eq('user_id', profile.id);
         setWallet({ ...wallet, balance_usdc: newUsdcBalance });
 
-        // 3. Update Asset Balance
+        // Update Asset with Avg Entry
         const { data: existingAsset } = await supabase
           .from('user_assets')
           .select('*')
@@ -191,22 +197,30 @@ const TradingDashboard: React.FC = () => {
         if (existingAsset) {
           await supabase
             .from('user_assets')
-            .update({ balance: existingAsset.balance + assetReceived })
+            .update({ 
+               balance: newBalanceTotal, 
+               avg_entry_price: newAvgEntry 
+            })
             .eq('id', existingAsset.id);
         } else {
           await supabase
             .from('user_assets')
-            .insert({ user_id: profile.id, symbol: symbolOnly, balance: assetReceived });
+            .insert({ 
+               user_id: profile.id, 
+               symbol: symbolOnly, 
+               balance: assetReceived,
+               avg_entry_price: currentPrice
+            });
         }
 
-        await addNotification(profile.id, 'Order Executed', `Bought ${assetReceived.toFixed(6)} ${symbolOnly}`, 'success');
+        await addNotification(profile.id, 'Node Sync Success', `Integrated ${assetReceived.toFixed(6)} ${symbolOnly}`, 'success');
       } else {
-        // SELL
+        // SELL (Liquidate)
         const assetToSell = amountUsdc / currentPrice;
-        if (assetToSell > assetBalance) throw new Error(`Insufficient ${symbolOnly} balance`);
+        if (assetToSell > assetBalance) throw new Error(`Insufficient ${symbolOnly} in core`);
 
-        // 1. Log order and transaction
-        const { error: orderError } = await supabase.from('orders').insert({
+        // Log order
+        await supabase.from('orders').insert({
           user_id: profile.id,
           symbol: selectedSymbol,
           type: 'sell',
@@ -215,33 +229,28 @@ const TradingDashboard: React.FC = () => {
           price_at_execution: currentPrice,
           status: 'completed'
         });
-        if (orderError) throw orderError;
 
         await supabase.from('transactions').insert({
           user_id: profile.id,
           type: 'trade',
           amount: amountUsdc,
-          description: `Sell ${assetToSell.toFixed(6)} ${symbolOnly} @ $${currentPrice.toLocaleString()}`,
+          description: `Liquidated ${assetToSell.toFixed(6)} ${symbolOnly} @ $${currentPrice.toLocaleString()}`,
           status: 'completed'
         });
 
-        // 2. Update Asset Balance
+        // Update Assets (Avg entry remains the same for remaining part)
         await supabase
           .from('user_assets')
           .update({ balance: assetBalance - assetToSell })
           .eq('user_id', profile.id)
           .eq('symbol', symbolOnly);
 
-        // 3. Update USDC Balance
+        // Update USDC
         const newUsdcBalance = wallet.balance_usdc + amountUsdc;
-        await supabase
-          .from('wallets')
-          .update({ balance_usdc: newUsdcBalance })
-          .eq('user_id', profile.id);
-
+        await supabase.from('wallets').update({ balance_usdc: newUsdcBalance }).eq('user_id', profile.id);
         setWallet({ ...wallet, balance_usdc: newUsdcBalance });
 
-        await addNotification(profile.id, 'Order Executed', `Sold ${assetToSell.toFixed(6)} ${symbolOnly}`, 'success');
+        await addNotification(profile.id, 'Liquidated', `Realized ${amountUsdc.toFixed(2)} USDC from ${symbolOnly}`, 'success');
       }
       
       setTradeAmount('');
@@ -256,7 +265,6 @@ const TradingDashboard: React.FC = () => {
 
   return (
     <div className="space-y-4 md:space-y-8 pb-10 -mt-2 md:mt-0">
-      {/* Ticker Tape */}
       <div className="hidden md:block -mx-12">
         <MarketTicker />
       </div>
@@ -274,18 +282,16 @@ const TradingDashboard: React.FC = () => {
           <div className="flex-1">
             <div className="flex items-center space-x-2 md:space-x-4 mb-1">
               <h1 className="text-2xl md:text-5xl font-black text-white italic uppercase tracking-tighter font-display leading-none">{selectedSymbol}</h1>
-              <span className="text-[10px] md:text-xs font-black px-3 md:px-5 py-1 bg-primary/10 text-primary rounded-full border border-primary/20 uppercase tracking-[0.2em] italic">Spot Market</span>
+              <span className="text-[10px] md:text-xs font-black px-3 md:px-5 py-1 bg-accent/10 text-accent rounded-full border border-accent/20 uppercase tracking-[0.2em] italic">Active Market</span>
             </div>
             <div className="flex items-center space-x-4 md:space-x-8">
-              <div className="flex items-center space-x-4">
-                <span className="text-2xl md:text-4xl font-mono font-black text-white italic tracking-tighter font-display">
-                  ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                </span>
-                <span className={`px-3 py-1 md:px-5 md:py-2 rounded-lg md:rounded-2xl text-[12px] md:text-base font-black flex items-center italic shadow-lg ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/20 text-accent' : 'bg-error/20 text-error'}`}>
-                  {(currentTicker?.change || 0) >= 0 ? <TrendingUp size={16} className="mr-2" /> : <TrendingDown size={16} className="mr-2" />}
-                  {(currentTicker?.change || 0) >= 0 ? '+' : ''}{currentTicker?.change?.toFixed(2) || '0.00'}%
-                </span>
-              </div>
+              <span className="text-2xl md:text-4xl font-mono font-black text-white italic tracking-tighter font-display">
+                ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+              </span>
+              <span className={`px-3 py-1 md:px-5 md:py-2 rounded-lg md:rounded-2xl text-[12px] md:text-base font-black flex items-center italic shadow-lg ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/20 text-accent' : 'bg-error/20 text-error'}`}>
+                {(currentTicker?.change || 0) >= 0 ? <TrendingUp size={16} className="mr-2" /> : <TrendingDown size={16} className="mr-2" />}
+                {(currentTicker?.change || 0) >= 0 ? '+' : ''}{currentTicker?.change?.toFixed(2) || '0.00'}%
+              </span>
             </div>
           </div>
         </div>
@@ -293,8 +299,7 @@ const TradingDashboard: React.FC = () => {
         <div className="flex items-center space-x-1 md:space-x-3 bg-white/2 p-2 rounded-2xl border border-white/5 relative z-10 overflow-x-auto no-scrollbar">
           {timeframes.map(tf => (
             <button
-              key={tf}
-              onClick={() => setSelectedTimeframe(tf)}
+              key={tf} onClick={() => setSelectedTimeframe(tf)}
               className={`px-4 md:px-6 py-2 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] italic transition-all shrink-0 ${selectedTimeframe === tf ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-white'}`}
             >
               {tf}
@@ -307,29 +312,28 @@ const TradingDashboard: React.FC = () => {
         <div className="lg:col-span-3 space-y-6 md:space-y-8 order-1">
           {/* Main Chart */}
           <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="glass-card p-4 md:p-8 h-[400px] md:h-[700px] flex flex-col"
           >
             <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-6">
               <div className="flex items-center space-x-8">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-slate-600 uppercase italic">High (24h)</span>
-                  <span className="text-sm md:text-base font-mono font-bold text-white">${currentTicker?.high?.toLocaleString() || '0.00'}</span>
+                  <span className="text-[10px] font-black text-slate-600 uppercase italic">Entry Reference</span>
+                  <span className="text-sm font-mono font-bold text-primary italic tracking-widest">${avgEntryPrice > 0 ? avgEntryPrice.toLocaleString() : '---'}</span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-slate-600 uppercase italic">Low (24h)</span>
-                  <span className="text-sm md:text-base font-mono font-bold text-white">${currentTicker?.low?.toLocaleString() || '0.00'}</span>
-                </div>
+                {assetBalance > 0 && avgEntryPrice > 0 && (
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-slate-600 uppercase italic">Core ROI</span>
+                    <span className={`text-sm font-mono font-bold italic tracking-widest ${((currentTicker?.price || 0) - avgEntryPrice) >= 0 ? 'text-accent' : 'text-error'}`}>
+                      {((currentTicker?.price || 0) - avgEntryPrice) >= 0 ? '+' : ''}
+                      {(((currentTicker?.price || 0) - avgEntryPrice) / avgEntryPrice * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center space-x-6">
-                <div className="hidden sm:flex flex-col items-end">
-                   <span className="text-[10px] font-black text-slate-500 uppercase italic">Market Liquidity</span>
-                   <span className="text-sm font-bold text-primary italic">SYNCHRONIZED</span>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <Activity size={18} className="text-primary animate-pulse" />
-                </div>
+              <div className="flex items-center space-x-4">
+                 <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
+                 <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-widest">Feed Initialized</span>
               </div>
             </div>
             <div ref={chartContainerRef} className="flex-1 w-full" />
@@ -342,12 +346,19 @@ const TradingDashboard: React.FC = () => {
               wallet={wallet} assetBalance={assetBalance}
               currentTicker={currentTicker} symbolOnly={symbolOnly}
               processing={processing} handleTrade={handleTrade}
+              avgEntryPrice={avgEntryPrice}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             <OrderHistoryWidget orders={recentOrders} />
-            <PortfolioStatsWidget balance={wallet?.balance_usdc} assets={assetBalance} symbol={symbolOnly} />
+            <PortfolioStatsWidget 
+                balance={wallet?.balance_usdc} 
+                assets={assetBalance} 
+                symbol={symbolOnly} 
+                avgEntry={avgEntryPrice}
+                currentPrice={currentTicker?.price || 0}
+            />
           </div>
 
           <AnnouncementCarousel />
@@ -361,6 +372,7 @@ const TradingDashboard: React.FC = () => {
             wallet={wallet} assetBalance={assetBalance}
             currentTicker={currentTicker} symbolOnly={symbolOnly}
             processing={processing} handleTrade={handleTrade}
+            avgEntryPrice={avgEntryPrice}
           />
           <MarketListWidget 
             tickers={tickers} selectedSymbol={selectedSymbol} setSelectedSymbol={setSelectedSymbol}
@@ -375,7 +387,7 @@ const TradingDashboard: React.FC = () => {
 
 function OrderHistoryWidget({ orders }: { orders: any[] }) {
   return (
-    <div className="glass-card flex flex-col h-[400px]">
+    <div className="glass-card flex flex-col h-[450px]">
       <div className="p-4 md:p-6 border-b border-white/5 bg-white/2 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <History size={18} className="text-primary" />
@@ -391,14 +403,14 @@ function OrderHistoryWidget({ orders }: { orders: any[] }) {
         ) : (
           <div className="divide-y divide-white/5">
             {orders.map((order) => (
-              <div key={order.id} className="p-4 hover:bg-white/2 transition-all group">
+              <div key={order.id} className="p-4 hover:bg-white/2 transition-all">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
                     <span className={`w-1.5 h-1.5 rounded-full ${order.type === 'buy' ? 'bg-accent shadow-[0_0_8px_var(--accent)]' : 'bg-error shadow-[0_0_8px_var(--error)]'}`} />
                     <span className="text-[10px] font-black uppercase italic text-white tracking-widest">{order.type}</span>
                     <span className="text-[8px] font-bold text-slate-500 uppercase">{new Date(order.created_at).toLocaleTimeString()}</span>
                   </div>
-                  <span className="text-[11px] font-mono font-bold text-white italic tracking-tighter">${order.amount_usdc.toFixed(2)}</span>
+                  <span className="text-[11px] font-mono font-bold text-white italic">${order.amount_usdc.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[9px] font-bold text-slate-500 uppercase italic">{order.symbol} @ ${order.price_at_execution.toLocaleString()}</span>
@@ -413,48 +425,67 @@ function OrderHistoryWidget({ orders }: { orders: any[] }) {
   );
 }
 
-function PortfolioStatsWidget({ balance, assets, symbol }: any) {
+function PortfolioStatsWidget({ balance, assets, symbol, avgEntry, currentPrice }: any) {
+  const pnlUsdc = assets * (currentPrice - avgEntry);
+  const pnlPercent = avgEntry > 0 ? ((currentPrice - avgEntry) / avgEntry * 100) : 0;
+  const totalValue = assets * currentPrice;
+
   return (
-    <div className="glass-card p-6 flex flex-col justify-between overflow-hidden relative group">
-      <div className="absolute top-0 right-0 p-8 opacity-5 -mr-4 -mt-4 transition-transform group-hover:scale-125 duration-700">
+    <div className="glass-card p-6 flex flex-col justify-between overflow-hidden relative group h-[450px]">
+      <div className="absolute top-0 right-0 p-8 opacity-5 -mr-4 -mt-4">
         <PieChart size={120} className="text-primary" />
       </div>
       
       <div>
         <div className="flex items-center space-x-3 mb-8">
-          <PieChart size={18} className="text-accent" />
-          <h3 className="font-black text-xs uppercase tracking-[0.2em] italic text-white font-display">Synchronized Core</h3>
+          <Target size={18} className="text-primary" />
+          <h3 className="font-black text-xs uppercase tracking-[0.2em] italic text-white font-display">Core Analysis</h3>
         </div>
         
         <div className="space-y-6 relative z-10">
           <div>
-            <span className="text-[10px] font-black text-slate-500 uppercase italic block mb-2 tracking-widest">Available Flux (USDC)</span>
-            <span className="text-3xl md:text-4xl font-black text-white italic tracking-tighter font-display">
+            <span className="text-[10px] font-black text-slate-500 uppercase italic block mb-2 tracking-widest">Available Balance</span>
+            <span className="text-3xl font-black text-white italic tracking-tighter font-display">
               ${(balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
           </div>
           
-          <div className="p-4 bg-black/40 rounded-2xl border border-white/5 backdrop-blur-md">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[9px] font-black text-slate-500 uppercase italic tracking-widest">Allocated {symbol}</span>
-              <span className="text-[10px] font-bold text-accent italic">ACTIVE</span>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-white/2 rounded-2xl border border-white/5 backdrop-blur-md">
+              <span className="text-[8px] font-black text-slate-500 uppercase italic block mb-1">Exposure</span>
+              <span className="text-lg font-black text-white italic font-display">${totalValue.toFixed(2)}</span>
+            </div>
+            <div className={`p-4 rounded-2xl border backdrop-blur-md ${pnlUsdc >= 0 ? 'bg-accent/5 border-accent/20' : 'bg-error/5 border-error/20'}`}>
+              <span className="text-[8px] font-black text-slate-500 uppercase italic block mb-1">Real-time PnL</span>
+              <span className={`text-lg font-black italic font-display ${pnlUsdc >= 0 ? 'text-accent' : 'text-error'}`}>
+                {pnlUsdc >= 0 ? '+' : ''}${pnlUsdc.toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
+            <div className="flex items-center justify-between mb-3 text-[9px] font-black tracking-widest text-slate-500 uppercase italic">
+               <span>Accumulation Area</span>
+               <span className="text-primary">{symbol}</span>
             </div>
             <div className="flex items-baseline space-x-3">
-              <span className="text-xl font-black text-white italic tracking-tighter font-display">{(assets || 0).toFixed(6)}</span>
-              <span className="text-xs font-black text-slate-400 italic">{symbol}</span>
+              <span className="text-2xl font-black text-white italic tracking-tighter font-display">{(assets || 0).toFixed(6)}</span>
+              <span className={`text-xs font-black italic ${pnlPercent >= 0 ? 'text-accent' : 'text-error'}`}>
+                 {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
+              </span>
             </div>
           </div>
         </div>
       </div>
       
       <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-        <div className="flex space-x-4">
-           <div className="flex items-center space-x-2">
-             <ArrowUpRight size={14} className="text-accent" />
-             <span className="text-[10px] font-bold text-white italic tracking-tighter font-display">P/L: +12.5%</span>
-           </div>
+        <div className="flex items-center space-x-2">
+          <Target size={14} className="text-primary animate-pulse" />
+          <span className="text-[10px] font-bold text-white italic tracking-tighter font-display uppercase tracking-widest">Live Sync Alpha</span>
         </div>
-        <span className="text-[8px] font-black text-slate-600 uppercase italic tracking-[0.3em]">Institutional Grade</span>
+        <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10">
+          <span className="text-[9px] font-black text-slate-400 uppercase italic">T+0 SETTLEMENT</span>
+        </div>
       </div>
     </div>
   );
@@ -465,41 +496,45 @@ function PortfolioStatsWidget({ balance, assets, symbol }: any) {
 function TradePanelWidget({ 
   tradeType, setTradeType, tradeAmount, setTradeAmount, 
   wallet, assetBalance, currentTicker, symbolOnly, 
-  processing, handleTrade 
+  processing, handleTrade, avgEntryPrice 
 }: any) {
+  const currentPrice = currentTicker?.price || 0;
+  const pnlPercent = avgEntryPrice > 0 ? ((currentPrice - avgEntryPrice) / avgEntryPrice * 100) : 0;
+
   return (
     <motion.div 
       initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
       className="glass-card overflow-hidden"
     >
       <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
-        <h3 className="font-black text-xs uppercase tracking-[0.3em] italic text-white text-trader">Neural Order</h3>
-        <div className="flex items-center space-x-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-          <span className="text-[8px] font-black text-slate-500 uppercase italic tracking-widest">EXECUTION Ready</span>
-        </div>
+        <h3 className="font-black text-xs uppercase tracking-[0.3em] italic text-white text-trader">Spot Neural Node</h3>
+        {assetBalance > 0 && (
+          <div className={`px-3 py-1 rounded-lg text-[9px] font-black italic ${pnlPercent >= 0 ? 'bg-accent/10 text-accent' : 'bg-error/10 text-error'}`}>
+            {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
+          </div>
+        )}
       </div>
       <div className="p-6 space-y-6">
         <div className="flex p-1.5 bg-black/40 rounded-[1.25rem] border border-white/5">
           <button 
             onClick={() => setTradeType('buy')}
-            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic transition-all ${tradeType === 'buy' ? 'bg-accent text-black shadow-xl shadow-accent/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic transition-all ${tradeType === 'buy' ? 'bg-primary text-black shadow-xl shadow-primary/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            BUY {symbolOnly}
+            S-BUY
           </button>
           <button 
             onClick={() => setTradeType('sell')}
             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic transition-all ${tradeType === 'sell' ? 'bg-error text-white shadow-xl shadow-error/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            SELL {symbolOnly}
+            S-SELL
           </button>
         </div>
 
         <div className="space-y-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <span className="text-[9px] font-black text-slate-500 uppercase italic tracking-widest">Amount to Invest</span>
-              <span className="text-[9px] font-bold text-white uppercase italic">Max: {tradeType === 'buy' ? (wallet?.balance_usdc || 0).toLocaleString() : (assetBalance * (currentTicker?.price || 0)).toFixed(2)} USDC</span>
+              <span className="text-[9px] font-black text-slate-500 uppercase italic tracking-widest">Exposure Amount</span>
+              <span className="text-[9px] font-bold text-white italic">{(wallet?.balance_usdc || 0).toLocaleString()} USDC</span>
             </div>
             <div className="relative group">
               <input 
@@ -516,14 +551,14 @@ function TradePanelWidget({
           </div>
           
           <div className="pt-2">
-            <div className="bg-white/2 rounded-2xl p-4 border border-white/5 space-y-3 mb-6">
+            <div className="bg-white/2 rounded-2xl p-5 border border-white/5 space-y-4 mb-6">
                <div className="flex justify-between items-center text-[10px] font-black italic">
-                 <span className="text-slate-500 uppercase tracking-widest">Estimated Yield</span>
-                 <span className="text-white">~ {currentTicker ? (parseFloat(tradeAmount || '0') / currentTicker.price).toFixed(6) : '0.000'} {symbolOnly}</span>
+                 <span className="text-slate-500 uppercase tracking-widest">Mark Price</span>
+                 <span className="text-white">${currentPrice.toLocaleString()}</span>
                </div>
                <div className="flex justify-between items-center text-[10px] font-black italic">
-                 <span className="text-slate-500 uppercase tracking-widest">Slippage Protocol</span>
-                 <span className="text-accent text-[9px]">PROTECTED (Neural Match)</span>
+                 <span className="text-slate-500 uppercase tracking-widest">Avg entry</span>
+                 <span className="text-primary">${avgEntryPrice > 0 ? avgEntryPrice.toLocaleString() : '---'}</span>
                </div>
             </div>
             
@@ -531,11 +566,11 @@ function TradePanelWidget({
               onClick={handleTrade} disabled={processing}
               className={`w-full py-6 rounded-2xl font-black text-xs uppercase tracking-[0.6em] italic transition-all flex items-center justify-center space-x-3 shadow-2xl relative overflow-hidden group/btn ${
                 tradeType === 'buy' 
-                  ? 'bg-accent text-black shadow-accent/20' 
+                  ? 'bg-primary text-black shadow-primary/20' 
                   : 'bg-error text-white shadow-error/20'
               }`}>
               <div className="absolute inset-0 bg-white opacity-0 group-hover/btn:opacity-10 transition-opacity" />
-              <span>{processing ? 'TRANSMITTING...' : `${tradeType === 'buy' ? 'INITIATE PURCHASE' : 'LIQUIDATE POSITION'}`}</span>
+              <span>{processing ? 'EXECUTING...' : `${tradeType === 'buy' ? 'OPEN LONG-S' : 'LIQUIDATE S'}`}</span>
               <ChevronRight size={20} className="group-hover/btn:translate-x-2 transition-transform" />
             </button>
           </div>
@@ -550,9 +585,9 @@ function MarketListWidget({ tickers, selectedSymbol, setSelectedSymbol }: any) {
     <div className="glass-card overflow-hidden">
       <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
         <h3 className="font-black text-xs uppercase tracking-[0.3em] italic text-white flex items-center font-display">
-          Market Pulse
+          Global Nodes
         </h3>
-        <span className="text-[8px] font-black text-accent uppercase tracking-[0.2em] animate-pulse italic">Connecting Nodes...</span>
+        <span className="text-[8px] font-black text-accent uppercase tracking-[0.2em] animate-pulse italic">Market Streaming</span>
       </div>
       <div className="max-h-[450px] overflow-y-auto no-scrollbar py-2">
         {tickers.map((ticker: any) => (
