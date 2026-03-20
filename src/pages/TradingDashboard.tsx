@@ -453,12 +453,12 @@ function LivePositionCard({ position, currentPrice }: any) {
       <div className="grid grid-cols-2 gap-6 bg-black/40 p-5 rounded-2xl border border-white/5">
          <div>
             <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Exposure</span>
-            <span className="text-lg font-mono font-black text-white italic">${position.amount_usdc.toFixed(2)}</span>
+            <span className="text-lg font-mono font-black text-white italic">${(position.amount_usdc || 0).toFixed(2)}</span>
          </div>
          <div className="text-right">
             <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Unrealized PnL</span>
             <span className={`text-lg font-mono font-black italic ${pnlPct >= 0 ? 'text-accent' : 'text-error'}`}>
-               {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%
+               {pnlPct >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(2)}%
             </span>
          </div>
       </div>
@@ -466,7 +466,7 @@ function LivePositionCard({ position, currentPrice }: any) {
       <div className="mt-6 flex justify-between items-center relative z-10">
          <div className="flex items-center space-x-3 text-[10px] font-black italic uppercase tracking-widest">
             <span className="text-slate-500">Net Return:</span>
-            <span className={pnlUsdc >= 0 ? 'text-accent' : 'text-error'}>{pnlUsdc >= 0 ? '+' : ''}${pnlUsdc.toFixed(2)}</span>
+            <span className={pnlUsdc >= 0 ? 'text-accent' : 'text-error'}>{pnlUsdc >= 0 ? '+' : ''}${(pnlUsdc || 0).toFixed(2)}</span>
          </div>
          <span className="text-[8px] font-black text-primary uppercase italic tracking-[0.3em] animate-pulse">TRANSMITTING...</span>
       </div>
@@ -497,7 +497,7 @@ function OrderHistoryLog({ orders }: any) {
               </div>
               <div className="text-right">
                  <p className={`text-base font-mono font-black italic tracking-tighter ${order.pnl_realized >= 0 ? 'text-accent' : 'text-error'}`}>
-                    {order.pnl_realized >= 0 ? '+' : ''}${order.pnl_realized.toFixed(2)}
+                    {order.pnl_realized >= 0 ? '+' : ''}${(order.pnl_realized || 0).toFixed(2)}
                  </p>
                  <p className="text-[9px] font-black text-slate-600 uppercase italic tracking-widest">Entry: ${order.price_at_execution?.toLocaleString()}</p>
               </div>
@@ -531,13 +531,13 @@ function MarketPulse({ tickers, selectedSymbol, onSelect }: any) {
               </div>
               <div className="text-left">
                 <p className="text-base font-black text-white italic leading-none mb-1">{ticker.symbol}</p>
-                <p className="text-[9px] font-black text-slate-600 uppercase italic tracking-widest">${(ticker.volume / 1000).toFixed(1)}k VOL</p>
+                <p className="text-[9px] font-black text-slate-600 uppercase italic tracking-widest">${(ticker.volume / 1000 || 0).toFixed(1)}k VOL</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-base font-mono font-bold text-white italic tracking-tighter leading-none mb-1">${ticker.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p className="text-base font-mono font-bold text-white italic tracking-tighter leading-none mb-1">${(ticker.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               <p className={`text-[10px] font-black italic ${ticker.change >= 0 ? 'text-accent' : 'text-error'}`}>
-                {ticker.change >= 0 ? '+' : ''}{ticker.change.toFixed(2)}%
+                {ticker.change >= 0 ? '+' : ''}{(ticker.change || 0).toFixed(2)}%
               </p>
             </div>
           </button>
