@@ -156,7 +156,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </button>
               
               {/* Notification Dropdown */}
-              <div className="absolute right-0 mt-2 w-[400px] bg-dark-lighter border border-white/10 rounded-3xl shadow-2xl opacity-0 translate-y-4 pointer-events-none group-hover/notif:opacity-100 group-hover/notif:translate-y-0 group-hover/notif:pointer-events-auto transition-all duration-300 z-50 overflow-hidden backdrop-blur-2xl">
+              <div className="absolute right-[-60px] md:right-0 mt-2 w-[calc(100vw-40px)] sm:w-[400px] bg-dark-lighter border border-white/10 rounded-3xl shadow-2xl opacity-0 translate-y-4 pointer-events-none group-hover/notif:opacity-100 group-hover/notif:translate-y-0 group-hover/notif:pointer-events-auto transition-all duration-300 z-50 overflow-hidden backdrop-blur-2xl">
                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
                   <h3 className="font-black text-white uppercase tracking-tighter italic">Notifications</h3>
                   <button 
@@ -223,13 +223,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <span className="hidden sm:inline-block text-xs md:text-sm font-semibold">{profile?.full_name?.split(' ')[0] || 'Profile'}</span>
             </Link>
 
-            <button 
-              onClick={() => signOut()}
-              className="p-2 md:p-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-full border border-rose-500/20 transition-all active:scale-90"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
           </div>
         </header>
 

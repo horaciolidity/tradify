@@ -289,7 +289,7 @@ const TradingDashboard: React.FC = () => {
              <div className="flex items-center space-x-3 md:space-x-6 mb-1 md:mb-2">
                 <h1 className="text-2xl md:text-7xl font-black text-white italic uppercase tracking-tighter font-display leading-none">{selectedSymbol}</h1>
                 <div className="px-3 py-1 md:px-5 md:py-2 bg-primary/20 border border-primary/40 rounded-full animate-pulse">
-                   <span className="text-[8px] md:text-[12px] font-black text-primary uppercase tracking-[0.4em] italic">Flash</span>
+                   <span className="text-[8px] md:text-[12px] font-black text-primary uppercase tracking-[0.4em] italic">OPERACIÓN FLASH</span>
                 </div>
              </div>
              <div className="flex items-center space-x-12">
@@ -344,34 +344,56 @@ const TradingDashboard: React.FC = () => {
                </div>
                <div className="flex items-center space-x-6">
                   <div className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
-                     <span className="text-[10px] font-black text-primary italic tracking-[0.3em] uppercase">Node ID: {profile?.id?.substring(0,8)}</span>
+                     <span className="text-[10px] font-black text-primary italic tracking-[0.3em] uppercase">ID DE USUARIO: {profile?.id?.substring(0,8)}</span>
                   </div>
                </div>
             </div>
             <div ref={chartContainerRef} className="flex-1 w-full" />
           </motion.div>
 
-          {/* ACTIVE FLASH POSITIONS (BYBIT STYLE) */}
-          <div className="space-y-8">
-            <div className="flex items-center justify-between px-2 md:px-4">
-               <h3 className="text-base md:text-xl font-black text-white italic tracking-[0.4em] uppercase font-display">Active Nodes ({activePositions.length})</h3>
-               <div className="flex items-center space-x-2 text-slate-500">
+          {/* ACTIVE FLASH POSITIONS (BINANCE/BYBIT STYLE TABLE) */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between px-2">
+               <div className="flex items-center space-x-4">
+                  <h3 className="text-sm md:text-lg font-black text-white italic tracking-[0.4em] uppercase font-display">Posiciones Abiertas</h3>
+                  <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
+                    <span className="text-[8px] md:text-[10px] font-black text-primary uppercase italic tracking-widest">{activePositions.length} OPERACIONES EN CURSO</span>
+                  </div>
+               </div>
+               <div className="flex items-center space-x-2 text-slate-600">
                   <Info size={14} />
-                  <span className="text-[10px] font-black italic uppercase tracking-widest">Automatic T+0 Settlement</span>
+                  <span className="text-[10px] font-black italic uppercase tracking-widest">Cierre Automático Activo</span>
                </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <AnimatePresence>
-                 {activePositions.map((pos) => (
-                   <LiveFlashPositionCard key={pos.id} position={pos} currentPrice={currentTicker?.price || 0} />
-                 ))}
-               </AnimatePresence>
-               {activePositions.length === 0 && (
-                 <div className="md:col-span-2 glass-card p-20 flex flex-col items-center justify-center border-dashed border-white/10 text-slate-600 transform hover:scale-[1.01] transition-all">
-                    <Zap size={64} className="mb-6 opacity-10 animate-pulse" />
-                    <p className="text-sm font-black uppercase italic tracking-[0.3em] text-center max-w-md">No Neural Signals detected. Synchronize a trade node above.</p>
-                 </div>
-               )}
+
+            <div className="glass-card overflow-hidden border-white/5 bg-[#0B0E11]/40">
+               <div className="hidden md:grid grid-cols-6 gap-4 px-8 py-4 bg-white/5 border-b border-white/5 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  <span>Instrumento</span>
+                  <span>Dirección / Monto</span>
+                  <span>Entrada / Actual</span>
+                  <span>Gasto/Ganancia (PnL)</span>
+                  <span>Cierre en</span>
+                  <span className="text-right">Acción</span>
+               </div>
+               
+               <div className="divide-y divide-white/5">
+                 <AnimatePresence>
+                   {activePositions.map((pos) => (
+                     <LiveFlashPositionRow 
+                       key={pos.id} 
+                       position={pos} 
+                       currentPrice={currentTicker?.price || 0} 
+                       onClose={() => settleOrder(pos)}
+                     />
+                   ))}
+                 </AnimatePresence>
+                 {activePositions.length === 0 && (
+                   <div className="p-16 flex flex-col items-center justify-center text-slate-600">
+                      <Zap size={40} className="mb-4 opacity-10 animate-pulse" />
+                      <p className="text-[10px] font-black uppercase italic tracking-[0.3em] text-center">No hay posiciones abiertas. Inicia una operación arriba.</p>
+                   </div>
+                 )}
+               </div>
             </div>
           </div>
 
@@ -402,53 +424,53 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
             <div className="p-3 bg-primary/20 rounded-xl border border-primary/30">
                <Zap size={20} className="text-primary" />
             </div>
-            <h3 className="font-black text-sm uppercase tracking-[0.4em] italic text-white font-display">Flash Core</h3>
+            <h3 className="font-black text-sm uppercase tracking-[0.4em] italic text-white font-display">Terminal de Trading</h3>
          </div>
-         <div className="bg-primary/95 text-black px-4 py-1.5 rounded-full text-[10px] font-black italic tracking-widest">HIGH SPEED</div>
+         <div className="bg-primary/95 text-black px-4 py-1.5 rounded-full text-[10px] font-black italic tracking-widest">OPERATIVA RAPIDA</div>
       </div>
       <div className="p-4 md:p-10 space-y-6 md:space-y-10">
          <div className="space-y-3 md:space-y-4">
             <div className="flex justify-between px-2">
-               <span className="text-[10px] md:text-[12px] font-black text-slate-500 uppercase italic tracking-widest">Input Flux</span>
-               <span className="text-[10px] md:text-[12px] font-bold text-white italic tracking-widest">Core: ${(wallet?.balance_usdc || 0).toLocaleString()}</span>
+               <span className="text-[10px] md:text-[12px] font-black text-slate-500 uppercase italic tracking-widest">Monto de Inversión</span>
+               <span className="text-[10px] md:text-[12px] font-bold text-white italic tracking-widest">Saldo: ${(wallet?.balance_usdc || 0).toLocaleString()}</span>
             </div>
             <div className="relative group">
                <input 
                  type="number" value={tradeAmount} onChange={(e) => setTradeAmount(e.target.value)}
-                 className="w-full bg-[#0B0E11] p-6 md:p-8 pr-20 md:pr-24 rounded-2xl md:rounded-3xl border border-white/10 text-2xl md:text-3xl font-black italic font-display focus:border-primary/50 focus:ring-0 transition-all shadow-inner"
+                 className="w-full bg-[#0B0E11] p-5 md:p-6 pr-16 md:pr-20 rounded-xl md:rounded-2xl border border-white/10 text-xl md:text-2xl font-black italic font-display focus:border-primary/50 focus:ring-0 transition-all shadow-inner"
                  placeholder="0.00"
                />
-               <span className="absolute right-8 top-8 text-sm font-black text-slate-600 italic tracking-[0.3em]">USDC</span>
+               <span className="absolute right-6 top-6 text-xs font-black text-slate-600 italic tracking-[0.3em]">USDC</span>
             </div>
          </div>
 
          <div className="grid grid-cols-2 gap-8">
             <button 
               onClick={() => onOpen('long')} disabled={processing}
-              className="group relative flex flex-col items-center justify-center p-10 bg-[#0ECB81] hover:bg-[#12e291] text-black rounded-[2.5rem] shadow-[0_20px_40px_rgba(14,203,129,0.2)] transition-all hover:translate-y-[-4px] overflow-hidden"
+              className="group relative flex flex-col items-center justify-center p-6 md:p-8 bg-[#0ECB81] hover:bg-[#12e291] text-black rounded-2xl md:rounded-3xl shadow-[0_20px_40px_rgba(14,203,129,0.2)] transition-all hover:translate-y-[-4px] overflow-hidden"
             >
                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                <TrendingUp size={32} className="mb-2 md:mb-4 relative z-10" />
-                <span className="text-xs md:text-base font-black italic tracking-[0.2em] uppercase relative z-10">Long-S</span>
+                <TrendingUp size={24} className="mb-2 relative z-10" />
+                <span className="text-[10px] md:text-xs font-black italic tracking-[0.2em] uppercase relative z-10">Long-S</span>
              </button>
              <button 
                onClick={() => onOpen('short')} disabled={processing}
-               className="group relative flex flex-col items-center justify-center p-6 md:p-10 bg-[#F6465D] hover:bg-[#ff5d72] text-white rounded-[2rem] md:rounded-[2.5rem] shadow-[0_20px_40px_rgba(246,70,93,0.2)] transition-all hover:translate-y-[-4px] overflow-hidden"
+               className="group relative flex flex-col items-center justify-center p-6 md:p-8 bg-[#F6465D] hover:bg-[#ff5d72] text-white rounded-2xl md:rounded-3xl shadow-[0_20px_40px_rgba(246,70,93,0.2)] transition-all hover:translate-y-[-4px] overflow-hidden"
              >
                 <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                <TrendingDown size={32} className="mb-2 md:mb-4 relative z-10" />
-                <span className="text-xs md:text-base font-black italic tracking-[0.2em] uppercase relative z-10">Short-S</span>
+                <TrendingDown size={24} className="mb-2 relative z-10" />
+                <span className="text-[10px] md:text-xs font-black italic tracking-[0.2em] uppercase relative z-10">Short-S</span>
              </button>
          </div>
 
          <div className="p-6 bg-white/2 rounded-3xl border border-white/5 space-y-4 backdrop-blur-sm">
             <div className="flex justify-between text-[11px] font-black italic tracking-widest">
-               <span className="text-slate-500 uppercase">Settlement Window</span>
-               <span className="text-primary italic">LOCKED (60s)</span>
+               <span className="text-slate-500 uppercase">Tiempo de Cierre</span>
+               <span className="text-primary italic">FIJO (60s)</span>
             </div>
             <div className="flex justify-between text-[11px] font-black italic tracking-widest">
-               <span className="text-slate-500 uppercase">Execution Node</span>
-               <span className="text-accent italic">ALPHA v4.2</span>
+               <span className="text-slate-500 uppercase">Estado de Red</span>
+               <span className="text-accent italic">CONECTADO</span>
             </div>
          </div>
       </div>
@@ -456,9 +478,8 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
   );
 }
 
-function LiveFlashPositionCard({ position, currentPrice }: any) {
+function LiveFlashPositionRow({ position, currentPrice, onClose }: any) {
   const [timeLeft, setTimeLeft] = useState(60);
-  const [pricePulse, setPricePulse] = useState<number[]>([]);
   const entryPrice = position.price_at_execution;
   const isLong = position.type === 'long';
   const priceChange = (currentPrice - entryPrice) / entryPrice;
@@ -473,74 +494,69 @@ function LiveFlashPositionCard({ position, currentPrice }: any) {
     return () => clearInterval(timer);
   }, [position]);
 
-  // Record price pulse for visual effect
-  useEffect(() => {
-    setPricePulse(prev => [...prev.slice(-15), currentPrice]);
-  }, [currentPrice]);
-
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: -20 }}
-      className="bg-[#171A1E] p-5 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-white/10 relative overflow-hidden group shadow-2xl"
+      initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="group hover:bg-white/5 transition-all"
     >
-      <div className={`absolute top-0 right-0 w-3 h-full ${pnlPct >= 0 ? 'bg-[#0ECB81] shadow-[0_0_30px_#0ECB81]' : 'bg-[#F6465D] shadow-[0_0_30px_#F6465D]'}`} />
-      
-      <div className="flex justify-between items-start mb-10">
-         <div className="flex items-center space-x-6">
-            <div className={`p-5 rounded-3xl ${isLong ? 'bg-accent/10 border-accent/20' : 'bg-error/10 border-error/20'} border shadow-inner`}>
-               {isLong ? <ArrowUpRight className="text-accent" size={32} /> : <ArrowDownLeft className="text-error" size={32} />}
+      <div className="flex flex-col md:grid md:grid-cols-6 gap-4 p-6 md:px-8 md:py-6 items-center">
+         {/* Instrument */}
+         <div className="w-full md:w-auto flex items-center space-x-4">
+            <div className={`p-2 rounded-lg ${isLong ? 'bg-accent/10 text-accent' : 'bg-error/10 text-error'} border border-current/20`}>
+               {isLong ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
             </div>
             <div>
-               <h4 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">{position.symbol}</h4>
-               <div className="flex items-center space-x-3">
-                  <span className={`text-[12px] font-black uppercase italic tracking-widest ${isLong ? 'text-accent' : 'text-error'}`}>{position.type.toUpperCase()} NODE</span>
-                  <span className="text-[10px] font-bold text-slate-600 uppercase">Entry: ${entryPrice.toLocaleString()}</span>
-               </div>
+               <p className="text-sm font-black text-white italic tracking-tighter uppercase">{position.symbol}</p>
+               <span className={`text-[9px] font-black uppercase italic tracking-widest ${isLong ? 'text-accent' : 'text-error'}`}>{position.type}</span>
             </div>
          </div>
-         <div className="text-right flex flex-col items-end">
-             <div className="flex items-center space-x-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/10">
-                <Clock size={14} className="text-primary animate-spin-slow" />
-                <span className="text-lg md:text-2xl font-mono font-black text-white italic">{timeLeft}s</span>
-             </div>
-            {timeLeft <= 10 && <span className="text-[10px] font-black text-error animate-pulse uppercase tracking-[0.2em] mt-2 italic">SETTLING SOON...</span>}
-         </div>
-      </div>
 
-      <div className="space-y-6 relative z-10">
-         <div className="grid grid-cols-2 gap-8 bg-black/40 p-8 rounded-[2rem] border border-white/5">
-            <div>
-               <span className="text-[11px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Mark Flux (Live)</span>
-               <span className="text-3xl font-mono font-black text-white italic tracking-tighter">${currentPrice.toLocaleString()}</span>
+         {/* Size */}
+         <div className="w-full md:w-auto flex justify-between md:block">
+            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Size</span>
+            <p className="text-sm font-mono font-bold text-slate-300 italic">${position.amount_usdc.toLocaleString()}</p>
+         </div>
+
+         {/* Entry / Mark */}
+         <div className="w-full md:w-auto flex justify-between md:block">
+            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Entrada / Actual</span>
+            <div className="text-right md:text-left">
+               <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-tighter">Entrada: ${entryPrice.toLocaleString()}</p>
+               <p className="text-sm font-mono font-black text-white italic tracking-tighter">${currentPrice.toLocaleString()}</p>
             </div>
-            <div className="text-right">
-               <span className="text-[11px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Unrealized Edge</span>
-               <span className={`text-4xl font-mono font-black italic tracking-tighter ${(pnlPct || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+         </div>
+
+         {/* PnL */}
+         <div className="w-full md:w-auto flex justify-between md:block">
+            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Beneficio (PnL)</span>
+            <div className="text-right md:text-left">
+               <p className={`text-lg font-mono font-black italic tracking-tighter ${(pnlPct || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
                   {(pnlPct || 0) >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(2)}%
-               </span>
+               </p>
+               <p className={`text-[10px] font-mono font-bold italic ${(pnlUsdc || 0) >= 0 ? 'text-accent/60' : 'text-error/60'}`}>
+                  {(pnlUsdc || 0) >= 0 ? '+' : ''}${(pnlUsdc || 0).toFixed(2)}
+               </p>
             </div>
          </div>
 
-         {/* Price Fluctuation Visualizer (Bybit style) */}
-         <div className="flex items-end space-x-1 h-12 px-4 opacity-40">
-            {pricePulse.map((p, i) => {
-               const height = 10 + ((p - entryPrice) / entryPrice * 1000); // scaled
-               return <div key={i} className={`flex-1 rounded-full ${p >= entryPrice ? 'bg-accent' : 'bg-error'}`} style={{ height: `${Math.abs(height)}%`, maxHeight: '100%', minHeight: '10%' }} />;
-            })}
+         {/* Settlement */}
+         <div className="w-full md:w-auto flex justify-between md:block">
+            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Cierre Auto</span>
+            <div className="flex items-center space-x-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10 w-fit">
+               <Clock size={12} className="text-primary animate-spin-slow" />
+               <span className="text-sm font-mono font-black text-white italic">{timeLeft}s</span>
+            </div>
          </div>
-      </div>
 
-      <div className="mt-8 pt-8 border-t border-white/5 flex justify-between items-center relative z-10">
-         <div className="flex items-center space-x-4">
-            <span className="text-[12px] font-black text-slate-500 uppercase italic tracking-widest">Net Realization:</span>
-            <span className={`text-2xl font-black italic tracking-tighter font-display ${(pnlUsdc || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
-               {(pnlUsdc || 0) >= 0 ? '+' : ''}${(pnlUsdc || 0).toFixed(2)}
-            </span>
-         </div>
-         <div className="flex space-x-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-            <span className="text-[10px] font-black text-primary uppercase italic tracking-widest">TRANSMITTING...</span>
+         {/* Action */}
+         <div className="w-full md:w-auto text-right">
+            <button 
+              onClick={onClose}
+              className="w-full md:w-auto px-6 py-2 bg-white/5 hover:bg-rose-500/20 text-slate-500 hover:text-rose-500 border border-white/10 hover:border-rose-500/40 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] italic transition-all shadow-xl backdrop-blur-md"
+            >
+               Cerrar Trade
+            </button>
          </div>
       </div>
     </motion.div>

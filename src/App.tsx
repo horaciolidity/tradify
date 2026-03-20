@@ -11,6 +11,7 @@ import Auth from './pages/Auth';
 import CustomTokens from './pages/CustomTokens';
 import Referrals from './pages/Referrals';
 import Tasks from './pages/Tasks';
+import Profile from './pages/Profile';
 import { useAuthStore } from './store/useAuthStore';
 import { supabase } from './services/supabase';
 
@@ -111,6 +112,13 @@ const AnimatedRoutes = () => {
           <ProtectedRoute>
             <MainLayout>
               <PageTransition><Wallet /></PageTransition>
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PageTransition><Profile /></PageTransition>
             </MainLayout>
           </ProtectedRoute>
         } />
