@@ -91,7 +91,7 @@ const Dashboard: React.FC = () => {
             <div className="w-8 md:w-10 h-[2px] bg-primary/30 rounded-full" />
             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Trading Dashboard</span>
           </div>
-          <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter italic leading-tight md:leading-none font-display">
+          <h1 className="text-3xl md:text-7xl font-black text-white tracking-tighter italic leading-tight md:leading-none font-display">
             Welcome, <br className="hidden md:block" />
             <span className="bg-gradient-to-r from-primary via-indigo-400 to-accent bg-clip-text text-transparent">
               {profile?.full_name?.split(' ')[0] || 'Member'}
@@ -113,8 +113,8 @@ const Dashboard: React.FC = () => {
           </div>
           <div>
             <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-0.5 md:mb-1">Available Balance</p>
-            <p className="text-2xl md:text-4xl font-black text-white italic tracking-tighter">
-              {(wallet?.balance_usdc || 0).toLocaleString()} <span className="text-[10px] md:text-sm font-normal text-slate-500 not-italic uppercase tracking-widest ml-1">USDC</span>
+            <p className="text-xl md:text-4xl font-black text-white italic tracking-tighter">
+              {(wallet?.balance_usdc || 0).toLocaleString()} <span className="text-[8px] md:text-sm font-normal text-slate-500 not-italic uppercase tracking-widest ml-1">USDC</span>
             </p>
           </div>
             <ChevronRight size={20} className="text-slate-800 ml-auto md:ml-4 group-hover:text-primary transition-all group-hover:translate-x-1" />
@@ -148,7 +148,7 @@ const Dashboard: React.FC = () => {
               <stat.icon className="w-5 h-5 md:w-7 md:h-7" />
             </div>
             <p className="text-[7px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] md:tracking-[0.3em] mb-1 md:mb-2">{stat.label}</p>
-            <h3 className="text-xl md:text-4xl font-black text-white italic tracking-tighter leading-none">{stat.value}</h3>
+            <h3 className="text-lg md:text-4xl font-black text-white italic tracking-tighter leading-none">{stat.value}</h3>
           </motion.div>
         ))}
       </div>
@@ -191,12 +191,12 @@ const Dashboard: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`text-base md:text-2xl font-black italic tracking-tighter ${
+                      <p className={`text-sm md:text-2xl font-black italic tracking-tighter ${
                         tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral'
                           ? 'text-accent'
                           : 'text-white'
                       }`}>
-                        {tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' ? '+' : '-'}{(tx.amount || 0).toLocaleString()} <span className="text-[8px] md:text-xs font-normal text-slate-500 not-italic ml-0.5">USDC</span>
+                        {tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' ? '+' : '-'}{(tx.amount || 0).toLocaleString()} <span className="text-[7px] md:text-xs font-normal text-slate-500 not-italic ml-0.5">USDC</span>
                       </p>
                     </div>
                   </motion.div>

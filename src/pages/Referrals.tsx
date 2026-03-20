@@ -61,8 +61,8 @@ const Referrals: React.FC = () => {
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
       >
-        <h1 className="text-4xl font-black text-white uppercase tracking-tighter italic">Referral Nexus</h1>
-        <p className="text-slate-400 mt-2 font-medium italic">Expand the Tradify network and harvest passive generational rewards.</p>
+        <h1 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter italic">Referral Nexus</h1>
+        <p className="text-xs md:text-sm text-slate-400 mt-2 font-medium italic">Expand the Tradify network and harvest passive generational rewards.</p>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -74,7 +74,7 @@ const Referrals: React.FC = () => {
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -mr-32 -mt-32 rounded-full group-hover:bg-primary/20 transition-all duration-700" />
           
           <div className="relative z-10 space-y-6">
-            <h3 className="text-2xl font-black text-white uppercase tracking-tight italic">Your Neural Gateway</h3>
+            <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight italic">Your Neural Gateway</h3>
             <p className="text-slate-400 max-w-xl leading-relaxed font-medium">
               Activate your connection. Earn <span className="text-primary font-black italic">{commissions.level1}%</span> from level 1, 
               <span className="text-primary font-black italic ml-1">{commissions.level2}%</span> from level 2, and 

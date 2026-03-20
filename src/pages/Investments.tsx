@@ -215,8 +215,8 @@ const Investments: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Investment Plans</h1>
-          <p className="text-slate-400 mt-1">Earn stable returns by staking your USDC in our guaranteed plans.</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Investment Plans</h1>
+          <p className="text-slate-400 mt-1 text-xs md:text-sm">Earn stable returns by staking your USDC in our guaranteed plans.</p>
         </div>
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 self-start">
           <button 
@@ -260,14 +260,14 @@ const Investments: React.FC = () => {
                   <ShieldCheck size={20} />
                   <span className="text-sm font-bold uppercase tracking-widest">Guaranteed Returns</span>
                 </div>
-                <h2 className="text-2xl font-bold text-white">System Reserve Fund</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-white">System Reserve Fund</h2>
                 <p className="text-slate-400 max-w-xl">
                   Our 500,000 USDC reserve fund ensures that all interest payments and capital withdrawals are processed instantly.
                 </p>
               </div>
               <div className="flex flex-col items-end">
                 <span className="text-sm text-slate-500 font-medium">Pool Balance</span>
-                <span className="text-4xl font-black text-white tracking-tight italic">{poolBalance.toLocaleString()} <span className="text-lg font-normal text-slate-500">USDC</span></span>
+                <span className="text-2xl md:text-4xl font-black text-white tracking-tight italic">{poolBalance.toLocaleString()} <span className="text-xs md:text-lg font-normal text-slate-500">USDC</span></span>
                 <div className="w-full h-2 bg-white/5 rounded-full mt-4 overflow-hidden border border-white/5">
                   <motion.div 
                     initial={{ width: 0 }}
@@ -296,8 +296,8 @@ const Investments: React.FC = () => {
                 </div>
                 
                 <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
-                <div className="flex items-baseline space-x-1 mb-6">
-                  <span className="text-3xl font-bold text-primary">{plan.interest_rate}%</span>
+                <div className="flex items-baseline space-x-1 mb-4 md:mb-6">
+                  <span className="text-2xl md:text-3xl font-bold text-primary">{plan.interest_rate}%</span>
                   <span className="text-sm text-slate-500 font-medium">every {plan.interest_period_days} days</span>
                 </div>
 

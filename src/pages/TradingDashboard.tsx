@@ -276,30 +276,30 @@ const TradingDashboard: React.FC = () => {
       </div>
 
       {/* High Fidelity Asset Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 bg-[#0B0E11] p-4 md:p-10 rounded-[2rem] border border-white/5 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 bg-[#0B0E11] p-4 md:p-10 rounded-3xl md:rounded-[2rem] border border-white/5 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
         
         <div className="flex items-center space-x-8 relative z-10">
-          <div className="p-6 bg-primary/10 rounded-3xl border border-primary/20 backdrop-blur-xl">
-            <div className="w-12 h-12 md:w-20 md:h-20 bg-primary rounded-2xl flex items-center justify-center text-black font-black text-3xl italic shadow-[0_10px_40px_rgba(252,186,44,0.3)]">
+          <div className="p-3 md:p-6 bg-primary/10 rounded-2xl md:rounded-3xl border border-primary/20 backdrop-blur-xl">
+            <div className="w-10 h-10 md:w-20 md:h-20 bg-primary rounded-xl flex items-center justify-center text-black font-black text-xl md:text-3xl italic shadow-[0_10px_40px_rgba(252,186,44,0.3)]">
               {selectedSymbol.split('/')[0].charAt(0)}
             </div>
           </div>
           <div className="flex-1">
-             <div className="flex items-center space-x-6 mb-2">
-                <h1 className="text-4xl md:text-7xl font-black text-white italic uppercase tracking-tighter font-display leading-none">{selectedSymbol}</h1>
-                <div className="px-5 py-2 bg-primary/20 border border-primary/40 rounded-full animate-pulse">
-                   <span className="text-[12px] font-black text-primary uppercase tracking-[0.4em] italic">Hyper-Speed Flash</span>
+             <div className="flex items-center space-x-3 md:space-x-6 mb-1 md:mb-2">
+                <h1 className="text-2xl md:text-7xl font-black text-white italic uppercase tracking-tighter font-display leading-none">{selectedSymbol}</h1>
+                <div className="px-3 py-1 md:px-5 md:py-2 bg-primary/20 border border-primary/40 rounded-full animate-pulse">
+                   <span className="text-[8px] md:text-[12px] font-black text-primary uppercase tracking-[0.4em] italic">Flash</span>
                 </div>
              </div>
              <div className="flex items-center space-x-12">
-                <div className="flex flex-col">
-                   <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest mb-1">Live Price (INDEX)</span>
-                   <span className="text-3xl md:text-5xl font-mono font-black text-white italic tracking-tighter font-display">
+                 <div className="flex flex-col">
+                   <span className="text-[8px] md:text-[10px] font-black text-slate-600 uppercase italic tracking-widest mb-0.5 md:mb-1">Price (INDEX)</span>
+                   <span className="text-xl md:text-5xl font-mono font-black text-white italic tracking-tighter font-display">
                      ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                    </span>
                 </div>
-                <div className={`px-5 py-2.5 rounded-2xl text-[16px] font-black flex items-center italic shadow-2xl ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/20 text-accent border border-accent/20' : 'bg-error/20 text-error border border-error/20'}`}>
+                <div className={`px-3 py-1 md:px-5 md:py-2.5 rounded-xl md:rounded-2xl text-[12px] md:text-[16px] font-black flex items-center italic shadow-2xl ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/20 text-accent border border-accent/20' : 'bg-error/20 text-error border border-error/20'}`}>
                    {(currentTicker?.change || 0) >= 0 ? <TrendingUp size={20} className="mr-3" /> : <TrendingDown size={20} className="mr-3" />}
                    {((currentTicker?.change || 0) >= 0 ? '+' : '') + (currentTicker?.change || 0).toFixed(2)}%
                 </div>
@@ -309,10 +309,10 @@ const TradingDashboard: React.FC = () => {
 
         <div className="flex items-center space-x-2 bg-white/5 p-2 rounded-3xl border border-white/10 relative z-10 overflow-x-auto no-scrollbar">
           {timeframes.map(tf => (
-            <button
-              key={tf} onClick={() => setSelectedTimeframe(tf)}
-              className={`px-8 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] italic transition-all shrink-0 ${selectedTimeframe === tf ? 'bg-primary text-black shadow-[0_10px_30px_rgba(252,186,44,0.2)]' : 'text-slate-500 hover:text-white'}`}
-            >
+             <button
+               key={tf} onClick={() => setSelectedTimeframe(tf)}
+               className={`px-4 md:px-8 py-2 md:py-4 rounded-xl md:rounded-2xl text-[10px] md:text-[12px] font-black uppercase tracking-[0.2em] italic transition-all shrink-0 ${selectedTimeframe === tf ? 'bg-primary text-black shadow-[0_10px_30px_rgba(252,186,44,0.2)]' : 'text-slate-500 hover:text-white'}`}
+             >
               {tf}
             </button>
           ))}
@@ -324,7 +324,7 @@ const TradingDashboard: React.FC = () => {
           {/* Main Chart */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-4 md:p-10 h-[500px] md:h-[800px] flex flex-col relative group overflow-hidden"
+            className="glass-card p-4 md:p-10 h-[400px] md:h-[800px] flex flex-col relative group overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[150px] pointer-events-none" />
             
@@ -353,8 +353,8 @@ const TradingDashboard: React.FC = () => {
 
           {/* ACTIVE FLASH POSITIONS (BYBIT STYLE) */}
           <div className="space-y-8">
-            <div className="flex items-center justify-between px-4">
-               <h3 className="text-xl font-black text-white italic tracking-[0.4em] uppercase font-display">Active Flash Nodes ({activePositions.length})</h3>
+            <div className="flex items-center justify-between px-2 md:px-4">
+               <h3 className="text-base md:text-xl font-black text-white italic tracking-[0.4em] uppercase font-display">Active Nodes ({activePositions.length})</h3>
                <div className="flex items-center space-x-2 text-slate-500">
                   <Info size={14} />
                   <span className="text-[10px] font-black italic uppercase tracking-widest">Automatic T+0 Settlement</span>
@@ -406,16 +406,16 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
          </div>
          <div className="bg-primary/95 text-black px-4 py-1.5 rounded-full text-[10px] font-black italic tracking-widest">HIGH SPEED</div>
       </div>
-      <div className="p-10 space-y-10">
-         <div className="space-y-4">
+      <div className="p-4 md:p-10 space-y-6 md:space-y-10">
+         <div className="space-y-3 md:space-y-4">
             <div className="flex justify-between px-2">
-               <span className="text-[12px] font-black text-slate-500 uppercase italic tracking-widest">Input Flux (USDC)</span>
-               <span className="text-[12px] font-bold text-white italic tracking-widest">Core: ${(wallet?.balance_usdc || 0).toLocaleString()}</span>
+               <span className="text-[10px] md:text-[12px] font-black text-slate-500 uppercase italic tracking-widest">Input Flux</span>
+               <span className="text-[10px] md:text-[12px] font-bold text-white italic tracking-widest">Core: ${(wallet?.balance_usdc || 0).toLocaleString()}</span>
             </div>
             <div className="relative group">
                <input 
                  type="number" value={tradeAmount} onChange={(e) => setTradeAmount(e.target.value)}
-                 className="w-full bg-[#0B0E11] p-8 pr-24 rounded-3xl border border-white/10 text-3xl font-black italic font-display focus:border-primary/50 focus:ring-0 transition-all shadow-inner"
+                 className="w-full bg-[#0B0E11] p-6 md:p-8 pr-20 md:pr-24 rounded-2xl md:rounded-3xl border border-white/10 text-2xl md:text-3xl font-black italic font-display focus:border-primary/50 focus:ring-0 transition-all shadow-inner"
                  placeholder="0.00"
                />
                <span className="absolute right-8 top-8 text-sm font-black text-slate-600 italic tracking-[0.3em]">USDC</span>
@@ -428,17 +428,17 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
               className="group relative flex flex-col items-center justify-center p-10 bg-[#0ECB81] hover:bg-[#12e291] text-black rounded-[2.5rem] shadow-[0_20px_40px_rgba(14,203,129,0.2)] transition-all hover:translate-y-[-4px] overflow-hidden"
             >
                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-               <TrendingUp size={48} className="mb-4 relative z-10" />
-               <span className="text-base font-black italic tracking-[0.2em] uppercase relative z-10">Long-S</span>
-            </button>
-            <button 
-              onClick={() => onOpen('short')} disabled={processing}
-              className="group relative flex flex-col items-center justify-center p-10 bg-[#F6465D] hover:bg-[#ff5d72] text-white rounded-[2.5rem] shadow-[0_20px_40px_rgba(246,70,93,0.2)] transition-all hover:translate-y-[-4px] overflow-hidden"
-            >
-               <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-               <TrendingDown size={48} className="mb-4 relative z-10" />
-               <span className="text-base font-black italic tracking-[0.2em] uppercase relative z-10">Short-S</span>
-            </button>
+                <TrendingUp size={32} className="mb-2 md:mb-4 relative z-10" />
+                <span className="text-xs md:text-base font-black italic tracking-[0.2em] uppercase relative z-10">Long-S</span>
+             </button>
+             <button 
+               onClick={() => onOpen('short')} disabled={processing}
+               className="group relative flex flex-col items-center justify-center p-6 md:p-10 bg-[#F6465D] hover:bg-[#ff5d72] text-white rounded-[2rem] md:rounded-[2.5rem] shadow-[0_20px_40px_rgba(246,70,93,0.2)] transition-all hover:translate-y-[-4px] overflow-hidden"
+             >
+                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                <TrendingDown size={32} className="mb-2 md:mb-4 relative z-10" />
+                <span className="text-xs md:text-base font-black italic tracking-[0.2em] uppercase relative z-10">Short-S</span>
+             </button>
          </div>
 
          <div className="p-6 bg-white/2 rounded-3xl border border-white/5 space-y-4 backdrop-blur-sm">
@@ -482,7 +482,7 @@ function LiveFlashPositionCard({ position, currentPrice }: any) {
     <motion.div 
       initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: -20 }}
-      className="bg-[#171A1E] p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden group shadow-2xl"
+      className="bg-[#171A1E] p-5 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-white/10 relative overflow-hidden group shadow-2xl"
     >
       <div className={`absolute top-0 right-0 w-3 h-full ${pnlPct >= 0 ? 'bg-[#0ECB81] shadow-[0_0_30px_#0ECB81]' : 'bg-[#F6465D] shadow-[0_0_30px_#F6465D]'}`} />
       
@@ -500,10 +500,10 @@ function LiveFlashPositionCard({ position, currentPrice }: any) {
             </div>
          </div>
          <div className="text-right flex flex-col items-end">
-            <div className="flex items-center space-x-3 px-4 py-2 bg-white/5 rounded-2xl border border-white/10">
-               <Clock size={16} className="text-primary animate-spin-slow" />
-               <span className="text-2xl font-mono font-black text-white italic">{timeLeft}s</span>
-            </div>
+             <div className="flex items-center space-x-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/10">
+                <Clock size={14} className="text-primary animate-spin-slow" />
+                <span className="text-lg md:text-2xl font-mono font-black text-white italic">{timeLeft}s</span>
+             </div>
             {timeLeft <= 10 && <span className="text-[10px] font-black text-error animate-pulse uppercase tracking-[0.2em] mt-2 italic">SETTLING SOON...</span>}
          </div>
       </div>
