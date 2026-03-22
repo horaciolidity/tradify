@@ -40,6 +40,7 @@ export interface Investment {
   end_date: string;
   last_interest_payment: string;
   status: 'active' | 'completed' | 'cancelled';
+  withdrawn_amount?: number;
   plan?: Plan;
 }
 
