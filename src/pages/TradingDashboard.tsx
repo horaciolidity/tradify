@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, ISeriesApi } from 'lightweight-charts';
 import { MarketService, TickerData } from '../services/market';
-import { TrendingUp, TrendingDown, Clock, ShieldCheck, Zap, History, ArrowUpRight, ArrowDownLeft, Info, Activity, Waves } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, ShieldCheck, Zap, History, ArrowUpRight, ArrowDownLeft, Info, Activity, Waves, ChevronRight, X, PieChart, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TradingChat from '../components/TradingChat';
 import AnnouncementCarousel from '../components/AnnouncementCarousel';
@@ -813,6 +813,8 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
     </motion.div>
   );
 }
+function SettlementArchive({ orders }: any) {
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   return (
     <div className="glass-card overflow-hidden rounded-3xl md:rounded-[2.5rem] bg-[#0B0E11]/40 border-white/5 shadow-2xl transition-all">
