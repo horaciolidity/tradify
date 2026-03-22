@@ -37,7 +37,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { profile, wallet, signOut } = useAuthStore();
-  const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, subscribeToNotifications } = useNotificationStore();
+  const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, subscribeToNotifications, lastNotification, clearLastNotification } = useNotificationStore();
 
   React.useEffect(() => {
     if (profile) {
@@ -46,6 +46,15 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       return () => unsubscribe();
     }
   }, [profile, fetchNotifications, subscribeToNotifications]);
+
+  React.useEffect(() => {
+    if (lastNotification) {
+      const timer = setTimeout(() => {
+        clearLastNotification();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastNotification, clearLastNotification]);
 
   return (
     <div className="min-h-screen bg-dark text-slate-200">
@@ -59,6 +68,40 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             onClick={() => setSidebarOpen(false)}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           />
+        )}
+
+        {/* Global Toast Notification */}
+        {lastNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className={`fixed top-24 right-4 md:right-8 lg:right-12 z-[100] p-4 rounded-2xl flex items-center space-x-4 shadow-2xl backdrop-blur-2xl border min-w-[300px] max-w-sm ${
+              lastNotification.type === 'success' ? 'bg-accent/10 border-accent/20 text-accent' :
+              lastNotification.type === 'error' ? 'bg-error/10 border-error/20 text-error' :
+              lastNotification.type === 'transaction' ? 'bg-primary/20 border-primary/40 text-primary shadow-[0_0_30px_rgba(243,186,47,0.2)]' :
+              'bg-slate-800/80 border-slate-700 text-white'
+            }`}
+          >
+            <div className={`p-2 rounded-xl ${
+              lastNotification.type === 'success' ? 'bg-accent/20' :
+              lastNotification.type === 'error' ? 'bg-error/20' :
+              lastNotification.type === 'transaction' ? 'bg-primary/20' :
+              'bg-slate-700'
+            }`}>
+              <Bell size={20} />
+            </div>
+            <div className="flex-1">
+               <h4 className="text-[10px] font-black uppercase tracking-widest">{lastNotification.title}</h4>
+               <p className="text-xs font-semibold opacity-90 mt-1">{lastNotification.message}</p>
+            </div>
+            <button 
+              onClick={clearLastNotification}
+              className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 

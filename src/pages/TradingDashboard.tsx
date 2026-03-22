@@ -814,9 +814,6 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
   );
 }
 
-function SettlementArchive({ orders }: any) {
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-
   return (
     <div className="glass-card overflow-hidden rounded-3xl md:rounded-[2.5rem] bg-[#0B0E11]/40 border-white/5 shadow-2xl transition-all">
       <div className="p-6 md:p-10 bg-gradient-to-r from-[#252930] to-transparent flex items-center justify-between border-b border-white/5">
@@ -825,93 +822,116 @@ function SettlementArchive({ orders }: any) {
                <History className="text-primary" size={24} />
             </div>
             <div>
-               <h3 className="text-lg md:text-xl font-black uppercase tracking-[0.4em] italic text-white font-display leading-none">Trade History</h3>
-               <p className="text-[8px] md:text-[10px] font-black text-slate-600 uppercase italic tracking-[0.2em] mt-1 md:mt-2">Secure Record of Past Operations</p>
+               <h3 className="text-lg md:text-xl font-black uppercase tracking-[0.4em] italic text-white font-display leading-none">Global Ledger</h3>
+               <p className="text-[8px] md:text-[10px] font-black text-slate-600 uppercase italic tracking-[0.2em] mt-1 md:mt-2">Immutable Protocol Record • Archive</p>
             </div>
          </div>
          <div className="hidden md:flex items-center space-x-3 text-[10px] font-black text-slate-500 uppercase italic bg-black/20 px-4 py-1.5 rounded-full border border-white/5">
             <ShieldCheck size={14} className="text-accent" />
-            <span>Encrypted Protocol</span>
+            <span>Node Verified Archive</span>
          </div>
       </div>
       
       <div className="max-h-[600px] overflow-y-auto no-scrollbar">
-         {orders.map((order: any) => (
-           <div key={order.id} className="group border-b border-white/5 hover:bg-white/[0.02] transition-all p-4 md:p-8 cursor-default">
-              <div className="flex items-center justify-between">
-                 <div className="flex items-center space-x-3 md:space-x-6 text-white">
-                    <div className={`w-10 h-10 md:w-16 md:h-16 rounded-2xl flex items-center justify-center font-black italic text-sm md:text-2xl border shadow-xl transition-transform group-hover:scale-105 ${(order.pnl_realized || 0) >= 0 ? 'bg-accent/10 text-accent border-accent/20' : 'bg-error/10 text-error border-error/20'}`}>
-                       {order.type === 'long' ? 'L' : 'S'}
-                    </div>
-                    <div>
-                       <div className="flex items-center space-x-3">
-                          <h5 className="text-sm md:text-2xl font-black italic uppercase tracking-tighter leading-none">{order.symbol}</h5>
-                          <span className={`text-[9px] md:text-[10px] font-black uppercase italic transition-colors px-2 py-0.5 rounded-lg border border-current/20 ${(order.pnl_realized || 0) >= 0 ? 'text-accent bg-accent/5' : 'text-error bg-error/5'}`}>
-                              {Number(order.pnl_realized) >= 0 ? 'Vector Profit' : 'Vector Loss'}
-                           </span>
-                        </div>
-                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mt-3 opacity-90">
-                           <div className="flex items-center space-x-2">
-                              <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Entry:</span>
-                              <span className="text-[11px] font-mono font-black text-white italic tracking-tighter">${order.price_at_execution?.toLocaleString()}</span>
-                           </div>
-                           <span className="hidden md:block text-white/10 text-xs">/</span>
-                           <div className="flex items-center space-x-2">
-                              <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Exit:</span>
-                              <span className="text-[11px] font-mono font-black text-white italic tracking-tighter">${order.exit_price?.toLocaleString()}</span>
-                           </div>
-                        </div>
-                    </div>
-                 </div>
+         {orders.map((order: any) => {
+           const pnl = order.pnl_realized || 0;
+           const isWin = pnl >= 0;
+           const durationSec = order.settled_at ? Math.floor((new Date(order.settled_at).getTime() - new Date(order.created_at).getTime()) / 1000) : 60;
+           const pnlPct = (pnl / order.amount_usdc) * 100;
 
-                 <div className="flex items-center space-x-4 md:space-x-12">
-                    <div className="text-right">
-                       <p className={`text-xl md:text-4xl font-mono font-black italic tracking-tighter leading-none mb-2 ${(order.pnl_realized || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
-                          {(order.pnl_realized || 0) >= 0 ? '+' : ''}${(order.pnl_realized || 0).toFixed(2)}
-                       </p>
-                       <p className="text-[9px] md:text-[12px] font-black text-slate-600 uppercase italic tracking-[0.2em]">{new Date(order.created_at).toLocaleDateString()} CYCLE</p>
-                    </div>
-                    
-                    <button 
-                      onClick={() => setSelectedOrder(selectedOrder === order.id ? null : order.id)}
-                      className={`p-3 md:p-4 rounded-2xl transition-all active:scale-95 ${selectedOrder === order.id ? 'bg-primary text-black' : 'hover:bg-white/5 text-slate-600'}`}
+           return (
+             <div key={order.id} className="group border-b border-white/5 hover:bg-white/[0.02] transition-all p-4 md:p-8 cursor-default">
+                <div className="flex items-center justify-between">
+                   <div className="flex items-center space-x-3 md:space-x-8 text-white">
+                      <div className={`w-10 h-10 md:w-20 md:h-20 rounded-[1.8rem] flex items-center justify-center font-black italic text-sm md:text-3xl border shadow-2xl transition-all group-hover:scale-105 ${isWin ? 'bg-accent/10 text-accent border-accent/20 shadow-accent/20' : 'bg-error/10 text-error border-error/20 shadow-error/20'}`}>
+                         {order.type === 'long' ? 'UP' : 'DN'}
+                      </div>
+                      <div>
+                         <div className="flex items-center space-x-4 mb-2">
+                            <h5 className="text-sm md:text-3xl font-black italic uppercase tracking-tighter leading-none">{order.symbol}</h5>
+                            <span className={`text-[9px] md:text-[11px] font-black uppercase italic transition-colors px-3 py-1 rounded-lg border border-current/20 ${isWin ? 'text-accent bg-accent/5' : 'text-error bg-error/5'}`}>
+                                {isWin ? 'QUANTUM PROFIT' : 'VECTOR LOSS'}
+                             </span>
+                         </div>
+                         <div className="flex items-center space-x-3 md:space-x-6 opacity-60">
+                            <div className="flex flex-col">
+                               <span className="text-[7px] font-black text-slate-700 uppercase tracking-widest mb-1">Entry Value</span>
+                               <span className="text-[12px] font-mono font-black text-white italic tracking-tighter">${order.price_at_execution?.toLocaleString()}</span>
+                            </div>
+                            <ChevronRight size={14} className="text-slate-800" />
+                            <div className="flex flex-col">
+                               <span className="text-[7px] font-black text-slate-700 uppercase tracking-widest mb-1">Exit Value</span>
+                               <span className="text-[12px] font-mono font-black text-white italic tracking-tighter">${order.exit_price?.toLocaleString()}</span>
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+ 
+                   <div className="flex items-center space-x-4 md:space-x-14">
+                      <div className="text-right">
+                         <div className="flex items-center justify-end space-x-2 mb-1">
+                            <span className={`text-[10px] font-black italic tracking-widest ${isWin ? 'text-accent' : 'text-error'}`}>
+                               {isWin ? '+' : ''}{pnlPct.toFixed(2)}%
+                            </span>
+                         </div>
+                         <p className={`text-xl md:text-5xl font-mono font-black italic tracking-tighter leading-none mb-3 ${isWin ? 'text-accent' : 'text-error'}`}>
+                            {isWin ? '+' : ''}{pnl.toFixed(2)} <span className="text-xs font-normal opacity-50">USDC</span>
+                         </p>
+                         <div className="flex items-center justify-end space-x-3">
+                            <Clock size={12} className="text-slate-700" />
+                            <p className="text-[8px] md:text-[11px] font-black text-slate-600 uppercase italic tracking-[0.2em]">{durationSec}S DURATION</p>
+                         </div>
+                      </div>
+                      
+                      <button 
+                        onClick={() => setSelectedOrder(selectedOrder === order.id ? null : order.id)}
+                        className={`p-3 md:p-5 rounded-2xl transition-all active:scale-95 border ${selectedOrder === order.id ? 'bg-primary text-black border-primary shadow-primary/20' : 'bg-white/2 hover:bg-white/5 text-slate-600 border-white/10'}`}
+                      >
+                         <Info size={24} />
+                      </button>
+                   </div>
+                </div>
+ 
+                <AnimatePresence>
+                  {selectedOrder === order.id && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
                     >
-                       <Info size={20} />
-                    </button>
-                 </div>
-              </div>
-
-              <AnimatePresence>
-                {selectedOrder === order.id && (
-                  <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-6 pb-2">
-                       <div className="space-y-2">
-                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Start Time</p>
-                          <p className="text-[12px] text-slate-300 font-medium italic">{new Date(order.created_at).toLocaleTimeString()} UTC</p>
-                       </div>
-                       <div className="space-y-2">
-                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">End Time</p>
-                           <p className="text-[12px] text-slate-300 font-medium italic">{new Date(order.created_at).toLocaleTimeString()} UTC</p>
-                       </div>
-                       <div className="space-y-2">
-                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Investment</p>
-                          <p className="text-[12px] text-primary font-black italic tracking-widest">${order.amount_usdc.toFixed(2)} USDC</p>
-                       </div>
-                       <div className="space-y-2">
-                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Trade ID</p>
-                          <p className="text-[10px] text-slate-500 font-mono tracking-tighter opacity-40">#{order.id.substring(0,8).toUpperCase()}</p>
-                       </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-           </div>
-         ))}
+                      <div className="mt-10 pt-10 border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-8 pb-4">
+                         <div className="space-y-3">
+                            <p className="text-[8px] font-black text-slate-700 uppercase tracking-[0.3em] flex items-center">
+                               <Clock className="mr-2" size={12} /> Execution Timestamp
+                            </p>
+                            <p className="text-[13px] text-slate-300 font-black italic tracking-widest">{new Date(order.created_at).toLocaleString()} UTC</p>
+                         </div>
+                         <div className="space-y-3">
+                            <p className="text-[8px] font-black text-slate-700 uppercase tracking-[0.3em] flex items-center">
+                               <X className="mr-2" size={12} /> Maturity Timestamp
+                            </p>
+                             <p className="text-[13px] text-slate-300 font-black italic tracking-widest">{order.settled_at ? new Date(order.settled_at).toLocaleString() : 'EXPIRED'} UTC</p>
+                         </div>
+                         <div className="space-y-3">
+                            <p className="text-[8px] font-black text-slate-700 uppercase tracking-[0.3em] flex items-center">
+                               <PieChart className="mr-2" size={12} /> Capital Allocation
+                            </p>
+                            <p className="text-[13px] text-primary font-black italic tracking-[0.2em]">${order.amount_usdc.toFixed(2)} USDC</p>
+                         </div>
+                         <div className="space-y-3">
+                            <p className="text-[8px] font-black text-slate-700 uppercase tracking-[0.3em] flex items-center">
+                               <Database className="mr-2" size={12} /> Protocol Reference
+                            </p>
+                            <p className="text-[11px] text-slate-600 font-mono tracking-tighter">NODE_{order.id.split('-')[0].toUpperCase()}</p>
+                         </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+             </div>
+           );
+         })}
          {orders.length === 0 && (
            <div className="p-32 flex flex-col items-center justify-center text-slate-700 grayscale opacity-20">
               <History size={60} className="mb-6" />
@@ -920,6 +940,7 @@ function SettlementArchive({ orders }: any) {
          )}
       </div>
     </div>
+    
   );
 }
 

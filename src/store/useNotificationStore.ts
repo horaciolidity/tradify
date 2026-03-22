@@ -14,7 +14,8 @@ interface Notification {
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
-  loading: boolean;
+  lastNotification: Notification | null;
+  clearLastNotification: () => void;
   fetchNotifications: (userId: string) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: (userId: string) => Promise<void>;
@@ -25,10 +26,10 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
-  loading: false,
+  lastNotification: null,
+  clearLastNotification: () => set({ lastNotification: null }),
 
   fetchNotifications: async (userId: string) => {
-    set({ loading: true });
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
@@ -38,9 +39,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     if (!error && data) {
       const unread = data.filter(n => !n.is_read).length;
-      set({ notifications: data, unreadCount: unread, loading: false });
-    } else {
-      set({ loading: false });
+      set({ notifications: data, unreadCount: unread });
     }
   },
 
@@ -84,7 +83,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     if (!error && data) {
       set({ 
         notifications: [data, ...get().notifications],
-        unreadCount: get().unreadCount + 1
+        unreadCount: get().unreadCount + 1,
+        lastNotification: data
       });
     }
   },
@@ -104,7 +104,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
           const newNotif = payload.new as Notification;
           set((state) => ({
             notifications: [newNotif, ...state.notifications],
-            unreadCount: state.unreadCount + 1
+            unreadCount: state.unreadCount + 1,
+            lastNotification: newNotif
           }));
         }
       )
