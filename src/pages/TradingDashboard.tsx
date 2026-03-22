@@ -438,101 +438,79 @@ const TradingDashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-10 border-b border-white/5 pb-10">
                <div className="flex space-x-16">
                   <div>
-                     <span className="text-[12px] font-black text-slate-600 uppercase italic tracking-widest mb-2 block">Alpha Stream V4</span>
+                     <span className="text-[12px] font-black text-slate-600 uppercase italic tracking-widest mb-2 block">Live Price Stream</span>
                      <div className="flex items-center space-x-3">
                         <Activity size={16} className="text-primary animate-pulse" />
-                        <span className="text-sm font-black text-white italic tracking-widest uppercase">LATENCY: 12MS</span>
+                        <span className="text-sm font-black text-white italic tracking-widest uppercase">STABLE CONNECTION</span>
                      </div>
                   </div>
                   <div className="hidden md:block">
-                     <span className="text-[12px] font-black text-slate-600 uppercase italic tracking-widest mb-2 block">Protocol Security</span>
+                     <span className="text-[12px] font-black text-slate-600 uppercase italic tracking-widest mb-2 block">Trading Security</span>
                      <div className="flex items-center space-x-3 text-accent">
                         <ShieldCheck size={16} />
-                        <span className="text-sm font-black italic tracking-widest uppercase">AES-256 ACTIVE</span>
+                        <span className="text-sm font-black italic tracking-widest uppercase">PROTECTED</span>
                      </div>
                   </div>
                </div>
                <div className="flex items-center space-x-6">
                   <div className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
-                     <span className="text-[10px] font-black text-primary italic tracking-[0.3em] uppercase tracking-tighter">TRADIFY_ID: {profile?.id?.substring(0,8)}</span>
+                     <span className="text-[10px] font-black text-primary italic tracking-[0.3em] uppercase tracking-tighter">ACCOUNT ID: {profile?.id?.substring(0,8)}</span>
                   </div>
                </div>
             </div>
             <div ref={chartContainerRef} className="flex-1 w-full" />
           </motion.div>
 
-          {/* ACTIVE FLASH POSITIONS */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between px-2">
-               <div className="flex items-center space-x-4">
-                  <h3 className="text-sm md:text-lg font-black text-white italic tracking-[0.4em] uppercase font-display">Live Synchronizations</h3>
-                  <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
-                    <span className="text-[8px] md:text-[10px] font-black text-primary uppercase italic tracking-widest">{activePositions.length} TERMINALS</span>
-                  </div>
-               </div>
-                <div className="flex items-center space-x-3">
-                  <button 
-                    disabled={activePositions.some(p => isSettlingIds.has(p.id))}
-                    onClick={async () => {
-                      // Settle sequentially to avoid balance race conditions
-                      for (const p of activePositions) {
-                        if (!isSettlingIds.has(p.id)) {
-                          await settleOrder(p);
-                        }
-                      }
-                    }}
-                    className="px-4 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/30 rounded-full text-[8px] font-black text-rose-500 uppercase italic tracking-widest transition-all hover:scale-105 active:scale-95"
-                  >
-                    {activePositions.some(p => isSettlingIds.has(p.id)) ? 'Syncing...' : 'Purge All Cycles'}
-                  </button>
-                  <Waves size={16} className="text-slate-700 animate-pulse" />
-                  <span className="text-[10px] font-black text-slate-600 italic uppercase tracking-widest">Auto-Settlement Core v2.1</span>
-               </div>
-            </div>
-
-            <div className="glass-card overflow-hidden border-white/5 bg-[#0B0E11]/40 shadow-2xl">
-               <div className="hidden md:grid grid-cols-6 gap-4 px-8 py-4 bg-white/5 border-b border-white/5 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                  <span>Instrument</span>
-                  <span>Position Value</span>
-                  <span>Exchange Index</span>
-                  <span>Unrealized PnL</span>
-                  <span>Time Vector</span>
-                  <span className="text-right">Operation</span>
-               </div>
-               
-               <div className="divide-y divide-white/5">
-                 <AnimatePresence>
-                   {activePositions.map((pos) => (
-                     <LiveFlashPositionRow 
-                       key={pos.id} 
-                       position={pos} 
-                       currentPrice={tickers.find(t => t.symbol === pos.symbol)?.price || currentTicker?.price || 0} 
-                       isSettling={isSettlingIds.has(pos.id)} onClose={() => settleOrder(pos, tickers.find(t => t.symbol === pos.symbol)?.price)}
-                     />
-                   ))}
-                 </AnimatePresence>
-                 {activePositions.length === 0 && (
-                   <div className="p-24 flex flex-col items-center justify-center text-slate-700">
-                      <div className="relative mb-6">
-                        <Zap size={60} className="opacity-5 animate-pulse" />
-                        <div className="absolute inset-0 bg-primary/5 blur-3xl rounded-full" />
-                      </div>
-                      <p className="text-[10px] font-black uppercase italic tracking-[0.5em] text-center max-w-xs leading-loose">Matrix empty. Initiate a trade unit to begin neural synchronization.</p>
-                   </div>
-                 )}
-               </div>
-            </div>
-          </div>
-
-          <div className="block lg:hidden">
-            <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
-          </div>
-
           <SettlementArchive orders={recentOrders} />
         </div>
 
         <div className="hidden lg:block space-y-8 lg:sticky lg:top-8 self-start order-2">
           <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
+          
+          {/* ACTIVE FLASH POSITIONS - MOVED TO SIDEBAR */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between px-2">
+               <div className="flex items-center space-x-4">
+                  <h3 className="text-[10px] font-black text-white italic tracking-[0.4em] uppercase font-display">Active Trades</h3>
+                  <div className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
+                    <span className="text-[8px] font-black text-primary uppercase italic tracking-widest">{activePositions.length}</span>
+                  </div>
+               </div>
+                <button 
+                  disabled={activePositions.some(p => isSettlingIds.has(p.id))}
+                  onClick={async () => {
+                    for (const p of activePositions) {
+                      if (!isSettlingIds.has(p.id)) {
+                        await settleOrder(p);
+                      }
+                    }
+                  }}
+                  className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/30 rounded-full text-[8px] font-black text-rose-500 uppercase italic tracking-widest transition-all"
+                >
+                  {activePositions.some(p => isSettlingIds.has(p.id)) ? 'Syncing...' : 'Close All'}
+                </button>
+            </div>
+
+            <div className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {activePositions.map((pos) => (
+                  <LiveFlashPositionRow 
+                    key={pos.id} 
+                    position={pos} 
+                    currentPrice={tickers.find(t => t.symbol === pos.symbol)?.price || currentTicker?.price || 0} 
+                    isSettling={isSettlingIds.has(pos.id)} 
+                    onClose={() => settleOrder(pos, tickers.find(t => t.symbol === pos.symbol)?.price)}
+                  />
+                ))}
+              </AnimatePresence>
+              {activePositions.length === 0 && (
+                <div className="glass-card p-8 flex flex-col items-center justify-center text-slate-700 bg-[#0B0E11]/20">
+                   <p className="text-[9px] font-black uppercase italic tracking-[0.2em] text-center leading-loose">No active trades. Start a trade to see the results here.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           <TradingChat />
           <GlobalNodeTable tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
         </div>
@@ -559,9 +537,9 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
       <div className="p-8 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent flex items-center justify-between border-b border-white/5">
          <div className="flex items-center space-x-4">
             <div className="p-3 bg-primary/20 rounded-xl border border-primary/30 shadow-[0_0_20px_rgba(252,186,44,0.3)]">
-               <Zap size={20} className="text-primary" />
+               <TrendingUp size={20} className="text-primary" />
             </div>
-            <h3 className="font-black text-[12px] uppercase tracking-[0.4em] italic text-white font-display">Execution Center</h3>
+            <h3 className="font-black text-[12px] uppercase tracking-[0.4em] italic text-white font-display">Trade Panel</h3>
          </div>
          <div className="bg-primary/95 text-black px-4 py-1.5 rounded-full text-[9px] font-black italic tracking-widest shadow-lg shadow-primary/20">REAL-TIME SYNC</div>
       </div>
@@ -569,8 +547,8 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
          <div className="space-y-4">
             <div className="flex justify-between items-end px-2">
                <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-widest mb-1">Position Size</span>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase italic px-2 py-0.5 bg-white/5 rounded border border-white/5">USDC ASSET</span>
+                  <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-widest mb-1">Trade Amount</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase italic px-2 py-0.5 bg-white/5 rounded border border-white/5">USDC</span>
                </div>
                <div className="text-right">
                   <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Available Liquidity</span>
@@ -607,15 +585,15 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
             >
                <div className="absolute inset-0 bg-white/30 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
                 <TrendingUp size={28} className="mb-2 relative z-10" />
-                <span className="text-xs font-black italic tracking-[0.3em] uppercase relative z-10">Neural Long</span>
+                <span className="text-xs font-black italic tracking-[0.3em] uppercase relative z-10">BUY (UP)</span>
              </button>
              <button 
                onClick={() => onOpen('short')} disabled={processing}
                className="group relative flex flex-col items-center justify-center p-8 bg-[#F6465D] hover:bg-[#ff5d72] text-white rounded-3xl shadow-[0_20px_40px_rgba(246,70,93,0.3)] transition-all hover:translate-y-[-6px] active:translate-y-0 overflow-hidden"
-             >
+            >
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
                 <TrendingDown size={28} className="mb-2 relative z-10" />
-                <span className="text-xs font-black italic tracking-[0.3em] uppercase relative z-10">Neural Short</span>
+                <span className="text-xs font-black italic tracking-[0.3em] uppercase relative z-10">SELL (DOWN)</span>
              </button>
          </div>
 
@@ -623,18 +601,18 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
             <div className="flex justify-between items-center text-[10px] font-black italic tracking-[0.2em]">
                <div className="flex items-center space-x-3 text-slate-500">
                   <Clock size={14} />
-                  <span className="uppercase">Vector Window</span>
+                  <span className="uppercase">Trade Duration</span>
                </div>
-               <span className="text-primary italic bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">60s CYCLE</span>
+               <span className="text-primary italic bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">60 SECONDS</span>
             </div>
             <div className="flex justify-between items-center text-[10px] font-black italic tracking-[0.2em]">
                <div className="flex items-center space-x-3 text-slate-500">
                   <Activity size={14} />
-                  <span className="uppercase">Link Status</span>
+                  <span className="uppercase">Feed Status</span>
                </div>
                <span className="text-accent italic flex items-center">
                   <div className="w-1.5 h-1.5 rounded-full bg-accent mr-2 animate-ping" />
-                  STABLE.V4
+                  ACTIVE
                </span>
             </div>
          </div>
@@ -675,7 +653,7 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
             </div>
             <div>
                <p className="text-sm font-black text-white italic tracking-tighter uppercase leading-none mb-1">{position.symbol}</p>
-               <span className={`text-[9px] font-black uppercase italic tracking-[0.2em] ${isLong ? 'text-accent' : 'text-error'}`}>{position.type} UNIT</span>
+               <span className={`text-[9px] font-black uppercase italic tracking-[0.2em] ${isLong ? 'text-accent' : 'text-error'}`}>{isLong ? 'BUY' : 'SELL'} OPERATION</span>
             </div>
          </div>
 
@@ -685,30 +663,31 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
          </div>
 
          <div className="w-full md:w-auto flex justify-between md:block px-2">
-            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Indices</span>
+            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Prices</span>
             <div className="text-right md:text-left">
                <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-tighter opacity-50">{entryPrice.toLocaleString()}</p>
                <p className="text-sm font-mono font-black text-white italic tracking-tighter">{currentPrice.toLocaleString()}</p>
             </div>
          </div>
 
-         <div className="w-full md:w-auto flex justify-between md:block px-2">
-            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Vectors</span>
+          <div className="w-full md:w-auto flex justify-between md:block px-2">
+            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Live Result</span>
             <div className="text-right md:text-left">
+               <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1 block">Live Result</span>
                <div className="flex items-center md:justify-start justify-end space-x-3">
                   <p className={`text-base font-mono font-black italic tracking-tighter ${(pnlPct || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
                      {(pnlPct || 0) >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(2)}%
                   </p>
                   <div className={`w-1.5 h-1.5 rounded-full ${(pnlPct || 0) >= 0 ? 'bg-accent shadow-[0_0_10px_#4ade80]' : 'bg-error shadow-[0_0_10px_#fb7185]'} animate-pulse`} />
                </div>
-               <p className={`text-[10px] font-mono font-bold italic tracking-wide ${(pnlUsdc || 0) >= 0 ? 'text-accent/60' : 'text-error/60'}`}>
-                  {(pnlUsdc || 0) >= 0 ? '+' : ''}${(pnlUsdc || 0).toFixed(2)} USDC
+               <p className={`text-[10px] font-mono font-black italic tracking-wide ${(pnlUsdc || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+                  {(pnlUsdc || 0) >= 0 ? '+' : '-'}${Math.abs(pnlUsdc || 0).toFixed(2)} USDT
                </p>
             </div>
          </div>
 
          <div className="w-full md:w-auto flex justify-between md:block px-2">
-            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Cycle</span>
+            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Time</span>
             <div className="flex items-center space-x-3 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 w-fit shadow-inner">
                <Clock size={12} className="text-primary animate-spin-slow" />
                <span className="text-sm font-mono font-black text-white italic tracking-widest">{timeLeft}S</span>
@@ -721,7 +700,7 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
               disabled={isSettling}
               className="w-full md:w-auto px-6 py-2 bg-rose-500/10 hover:bg-rose-500 text-white border border-rose-500/20 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] italic transition-all group-hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] active:scale-95 disabled:opacity-50"
             >
-               {isSettling ? 'Syncing...' : 'Close Loop'}
+               {isSettling ? 'Syncing...' : 'Close Trade'}
             </button>
          </div>
       </div>
@@ -740,8 +719,8 @@ function SettlementArchive({ orders }: any) {
                <History className="text-primary" size={24} />
             </div>
             <div>
-               <h3 className="text-lg md:text-xl font-black uppercase tracking-[0.4em] italic text-white font-display leading-none">History Vector</h3>
-               <p className="text-[8px] md:text-[10px] font-black text-slate-600 uppercase italic tracking-[0.2em] mt-1 md:mt-2">Immutable Protocol Ledger Ledger v1</p>
+               <h3 className="text-lg md:text-xl font-black uppercase tracking-[0.4em] italic text-white font-display leading-none">Trade History</h3>
+               <p className="text-[8px] md:text-[10px] font-black text-slate-600 uppercase italic tracking-[0.2em] mt-1 md:mt-2">Secure Record of Past Operations</p>
             </div>
          </div>
          <div className="hidden md:flex items-center space-x-3 text-[10px] font-black text-slate-500 uppercase italic bg-black/20 px-4 py-1.5 rounded-full border border-white/5">
@@ -800,20 +779,20 @@ function SettlementArchive({ orders }: any) {
                   >
                     <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-6 pb-2">
                        <div className="space-y-2">
-                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Entry Synchrony</p>
+                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Start Time</p>
                           <p className="text-[12px] text-slate-300 font-medium italic">{new Date(order.created_at).toLocaleTimeString()} UTC</p>
                        </div>
                        <div className="space-y-2">
-                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Protocol Settle</p>
+                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">End Time</p>
                            <p className="text-[12px] text-slate-300 font-medium italic">{new Date(order.created_at).toLocaleTimeString()} UTC</p>
                        </div>
                        <div className="space-y-2">
-                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Asset Value</p>
+                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Investment</p>
                           <p className="text-[12px] text-primary font-black italic tracking-widest">${order.amount_usdc.toFixed(2)} USDC</p>
                        </div>
                        <div className="space-y-2">
-                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Ledger Hash</p>
-                          <p className="text-[10px] text-slate-500 font-mono tracking-tighter opacity-40">TXN-{order.id.substring(0,16).toUpperCase()}</p>
+                          <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Trade ID</p>
+                          <p className="text-[10px] text-slate-500 font-mono tracking-tighter opacity-40">#{order.id.substring(0,8).toUpperCase()}</p>
                        </div>
                     </div>
                   </motion.div>
@@ -837,14 +816,14 @@ function GlobalNodeTable({ tickers, selectedSymbol, onSelect }: any) {
     <div className="bg-[#1C2023] rounded-[2rem] border border-white/10 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.4)]">
       <div className="p-8 bg-[#252930] flex items-center justify-between border-b border-white/10">
          <div className="flex items-center space-x-4">
-            <h3 className="font-black text-[12px] uppercase tracking-[0.4em] italic text-white font-display">Global Streams</h3>
+            <h3 className="font-black text-[12px] uppercase tracking-[0.4em] italic text-white font-display">Market List</h3>
             <div className="px-3 py-1 bg-accent/20 border border-accent/40 rounded-full">
-               <span className="text-[8px] font-black text-accent uppercase tracking-widest italic">{tickers.length} AGENTS</span>
+               <span className="text-[8px] font-black text-accent uppercase tracking-widest italic">{tickers.length} PAIRS</span>
             </div>
          </div>
          <div className="flex items-center space-x-2">
             <div className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-            <span className="text-[9px] font-black text-slate-500 uppercase italic tracking-widest">LIVE DATA FEED</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase italic tracking-widest">ONLINE</span>
          </div>
       </div>
       <div className="max-h-[600px] overflow-y-auto no-scrollbar divide-y divide-white/[0.02]">
@@ -865,7 +844,7 @@ function GlobalNodeTable({ tickers, selectedSymbol, onSelect }: any) {
                 <div className="text-left">
                   <p className="text-2xl font-black text-white italic leading-none mb-2 tracking-tighter">{ticker.symbol}</p>
                   <div className="flex items-center space-x-2">
-                     <span className="text-[9px] font-black text-slate-600 uppercase italic tracking-widest">STREAM LOAD</span>
+                     <span className="text-[9px] font-black text-slate-600 uppercase italic tracking-widest">VOLATILITY</span>
                      <div className="w-10 h-1 bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full bg-slate-700" style={{ width: `${Math.random() * 100}%` }} />
                      </div>
