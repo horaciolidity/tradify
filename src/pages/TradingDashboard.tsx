@@ -227,8 +227,7 @@ const TradingDashboard: React.FC = () => {
       const { error: orderError } = await supabase.from('orders').update({
         status: 'completed',
         exit_price: currentPriceForSettle,
-        pnl_realized: profit - amount,
-        settled_at: new Date().toISOString()
+        pnl_realized: profit - amount
       }).eq('id', order.id);
       if (orderError) throw orderError;
 
@@ -716,7 +715,7 @@ function SettlementArchive({ orders }: any) {
                        </div>
                        <div className="space-y-2">
                           <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Protocol Settle</p>
-                          <p className="text-[12px] text-slate-300 font-medium italic">{new Date(order.settled_at || order.created_at).toLocaleTimeString()} UTC</p>
+                           <p className="text-[12px] text-slate-300 font-medium italic">{new Date(order.created_at).toLocaleTimeString()} UTC</p>
                        </div>
                        <div className="space-y-2">
                           <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Asset Value</p>
