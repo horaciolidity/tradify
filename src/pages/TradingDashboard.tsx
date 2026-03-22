@@ -690,9 +690,9 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
             <div className="flex justify-between items-center text-[10px] font-black italic tracking-[0.2em]">
                <div className="flex items-center space-x-3 text-slate-500">
                   <Clock size={14} />
-                  <span className="uppercase">Trade Duration</span>
+                  <span className="uppercase">Contract Type</span>
                </div>
-               <span className="text-primary italic bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">60 SECONDS</span>
+               <span className="text-primary italic bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">PERPETUAL</span>
             </div>
             <div className="flex justify-between items-center text-[10px] font-black italic tracking-[0.2em]">
                <div className="flex items-center space-x-3 text-slate-500">
@@ -711,20 +711,11 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
 }
 
 function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: any) {
-  const [timeLeft, setTimeLeft] = useState(60);
   const entryPrice = position.price_at_execution;
   const isLong = position.type === 'long';
   const priceChange = (currentPrice - entryPrice) / entryPrice;
   const pnlPct = isLong ? priceChange * 100 : -priceChange * 100;
   const pnlUsdc = position.amount_usdc * (pnlPct / 100);
-
-  useEffect(() => {
-    const expiry = new Date(position.expires_at).getTime();
-    const timer = setInterval(() => {
-      setTimeLeft(Math.max(0, Math.floor((expiry - Date.now()) / 1000)));
-    }, 100);
-    return () => clearInterval(timer);
-  }, [position]);
 
   return (
     <motion.div 
@@ -748,14 +739,19 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
 
          <div className="w-full md:w-auto flex justify-between md:block px-2">
             <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Size</span>
-            <p className="text-sm font-mono font-bold text-slate-300 italic opacity-80">${position.amount_usdc.toFixed(2)}</p>
+            <div className="text-right md:text-left">
+               <p className="text-sm font-mono font-bold text-slate-300 italic opacity-80">${position.amount_usdc.toFixed(2)}</p>
+               <p className="text-[10px] font-mono font-bold text-slate-500 tracking-tighter opacity-80">
+                  {(position.amount_asset || (position.amount_usdc / entryPrice)).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 6 })} {position.symbol.split('/')[0]}
+               </p>
+            </div>
          </div>
 
          <div className="w-full md:w-auto flex justify-between md:block px-2">
             <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Prices</span>
             <div className="text-right md:text-left">
-               <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-tighter opacity-50">{entryPrice.toLocaleString()}</p>
-               <p className="text-sm font-mono font-black text-white italic tracking-tighter">{currentPrice.toLocaleString()}</p>
+               <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-tighter opacity-70">En: {entryPrice.toLocaleString(undefined, { minimumFractionDigits: 3 })}</p>
+               <p className="text-sm font-mono font-black text-white italic tracking-tighter">Mk: {currentPrice.toLocaleString(undefined, { minimumFractionDigits: 3 })}</p>
             </div>
          </div>
 
@@ -776,10 +772,10 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
          </div>
 
          <div className="w-full md:w-auto flex justify-between md:block px-2">
-            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Time</span>
+            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Type</span>
             <div className="flex items-center space-x-3 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 w-fit shadow-inner">
-               <Clock size={12} className="text-primary animate-spin-slow" />
-               <span className="text-sm font-mono font-black text-white italic tracking-widest">{timeLeft}S</span>
+               <Activity size={12} className="text-primary animate-pulse" />
+               <span className="text-sm font-mono font-black text-white italic tracking-widest">PERPETUAL</span>
             </div>
          </div>
 
