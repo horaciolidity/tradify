@@ -29,6 +29,7 @@ const TradingDashboard: React.FC = () => {
   const [activePositions, setActivePositions] = useState<any[]>([]);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const settlingIds = useRef<Set<string>>(new Set());
+  const latestBarRef = useRef<any>(null);
 
   // Initialize Chart
   useEffect(() => {
@@ -45,14 +46,15 @@ const TradingDashboard: React.FC = () => {
         horzLines: { color: 'rgba(255, 255, 255, 0.02)' },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 450,
+      height: 550,
       timeScale: {
         borderColor: 'rgba(255, 255, 255, 0.05)',
         timeVisible: true,
       },
       rightPriceScale: {
         borderColor: 'rgba(255, 255, 255, 0.05)',
-        scaleMargins: { top: 0.1, bottom: 0.2 },
+        scaleMargins: { top: 0.15, bottom: 0.15 },
+        autoScale: true,
       }
     });
 
@@ -69,8 +71,9 @@ const TradingDashboard: React.FC = () => {
 
     const loadData = async () => {
       const data = await MarketService.getHistory(selectedSymbol, selectedTimeframe);
-      if (candlestickSeriesRef.current) {
+      if (candlestickSeriesRef.current && data.length > 0) {
         candlestickSeriesRef.current.setData(data as any);
+        latestBarRef.current = { ...data[data.length - 1] };
       }
     };
 
@@ -138,14 +141,12 @@ const TradingDashboard: React.FC = () => {
         setCurrentTicker(symbolTicker);
         
         // Update Chart in Real-Time
-        if (candlestickSeriesRef.current) {
-          candlestickSeriesRef.current.update({
-            time: Math.floor(Date.now() / 1000) as any,
-            open: symbolTicker.price,
-            high: symbolTicker.price,
-            low: symbolTicker.price,
-            close: symbolTicker.price
-          });
+        if (candlestickSeriesRef.current && latestBarRef.current) {
+          const currentBar = latestBarRef.current;
+          currentBar.close = symbolTicker.price;
+          currentBar.high = Math.max(currentBar.high, symbolTicker.price);
+          currentBar.low = Math.min(currentBar.low, symbolTicker.price);
+          candlestickSeriesRef.current.update(currentBar);
         }
       }
     });
@@ -218,7 +219,7 @@ const TradingDashboard: React.FC = () => {
           lineWidth: 2,
           lineStyle: 2, // Dashed
           axisLabelVisible: true,
-          title: `ENTRY ${pos.type.toUpperCase()} ($${pnl.toFixed(2)})`,
+          title: `ENTRY ${pos.type.toUpperCase()} (${pnl >= 0 ? '+' : ''}$${pnl.toFixed(4)})`,
         });
         priceLinesRef.current[pos.id] = line;
       }
