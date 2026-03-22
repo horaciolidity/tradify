@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, ISeriesApi } from 'lightweight-charts';
 import { MarketService, TickerData } from '../services/market';
-import { TrendingUp, TrendingDown, Clock, ShieldCheck, Zap, History, ArrowUpRight, ArrowDownLeft, Info, Activity, ShieldAudit, Waves } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, ShieldCheck, Zap, History, ArrowUpRight, ArrowDownLeft, Info, Activity, Waves } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TradingChat from '../components/TradingChat';
 import AnnouncementCarousel from '../components/AnnouncementCarousel';
@@ -341,7 +341,7 @@ const TradingDashboard: React.FC = () => {
                   <div className="hidden md:block">
                      <span className="text-[12px] font-black text-slate-600 uppercase italic tracking-widest mb-2 block">Protocol Security</span>
                      <div className="flex items-center space-x-3 text-accent">
-                        <ShieldAudit size={16} />
+                        <ShieldCheck size={16} />
                         <span className="text-sm font-black italic tracking-widest uppercase">AES-256 ACTIVE</span>
                      </div>
                   </div>
@@ -700,7 +700,7 @@ function SettlementArchive({ orders }: any) {
               </AnimatePresence>
            </div>
          ))}
-         {recentOrders.length === 0 && (
+         {orders.length === 0 && (
            <div className="p-32 flex flex-col items-center justify-center text-slate-700 grayscale opacity-20">
               <History size={60} className="mb-6" />
               <p className="text-[11px] font-black uppercase italic tracking-[0.5em]">No archival records detected</p>
