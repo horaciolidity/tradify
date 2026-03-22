@@ -598,7 +598,7 @@ const TradingDashboard: React.FC = () => {
           </div>
 
           <SettlementArchive orders={recentOrders} />
-          <TradingChat />
+          <TradingChat activePositions={activePositions} tickers={tickers} />
           <GlobalNodeTable tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
         </div>
 
@@ -826,7 +826,7 @@ function SettlementArchive({ orders }: any) {
              <div key={order.id} className="group border-b border-white/5 hover:bg-white/[0.02] transition-all p-4 md:p-8 cursor-default">
                 <div className="flex items-center justify-between">
                    <div className="flex items-center space-x-3 md:space-x-8 text-white">
-                      <div className={`w-10 h-10 md:w-20 md:h-20 rounded-[1.8rem] flex items-center justify-center font-black italic text-sm md:text-3xl border shadow-2xl transition-all group-hover:scale-105 ${isWin ? 'bg-accent/10 text-accent border-accent/20 shadow-accent/20' : 'bg-error/10 text-error border-error/20 shadow-error/20'}`}>
+                      <div className={`w-10 h-10 md:w-20 md:h-20 rounded-[1.8rem] flex items-center justify-center font-black italic text-sm md:text-3xl border shadow-2xl transition-all group-hover:scale-105 ${order.type === 'long' ? 'bg-[#0ECB81]/10 text-[#0ECB81] border-[#0ECB81]/20 shadow-[#0ECB81]/20' : 'bg-[#F6465D]/10 text-[#F6465D] border-[#F6465D]/20 shadow-[#F6465D]/20'}`}>
                          {order.type === 'long' ? 'UP' : 'DN'}
                       </div>
                       <div>

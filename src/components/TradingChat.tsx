@@ -15,7 +15,12 @@ interface ChatMessage {
   };
 }
 
-const TradingChat: React.FC = () => {
+interface TradingChatProps {
+  activePositions?: any[];
+  tickers?: { symbol: string, price: number }[];
+}
+
+const TradingChat: React.FC<TradingChatProps> = ({ activePositions = [], tickers = [] }) => {
   const { profile } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -69,11 +74,23 @@ const TradingChat: React.FC = () => {
     if (!newMessage.trim() || !profile) return;
 
     setLoading(true);
+
+    let finalMessage = newMessage.trim();
+    if (activePositions.length > 0) {
+       const pos = activePositions[0]; // Take largest or most recent (using first index)
+       const currentPrice = tickers.find(t => t.symbol === pos.symbol)?.price || pos.price_at_execution;
+       const diff = (currentPrice - pos.price_at_execution) / pos.price_at_execution;
+       const pnlPct = pos.type === 'long' ? diff * 100 : -diff * 100;
+       
+       const prefix = `[${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}% ${pos.symbol.split('/')[0]}]`;
+       finalMessage = `${prefix} ${finalMessage}`;
+    }
+
     const { error } = await supabase
       .from('chat_messages')
       .insert({
         user_id: profile.id,
-        message: newMessage.trim()
+        message: finalMessage
       });
 
     if (error) {
@@ -113,7 +130,18 @@ const TradingChat: React.FC = () => {
                   {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-              {msg.message}
+              <div>
+                 {msg.message.match(/^\[([+-][\d.]+% \w+)\]\s(.*)$/) ? (
+                    <>
+                       <span className={`font-mono font-black italic tracking-tighter mr-2 ${msg.message.startsWith('[+') ? 'text-accent' : msg.message.startsWith('[-') ? 'text-error' : 'text-primary'}`}>
+                          {msg.message.match(/^\[([+-][\d.]+% \w+)\]\s(.*)$/)?.[1] && `[${msg.message.match(/^\[([+-][\d.]+% \w+)\]\s(.*)$/)?.[1]}]`}
+                       </span>
+                       <span className="break-words">{msg.message.match(/^\[([+-][\d.]+% \w+)\]\s(.*)$/)?.[2]}</span>
+                    </>
+                 ) : (
+                    <span className="break-words">{msg.message}</span>
+                 )}
+              </div>
             </div>
           </div>
         ))}
