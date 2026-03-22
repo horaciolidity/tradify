@@ -562,6 +562,10 @@ const TradingDashboard: React.FC = () => {
             </AnimatePresence>
           </motion.div>
 
+          <div className="block lg:hidden mb-8">
+            <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
+          </div>
+
           <div className="space-y-6">
             <div className="flex items-center justify-between px-2">
                <div className="flex items-center space-x-4">
