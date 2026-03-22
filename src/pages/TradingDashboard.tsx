@@ -150,13 +150,16 @@ const TradingDashboard: React.FC = () => {
       }
     });
 
-    return () => { unsubscribe(); };
-  }, [selectedSymbol]);
+    // POLLING FAILSAFE: Refresh data every 10 seconds to ensure consistency
+    const pollInterval = setInterval(() => {
+      if (profile) fetchData();
+    }, 10000);
 
-  // Initial Data Load
-  useEffect(() => {
-    if (profile) fetchData();
-  }, [profile, selectedSymbol]);
+    return () => { 
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
+  }, [selectedSymbol, profile?.id]);
 
   const fetchData = async () => {
     const { data: ordersData } = await supabase
@@ -784,7 +787,7 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
                   <div className={`w-1.5 h-1.5 rounded-full ${(pnlPct || 0) >= 0 ? 'bg-accent shadow-[0_0_10px_#4ade80]' : 'bg-error shadow-[0_0_10px_#fb7185]'} animate-pulse`} />
                </div>
                <p className={`text-[10px] font-mono font-black italic tracking-wide ${(pnlUsdc || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
-                  {(pnlUsdc || 0) >= 0 ? '+' : '-'}${Math.abs(pnlUsdc || 0).toFixed(2)} USDT
+                  {(pnlUsdc || 0) >= 0 ? '+' : '-'}${Math.abs(pnlUsdc || 0).toFixed(2)} USDC
                </p>
             </div>
          </div>
