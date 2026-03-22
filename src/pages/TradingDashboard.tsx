@@ -459,6 +459,60 @@ const TradingDashboard: React.FC = () => {
                </div>
             </div>
             <div ref={chartContainerRef} className="flex-1 w-full" />
+
+            {/* FLOATING PNL MONITOR */}
+            <AnimatePresence>
+               {activePositions.filter(p => p.symbol === selectedSymbol).length > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.8, x: 20 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, x: 20 }}
+                    className="absolute top-32 right-12 z-[50]"
+                  >
+                     <div className={`px-6 py-4 rounded-[1.5rem] border backdrop-blur-3xl shadow-2xl transition-all duration-500 ${
+                        activePositions.reduce((acc, p) => {
+                           if (p.symbol !== selectedSymbol) return acc;
+                           const entry = p.price_at_execution;
+                           const curr = tickers.find(t => t.symbol === p.symbol)?.price || currentTicker?.price || entry;
+                           const diff = (curr - entry) / entry;
+                           return acc + (p.type === 'long' ? diff : -diff);
+                        }, 0) >= 0 ? 'bg-accent/10 border-accent/20 text-accent shadow-accent/20' : 'bg-error/10 border-error/20 text-error shadow-error/20'
+                     }`}>
+                        <div className="flex flex-col items-end">
+                           <span className="text-[10px] font-black uppercase tracking-[0.3em] mb-1 opacity-60 italic">Live Position PnL</span>
+                           <div className="flex items-center space-x-3">
+                              <span className="text-4xl font-black italic tracking-tighter">
+                                 {activePositions.reduce((acc, p) => {
+                                    if (p.symbol !== selectedSymbol) return acc;
+                                    const entry = p.price_at_execution;
+                                    const curr = tickers.find(t => t.symbol === p.symbol)?.price || currentTicker?.price || entry;
+                                    const diff = (curr - entry) / entry;
+                                    const gain = p.type === 'long' ? p.amount_usdc * diff : -p.amount_usdc * diff;
+                                    return acc + gain;
+                                 }, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              <span className="text-[14px] font-black italic tracking-widest mt-1">USDC</span>
+                           </div>
+                           <div className="w-full h-1 bg-white/5 rounded-full mt-3 overflow-hidden">
+                              <motion.div 
+                                 className={`h-full ${
+                                    activePositions.reduce((acc, p) => {
+                                       if (p.symbol !== selectedSymbol) return acc;
+                                       const entry = p.price_at_execution;
+                                       const curr = tickers.find(t => t.symbol === p.symbol)?.price || currentTicker?.price || entry;
+                                       const diff = (curr - entry) / entry;
+                                       return acc + (p.type === 'long' ? diff : -diff);
+                                    }, 0) >= 0 ? 'bg-accent shadow-[0_0_15px_#4ade80]' : 'bg-error shadow-[0_0_15px_#fb7185]'
+                                 }`}
+                                 animate={{ width: '100%' }}
+                                 transition={{ repeat: Infinity, duration: 1 }}
+                              />
+                           </div>
+                        </div>
+                     </div>
+                  </motion.div>
+               )}
+            </AnimatePresence>
           </motion.div>
 
           <div className="block lg:hidden mb-8">
@@ -466,6 +520,8 @@ const TradingDashboard: React.FC = () => {
           </div>
 
           <SettlementArchive orders={recentOrders} />
+          <TradingChat />
+          <GlobalNodeTable tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
         </div>
 
         <div className="hidden lg:block space-y-8 lg:sticky lg:top-8 self-start order-2">
@@ -514,9 +570,6 @@ const TradingDashboard: React.FC = () => {
               )}
             </div>
           </div>
-
-          <TradingChat />
-          <GlobalNodeTable tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
         </div>
       </div>
     </div>

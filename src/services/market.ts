@@ -94,7 +94,7 @@ export class MarketService {
     };
 
     fetchData();
-    this.interval = setInterval(fetchData, 8000); 
+    this.interval = setInterval(fetchData, 2000); 
   }
 
   static stopSimulation() {
