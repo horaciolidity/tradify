@@ -32,17 +32,37 @@ const Referrals: React.FC = () => {
   };
 
   const fetchReferralData = async () => {
-    const { data: refs, error } = await supabase
+    // 1. Get commissions (from the referrals table)
+    const { data: commissionsData, error: commError } = await supabase
       .from('referrals')
-      .select('*, referred:profiles!referred_id(email)')
+      .select('*, referred:profiles!referred_id(email, full_name)')
       .eq('referrer_id', profile?.id);
 
-    if (!error && refs) {
-      setReferrals(refs);
-      const totalEarned = refs.reduce((acc: number, curr: any) => acc + (curr.commission_earned || 0), 0);
+    // 2. Get registered users (from the profiles table)
+    const { data: networkData, error: networkError } = await supabase
+      .from('profiles')
+      .select('email, created_at, id')
+      .eq('referred_by', profile?.id);
+
+    if (!commError && !networkError && networkData) {
+      const totalEarned = (commissionsData || []).reduce((acc: number, curr: any) => acc + (curr.commission_earned || 0), 0);
+      
+      // Combine info: If a profile is in the commissions list, mark as active
+      const processedNetwork = networkData.map(user => {
+        const commsForUser = (commissionsData || []).filter(c => c.referred_id === user.id);
+        const earnedFromUser = commsForUser.reduce((acc, c) => acc + (c.commission_earned || 0), 0);
+        return {
+          ...user,
+          total_earned: earnedFromUser,
+          status: earnedFromUser > 0 ? 'Active Investor' : 'Registered',
+          is_active: earnedFromUser > 0
+        };
+      });
+
+      setReferrals(processedNetwork);
       setStats({
-        total: refs.length,
-        active: refs.length, // Simplified
+        total: networkData.length,
+        active: processedNetwork.filter(u => u.is_active).length,
         rewards: totalEarned
       });
     }
@@ -139,25 +159,33 @@ const Referrals: React.FC = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/2">
-                <th className="px-6 py-4">User</th>
-                <th className="px-6 py-4">Level</th>
-                <th className="px-6 py-4">Commission</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Referred Node</th>
+                <th className="px-6 py-4">Activity Status</th>
+                <th className="px-6 py-4">Total Harvested</th>
+                <th className="px-6 py-4">Verification</th>
+                <th className="px-6 py-4">Launch Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {referrals.map((ref, i) => (
                 <tr key={i} className="text-sm text-slate-300 hover:bg-white/2 transition-colors">
-                  <td className="px-6 py-4 font-medium">{ref.referred?.email?.split('@')[0]}***</td>
-                  <td className="px-6 py-4">{ref.level}</td>
-                  <td className="px-6 py-4 font-bold text-white">{ref.commission_earned} USDC</td>
+                  <td className="px-6 py-4 font-medium italic break-all">
+                    {ref.email?.split('@')[0]}***@{ref.email?.split('@')[1]}
+                  </td>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent/20 text-accent">
-                      Received
+                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${ref.is_active ? 'bg-accent/10 text-accent border-accent/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
+                      {ref.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-slate-500 font-mono">{new Date(ref.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 font-black italic text-white tracking-widest">
+                    {ref.total_earned.toFixed(2)} USDC
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border ${ref.is_active ? 'bg-primary/20 text-primary border-primary/20 shadow-[0_0_10px_rgba(252,186,44,0.1)]' : 'bg-white/5 text-slate-600 border-white/5'}`}>
+                      {ref.is_active ? 'Verified' : 'Pending Node'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-600 font-mono text-[10px] italic">{new Date(ref.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
               {referrals.length === 0 && (

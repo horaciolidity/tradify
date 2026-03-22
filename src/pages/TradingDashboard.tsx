@@ -128,26 +128,34 @@ const TradingDashboard: React.FC = () => {
 
   }, [activePositions, selectedSymbol]);
 
-  // Subscribe to Tickers
+  // 1. STABLE TICKER SUBSCRIPTION & REAL-TIME CHART UPDATE
   useEffect(() => {
     MarketService.startSimulation();
-    const unsubscribe = MarketService.subscribe((data) => {
-      setTickers(data);
+    const unsubscribe = MarketService.subscribe((allTickers) => {
+      setTickers(allTickers);
+      const symbolTicker = allTickers.find(t => t.symbol === selectedSymbol);
+      if (symbolTicker) {
+        setCurrentTicker(symbolTicker);
+        
+        // Update Chart in Real-Time
+        if (candlestickSeriesRef.current) {
+          candlestickSeriesRef.current.update({
+            time: Math.floor(Date.now() / 1000) as any,
+            open: symbolTicker.price,
+            high: symbolTicker.price,
+            low: symbolTicker.price,
+            close: symbolTicker.price
+          });
+        }
+      }
     });
+
     return () => { unsubscribe(); };
-  }, []);
+  }, [selectedSymbol]);
 
-  // Update currentTicker
+  // Initial Data Load
   useEffect(() => {
-    const active = tickers.find(t => t.symbol === selectedSymbol);
-    if (active) setCurrentTicker(active);
-  }, [tickers, selectedSymbol]);
-
-  // Data Fetching
-  useEffect(() => {
-    if (profile && selectedSymbol) {
-      fetchData();
-    }
+    if (profile) fetchData();
   }, [profile, selectedSymbol]);
 
   const fetchData = async () => {
@@ -165,45 +173,84 @@ const TradingDashboard: React.FC = () => {
 
   const [isSettlingIds, setIsSettlingIds] = useState<Set<string>>(new Set());
 
-  // --- AUTO-SETTLEMENT & PURGE ---
+  const activePositionsRef = useRef(activePositions);
   useEffect(() => {
-    const settlementInterval = setInterval(async () => {
+    activePositionsRef.current = activePositions;
+  }, [activePositions]);
+
+  // 2. STABLE AUTO-SETTLEMENT LOOP
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const positions = activePositionsRef.current;
+      if (positions.length === 0) return;
+
       const now = new Date();
-      
-      // Filter out positions already in the process of settling to avoid parallel attempts
-      const expiredPositions = activePositions.filter(pos => {
+      const expiredOrDead = positions.filter(pos => {
         const expiry = new Date(pos.expires_at);
+        // Settle if expired or if it's way past expiry (dead trade purge)
         return now >= expiry && pos.status === 'active' && !settlingIds.current.has(pos.id);
       });
 
-      // Settle sequentially to avoid balance race conditions
-      for (const pos of expiredPositions) {
+      for (const pos of expiredOrDead) {
         await settleOrder(pos);
       }
     }, 1000);
+    return () => clearInterval(interval);
+  }, [profile?.id]);
 
-    return () => clearInterval(settlementInterval);
-  }, [activePositions, tickers, wallet, profile]);
-
-  // Initial Purge of dead trades
+  // 3. UPDATE CHART OVERLAYS
   useEffect(() => {
-    const purgeDead = async () => {
-      if (activePositions.length > 0 && tickers.length > 0) {
-        const now = new Date();
-        const deadPositions = activePositions.filter(pos => {
-          const expiry = new Date(pos.expires_at);
-          return now > new Date(expiry.getTime() + 2000); // 2s Grace period
-        });
+    if (!candlestickSeriesRef.current || !currentTicker) return;
 
-        for (const pos of deadPositions) {
-          if (!settlingIds.current.has(pos.id)) {
-            await settleOrder(pos);
-          }
-        }
+    // Remove old lines
+    Object.values(priceLinesRef.current).forEach(line => {
+      candlestickSeriesRef.current?.removePriceLine(line);
+    });
+    priceLinesRef.current = {};
+
+    // MARKET PRICE LINE
+    const marketColor = currentTicker.change >= 0 ? 'rgba(14, 203, 129, 0.4)' : 'rgba(246, 70, 93, 0.4)';
+    const marketLine = candlestickSeriesRef.current.createPriceLine({
+      price: currentTicker.price,
+      color: marketColor,
+      lineWidth: 1,
+      lineStyle: 0,
+      axisLabelVisible: true,
+      title: 'MARKET',
+    });
+    priceLinesRef.current['market'] = marketLine;
+
+    // ENTRY LINES & PNL LABELS
+    activePositions.forEach(pos => {
+      if (pos.symbol === selectedSymbol && pos.status === 'active') {
+        const pnl = pos.type === 'long' 
+          ? (currentTicker.price - pos.price_at_execution) 
+          : (pos.price_at_execution - currentTicker.price);
+        
+        const line = candlestickSeriesRef.current?.createPriceLine({
+          price: pos.price_at_execution,
+          color: pos.type === 'long' ? '#0ECB81' : '#F6465D',
+          lineWidth: 2,
+          lineStyle: 2, // Dashed
+          axisLabelVisible: true,
+          title: `ENTRY ${pos.type.toUpperCase()} ($${pnl.toFixed(2)})`,
+        });
+        priceLinesRef.current[pos.id] = line;
       }
-    };
-    purgeDead();
-  }, [tickers.length > 0, activePositions.length]);
+    });
+
+    const markers = activePositions
+      .filter(p => p.symbol === selectedSymbol && p.status === 'active')
+      .map(p => ({
+        time: Math.floor(new Date(p.created_at).getTime() / 1000),
+        position: p.type === 'long' ? 'belowBar' : 'aboveBar',
+        color: p.type === 'long' ? '#0ECB81' : '#F6465D',
+        shape: p.type === 'long' ? 'arrowUp' : 'arrowDown',
+        text: 'ENTRY NODE',
+      }));
+    
+    candlestickSeriesRef.current.setMarkers(markers as any);
+  }, [activePositions, selectedSymbol, currentTicker?.price]);
 
   const settleOrder = async (order: any, manualPrice?: number) => {
     if (!profile || !wallet || settlingIds.current.has(order.id)) {
@@ -515,19 +562,6 @@ const TradingDashboard: React.FC = () => {
             </AnimatePresence>
           </motion.div>
 
-          <div className="block lg:hidden mb-8">
-            <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
-          </div>
-
-          <SettlementArchive orders={recentOrders} />
-          <TradingChat />
-          <GlobalNodeTable tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
-        </div>
-
-        <div className="hidden lg:block space-y-8 lg:sticky lg:top-8 self-start order-2">
-          <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
-          
-          {/* ACTIVE FLASH POSITIONS - MOVED TO SIDEBAR */}
           <div className="space-y-6">
             <div className="flex items-center justify-between px-2">
                <div className="flex items-center space-x-4">
@@ -570,6 +604,14 @@ const TradingDashboard: React.FC = () => {
               )}
             </div>
           </div>
+
+          <SettlementArchive orders={recentOrders} />
+          <TradingChat />
+          <GlobalNodeTable tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
+        </div>
+
+        <div className="hidden lg:block space-y-8 lg:sticky lg:top-8 self-start order-2">
+          <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
         </div>
       </div>
     </div>
