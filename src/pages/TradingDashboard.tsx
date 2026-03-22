@@ -198,15 +198,15 @@ const TradingDashboard: React.FC = () => {
        return;
     }
 
+    settlingIds.current.add(order.id);
     const targetTicker = tickers.find(t => t.symbol === order.symbol);
     const currentPriceForSettle = manualPrice || targetTicker?.price;
 
     if (!currentPriceForSettle) {
+      settlingIds.current.delete(order.id); // Release if cannot settle
       console.warn(`Price stream for ${order.symbol} not established. Delaying settlement.`);
       return;
     }
-
-    settlingIds.current.add(order.id);
     const entryPrice = order.price_at_execution;
     const amount = order.amount_usdc;
     
@@ -229,16 +229,29 @@ const TradingDashboard: React.FC = () => {
         exit_price: currentPriceForSettle,
         pnl_realized: profit - amount
       }).eq('id', order.id);
+      
       if (orderError) throw orderError;
+
+      // OPTIMISTIC UPDATES for seamless UX
+      setActivePositions(prev => prev.filter(p => p.id !== order.id));
+      setRecentOrders(prev => [{
+        ...order,
+        status: 'completed',
+        exit_price: currentPriceForSettle,
+        pnl_realized: profit - amount,
+        created_at: new Date().toISOString()
+      }, ...prev].slice(0, 10));
 
       setWallet({ ...wallet, balance_usdc: newBalance });
       
       const isWin = profit >= amount;
       addNotification(profile.id, 'Position Settled', `Result: ${isWin ? 'PROFIT' : 'LOSS'} of $${Math.abs(profit - amount).toFixed(2)}`, isWin ? 'success' : 'transaction');
 
-      await fetchData();
+      // Sync with DB
+      fetchData();
     } catch (err) {
       console.error("Settlement error:", err);
+      addNotification(profile.id, 'Settlement Failure', 'Protocol could not synchronize the exit signal.', 'error');
     } finally {
        settlingIds.current.delete(order.id);
     }
