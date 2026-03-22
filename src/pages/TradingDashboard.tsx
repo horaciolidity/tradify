@@ -308,7 +308,7 @@ const TradingDashboard: React.FC = () => {
 
     } catch (err: any) {
       if (err.message !== 'Price missing') {
-        process.env.NODE_ENV === 'development' && console.error("Settlement Logic Trace:", {
+        import.meta.env.DEV && console.error("Settlement Logic Trace:", {
           orderId: order.id,
           error: err,
           message: err.message
