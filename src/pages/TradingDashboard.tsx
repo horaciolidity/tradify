@@ -163,13 +163,14 @@ const TradingDashboard: React.FC = () => {
     }
   };
 
-  // --- AUTO-SETTLEMENT ---
+  // --- AUTO-SETTLEMENT & PURGE ---
   useEffect(() => {
     const settlementInterval = setInterval(async () => {
       const now = new Date();
       
       for (const pos of activePositions) {
         const expiry = new Date(pos.expires_at);
+        // Auto-settle if expired
         if (now >= expiry && pos.status === 'active' && !settlingIds.current.has(pos.id)) {
            await settleOrder(pos);
         }
@@ -177,15 +178,35 @@ const TradingDashboard: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(settlementInterval);
-  }, [activePositions, currentTicker, wallet, profile]);
+  }, [activePositions, tickers, wallet, profile]);
 
-  const settleOrder = async (order: any) => {
-    if (!currentTicker || !profile || !wallet || settlingIds.current.has(order.id)) {
+  // Initial Purge of dead trades
+  useEffect(() => {
+    if (activePositions.length > 0 && tickers.length > 0) {
+      const now = new Date();
+      activePositions.forEach(pos => {
+        const expiry = new Date(pos.expires_at);
+        if (now > new Date(expiry.getTime() + 2000)) { // 2s Grace period
+          settleOrder(pos);
+        }
+      });
+    }
+  }, [tickers.length > 0]);
+
+  const settleOrder = async (order: any, manualPrice?: number) => {
+    if (!profile || !wallet || settlingIds.current.has(order.id)) {
        return;
     }
-    settlingIds.current.add(order.id);
 
-    const currentPriceForSettle = currentTicker.price;
+    const targetTicker = tickers.find(t => t.symbol === order.symbol);
+    const currentPriceForSettle = manualPrice || targetTicker?.price;
+
+    if (!currentPriceForSettle) {
+      console.warn(`Price stream for ${order.symbol} not established. Delaying settlement.`);
+      return;
+    }
+
+    settlingIds.current.add(order.id);
     const entryPrice = order.price_at_execution;
     const amount = order.amount_usdc;
     
@@ -228,8 +249,13 @@ const TradingDashboard: React.FC = () => {
     if (!profile || !wallet || !currentTicker || !tradeAmount || processing) return;
     
     const amount = parseFloat(tradeAmount);
-    if (isNaN(amount) || amount <= 0 || amount > wallet.balance_usdc) {
-      alert('Insufficient USDC balance for this trade unit.');
+    if (isNaN(amount) || amount <= 0 || amount > (wallet?.balance_usdc || 0)) {
+      addNotification(profile.id, 'Calibration Error', 'Insufficient USDC balance for this trade unit.', 'error');
+      return;
+    }
+
+    if (!currentTicker) {
+      addNotification(profile.id, 'Sync Error', 'Satellite price link not established.', 'error');
       return;
     }
 
@@ -259,7 +285,7 @@ const TradingDashboard: React.FC = () => {
       setTradeAmount('');
       await fetchData();
     } catch (err: any) {
-      alert(err.message || 'Network synchrony lost.');
+      addNotification(profile.id, 'Critical Link Failure', err.message || 'Network synchrony lost.', 'error');
     } finally {
       setProcessing(false);
     }
@@ -364,7 +390,13 @@ const TradingDashboard: React.FC = () => {
                     <span className="text-[8px] md:text-[10px] font-black text-primary uppercase italic tracking-widest">{activePositions.length} TERMINALS</span>
                   </div>
                </div>
-               <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3">
+                  <button 
+                    onClick={() => activePositions.forEach(p => settleOrder(p))}
+                    className="px-4 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-full text-[8px] font-black text-rose-500 uppercase italic tracking-widest transition-all hover:scale-105 active:scale-95"
+                  >
+                    Purge All Cycles
+                  </button>
                   <Waves size={16} className="text-slate-700 animate-pulse" />
                   <span className="text-[10px] font-black text-slate-600 italic uppercase tracking-widest">Auto-Settlement Core v2.1</span>
                </div>
@@ -386,8 +418,8 @@ const TradingDashboard: React.FC = () => {
                      <LiveFlashPositionRow 
                        key={pos.id} 
                        position={pos} 
-                       currentPrice={currentTicker?.price || 0} 
-                       onClose={() => settleOrder(pos)}
+                       currentPrice={tickers.find(t => t.symbol === pos.symbol)?.price || currentTicker?.price || 0} 
+                       onClose={() => settleOrder(pos, tickers.find(t => t.symbol === pos.symbol)?.price)}
                      />
                    ))}
                  </AnimatePresence>
