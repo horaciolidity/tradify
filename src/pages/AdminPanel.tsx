@@ -112,6 +112,8 @@ const AdminPanel: React.FC = () => {
         .select('*')
         .order('id', { ascending: true });
 
+      console.log('Admin Data Fetch Results:', { userData, depositData, tokenData, announceData, planData });
+
       if (userData) setUsers(userData);
       if (depositData) setPendingDeposits(depositData);
       if (tokenData) setTokens(tokenData);
@@ -123,10 +125,12 @@ const AdminPanel: React.FC = () => {
         const totalUsers = userData.length;
         const totalDeposits = userData.reduce((acc, curr: any) => acc + (curr.wallets?.[0]?.balance_usdc || 0), 0);
         
-        const { count: activeInvs } = await supabase
+        const { count: activeInvs, error: invErr } = await supabase
           .from('investments')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'active');
+        
+        if (invErr) console.error('Investments fetch error:', invErr);
 
         setStats([
           { label: 'Users Network', value: totalUsers.toString(), icon: Users, change: '+2.4%' },

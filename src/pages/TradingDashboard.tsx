@@ -461,6 +461,10 @@ const TradingDashboard: React.FC = () => {
             <div ref={chartContainerRef} className="flex-1 w-full" />
           </motion.div>
 
+          <div className="block lg:hidden mb-8">
+            <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
+          </div>
+
           <SettlementArchive orders={recentOrders} />
         </div>
 
