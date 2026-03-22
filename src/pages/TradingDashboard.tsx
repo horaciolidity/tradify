@@ -46,14 +46,15 @@ const TradingDashboard: React.FC = () => {
         horzLines: { color: 'rgba(255, 255, 255, 0.02)' },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 550,
+      height: chartContainerRef.current.clientHeight || 500,
+      autoSize: true,
       timeScale: {
         borderColor: 'rgba(255, 255, 255, 0.05)',
         timeVisible: true,
       },
       rightPriceScale: {
         borderColor: 'rgba(255, 255, 255, 0.05)',
-        scaleMargins: { top: 0.15, bottom: 0.15 },
+        scaleMargins: { top: 0.2, bottom: 0.2 },
         autoScale: true,
       }
     });
@@ -523,7 +524,7 @@ const TradingDashboard: React.FC = () => {
                                     const diff = (curr - entry) / entry;
                                     const gain = p.type === 'long' ? p.amount_usdc * diff : -p.amount_usdc * diff;
                                     return acc + gain;
-                                 }, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                 }, 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                               </span>
                               <span className="text-[14px] font-black italic tracking-widest mt-1">USDC</span>
                            </div>
@@ -642,7 +643,7 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
                </div>
                <div className="text-right">
                   <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Available Liquidity</span>
-                  <span className="text-sm font-bold text-primary italic tracking-widest">${(wallet?.balance_usdc || 0).toLocaleString()}</span>
+                  <span className="text-sm font-bold text-primary italic tracking-widest">${(wallet?.balance_usdc || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
                </div>
             </div>
             
