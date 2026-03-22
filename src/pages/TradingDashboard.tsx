@@ -181,25 +181,7 @@ const TradingDashboard: React.FC = () => {
     activePositionsRef.current = activePositions;
   }, [activePositions]);
 
-  // 2. STABLE AUTO-SETTLEMENT LOOP
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const positions = activePositionsRef.current;
-      if (positions.length === 0) return;
-
-      const now = new Date();
-      const expiredOrDead = positions.filter(pos => {
-        const expiry = new Date(pos.expires_at);
-        // Settle if expired or if it's way past expiry (dead trade purge)
-        return now >= expiry && pos.status === 'active' && !settlingIds.current.has(pos.id);
-      });
-
-      for (const pos of expiredOrDead) {
-        await settleOrder(pos);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [profile?.id]);
+  // Perpetual Mode: Auto-settlement loop has been removed. Users must manually close trades.
 
   // 3. UPDATE CHART OVERLAYS
   useEffect(() => {
@@ -269,7 +251,7 @@ const TradingDashboard: React.FC = () => {
       const currentPriceForSettle = manualPrice || targetTicker?.price;
 
       if (!currentPriceForSettle) {
-        addNotification(profile.id, 'Bridge Delay', `Price link for ${order.symbol} temporary unavailable. Retrying...`, 'transaction');
+        addNotification(profile.id, 'Syncing Price', `Live price link for ${order.symbol} temporary unavailable. Retrying...`, 'transaction');
         throw new Error('Price missing');
       }
 
@@ -391,7 +373,8 @@ const TradingDashboard: React.FC = () => {
 
     setProcessing(true);
     const entryPrice = currentTicker.price;
-    const expiresAt = new Date(Date.now() + 60 * 1000).toISOString();
+    // Perpetual Contract: Expiration is set to 1 year from now.
+    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
 
     try {
       const newBalance = wallet.balance_usdc - amount;
