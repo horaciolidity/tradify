@@ -750,8 +750,8 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
          <div className="w-full md:w-auto flex justify-between md:block px-2">
             <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Prices</span>
             <div className="text-right md:text-left">
-               <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-tighter opacity-70">En: {entryPrice.toLocaleString(undefined, { minimumFractionDigits: 3 })}</p>
-               <p className="text-sm font-mono font-black text-white italic tracking-tighter">Mk: {currentPrice.toLocaleString(undefined, { minimumFractionDigits: 3 })}</p>
+               <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-tighter opacity-70">En: {entryPrice.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</p>
+               <p className="text-sm font-mono font-black text-white italic tracking-tighter">Mk: {currentPrice.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</p>
             </div>
          </div>
 
@@ -761,12 +761,12 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
                <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1 block">Live Result</span>
                <div className="flex items-center md:justify-start justify-end space-x-3">
                   <p className={`text-base font-mono font-black italic tracking-tighter ${(pnlPct || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
-                     {(pnlPct || 0) >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(2)}%
+                     {(pnlPct || 0) >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(4)}%
                   </p>
                   <div className={`w-1.5 h-1.5 rounded-full ${(pnlPct || 0) >= 0 ? 'bg-accent shadow-[0_0_10px_#4ade80]' : 'bg-error shadow-[0_0_10px_#fb7185]'} animate-pulse`} />
                </div>
                <p className={`text-[10px] font-mono font-black italic tracking-wide ${(pnlUsdc || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
-                  {(pnlUsdc || 0) >= 0 ? '+' : '-'}${Math.abs(pnlUsdc || 0).toFixed(2)} USDC
+                  {(pnlUsdc || 0) >= 0 ? '+' : '-'}${Math.abs(pnlUsdc || 0).toFixed(4)} USDC
                </p>
             </div>
          </div>
