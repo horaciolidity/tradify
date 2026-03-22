@@ -798,14 +798,20 @@ function SettlementArchive({ orders }: any) {
                        <div className="flex items-center space-x-3">
                           <h5 className="text-sm md:text-2xl font-black italic uppercase tracking-tighter leading-none">{order.symbol}</h5>
                           <span className={`text-[9px] md:text-[10px] font-black uppercase italic transition-colors px-2 py-0.5 rounded-lg border border-current/20 ${(order.pnl_realized || 0) >= 0 ? 'text-accent bg-accent/5' : 'text-error bg-error/5'}`}>
-                             {Number(order.pnl_realized) >= 0 ? 'Vector Profit' : 'Vector Loss'}
-                          </span>
-                       </div>
-                       <div className="flex items-center space-x-3 mt-2 md:mt-3 opacity-60">
-                          <span className="text-[10px] font-mono font-medium text-slate-500 italic">Entry Index: ${order.price_at_execution?.toLocaleString()}</span>
-                          <span className="text-slate-700 font-black">|</span>
-                          <span className="text-[10px] font-mono font-medium text-slate-500 italic">Exit Index: ${order.exit_price?.toLocaleString()}</span>
-                       </div>
+                              {Number(order.pnl_realized) >= 0 ? 'Vector Profit' : 'Vector Loss'}
+                           </span>
+                        </div>
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mt-3 opacity-90">
+                           <div className="flex items-center space-x-2">
+                              <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Entry:</span>
+                              <span className="text-[11px] font-mono font-black text-white italic tracking-tighter">${order.price_at_execution?.toLocaleString()}</span>
+                           </div>
+                           <span className="hidden md:block text-white/10 text-xs">/</span>
+                           <div className="flex items-center space-x-2">
+                              <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Exit:</span>
+                              <span className="text-[11px] font-mono font-black text-white italic tracking-tighter">${order.exit_price?.toLocaleString()}</span>
+                           </div>
+                        </div>
                     </div>
                  </div>
 

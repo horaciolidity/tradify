@@ -415,26 +415,48 @@ const Investments: React.FC = () => {
                   <span className="text-slate-500">Min: {selectedPlan.min_amount}</span>
                   <span className="text-slate-500">Max: {selectedPlan.max_amount}</span>
                 </div>
-              </div>
+              </div>              <div className="bg-white/5 rounded-2xl p-6 space-y-4 border border-white/5 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors" />
+                
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500 font-bold uppercase tracking-widest text-[9px]">Daily Yield (Approx)</span>
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp size={14} className="text-accent" />
+                    <span className="text-accent font-black italic tracking-tighter">
+                      +${((parseFloat(investmentAmount) || 0) * (selectedPlan.interest_rate / 100) / selectedPlan.interest_period_days).toFixed(2)} USDC
+                    </span>
+                  </div>
+                </div>
 
-              <div className="bg-white/5 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500 font-bold uppercase tracking-widest text-[9px]">Total Maturity Return</span>
+                  <div className="flex items-center space-x-2">
+                    <Zap size={14} className="text-primary" />
+                    <span className="text-white font-black italic tracking-tighter">
+                      ${((parseFloat(investmentAmount) || 0) * (1 + (selectedPlan.interest_rate / 100) * (selectedPlan.duration_days / selectedPlan.interest_period_days))).toFixed(2)} USDC
+                    </span>
+                  </div>
+                </div>
+
+                <div className="h-px bg-white/5 my-2" />
+
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Duration</span>
+                  <span className="text-slate-400">Lock-up Period</span>
                   <span className="text-white font-bold">{selectedPlan.duration_days} Days</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Compound Returns</span>
-                  <span className="text-accent font-bold">Yes</span>
+                  <span className="text-slate-400">Payout Cycle</span>
+                  <span className="text-white font-bold">Every {selectedPlan.interest_period_days} Days</span>
                 </div>
                 <div className="flex justify-between text-sm border-t border-white/5 pt-3">
-                  <span className="text-slate-400 font-bold uppercase text-xs">Available Balance</span>
+                  <span className="text-slate-500 font-bold uppercase text-xs">Wallet Balance</span>
                   <span className="text-white font-bold">{wallet?.balance_usdc || 0} USDC</span>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 text-xs text-slate-500 leading-relaxed">
-                <Info size={16} className="text-primary mt-0.5 shrink-0" />
-                <p>Funds will be locked for the duration of the plan. Interests are paid every {selectedPlan.interest_period_days} days to your wallet.</p>
+              <div className="flex items-start space-x-3 text-[10px] text-slate-500 leading-relaxed bg-primary/5 p-3 rounded-xl border border-primary/10">
+                <Info size={14} className="text-primary mt-0.5 shrink-0" />
+                <p>Projections are estimates based on current plan performance. Principle and interest are guaranteed by the Reserve Fund.</p>
               </div>
 
               <button 
