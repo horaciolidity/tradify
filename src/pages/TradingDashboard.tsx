@@ -163,17 +163,22 @@ const TradingDashboard: React.FC = () => {
     }
   };
 
+  const [isSettlingIds, setIsSettlingIds] = useState<Set<string>>(new Set());
+
   // --- AUTO-SETTLEMENT & PURGE ---
   useEffect(() => {
     const settlementInterval = setInterval(async () => {
       const now = new Date();
       
-      for (const pos of activePositions) {
+      // Filter out positions already in the process of settling to avoid parallel attempts
+      const expiredPositions = activePositions.filter(pos => {
         const expiry = new Date(pos.expires_at);
-        // Auto-settle if expired
-        if (now >= expiry && pos.status === 'active' && !settlingIds.current.has(pos.id)) {
-           await settleOrder(pos);
-        }
+        return now >= expiry && pos.status === 'active' && !settlingIds.current.has(pos.id);
+      });
+
+      // Settle sequentially to avoid balance race conditions
+      for (const pos of expiredPositions) {
+        await settleOrder(pos);
       }
     }, 1000);
 
@@ -182,78 +187,129 @@ const TradingDashboard: React.FC = () => {
 
   // Initial Purge of dead trades
   useEffect(() => {
-    if (activePositions.length > 0 && tickers.length > 0) {
-      const now = new Date();
-      activePositions.forEach(pos => {
-        const expiry = new Date(pos.expires_at);
-        if (now > new Date(expiry.getTime() + 2000)) { // 2s Grace period
-          settleOrder(pos);
+    const purgeDead = async () => {
+      if (activePositions.length > 0 && tickers.length > 0) {
+        const now = new Date();
+        const deadPositions = activePositions.filter(pos => {
+          const expiry = new Date(pos.expires_at);
+          return now > new Date(expiry.getTime() + 2000); // 2s Grace period
+        });
+
+        for (const pos of deadPositions) {
+          if (!settlingIds.current.has(pos.id)) {
+            await settleOrder(pos);
+          }
         }
-      });
-    }
-  }, [tickers.length > 0]);
+      }
+    };
+    purgeDead();
+  }, [tickers.length > 0, activePositions.length]);
 
   const settleOrder = async (order: any, manualPrice?: number) => {
     if (!profile || !wallet || settlingIds.current.has(order.id)) {
        return;
     }
 
+    // Mark as settling immediately to block other calls
     settlingIds.current.add(order.id);
-    const targetTicker = tickers.find(t => t.symbol === order.symbol);
-    const currentPriceForSettle = manualPrice || targetTicker?.price;
-
-    if (!currentPriceForSettle) {
-      settlingIds.current.delete(order.id); // Release if cannot settle
-      console.warn(`Price stream for ${order.symbol} not established. Delaying settlement.`);
-      return;
-    }
-    const entryPrice = order.price_at_execution;
-    const amount = order.amount_usdc;
-    
-    const priceChangePct = (currentPriceForSettle - entryPrice) / entryPrice;
-    let profit = 0;
-    if (order.type === 'long') {
-      profit = amount * (1 + priceChangePct); 
-    } else {
-      profit = amount * (1 - priceChangePct);
-    }
+    setIsSettlingIds(prev => new Set(prev).add(order.id));
 
     try {
-      const newBalance = wallet.balance_usdc + profit;
+      const targetTicker = tickers.find(t => t.symbol === order.symbol);
+      const currentPriceForSettle = manualPrice || targetTicker?.price;
+
+      if (!currentPriceForSettle) {
+        addNotification(profile.id, 'Bridge Delay', `Price link for ${order.symbol} temporary unavailable. Retrying...`, 'transaction');
+        throw new Error('Price missing');
+      }
+
+      const entryPrice = order.price_at_execution;
+      const amount = order.amount_usdc;
       
-      const { error: walletError } = await supabase.from('wallets').update({ balance_usdc: newBalance }).eq('user_id', profile.id);
+      const priceChangePct = (currentPriceForSettle - entryPrice) / entryPrice;
+      let profit = 0;
+      if (order.type === 'long') {
+        profit = amount * (1 + priceChangePct); 
+      } else {
+        profit = amount * (1 - priceChangePct);
+      }
+      const pnlRealized = profit - amount;
+
+      // 1. Fetch LATEST wallet state to avoid race conditions
+      const { data: latestWallet, error: fetchWalletErr } = await supabase
+        .from('wallets')
+        .select('balance_usdc')
+        .eq('user_id', profile.id)
+        .single();
+      
+      if (fetchWalletErr || !latestWallet) throw new Error('Could not synchronize wallet state');
+
+      const updatedBalance = Number(latestWallet.balance_usdc) + profit;
+
+      // 2. Perform DB Updates in a reliable sequence
+      // Note: In production, this should ideally be handled by a Postgres Function (RPC) for atomicity
+      
+      // Update wallet balance
+      const { error: walletError } = await supabase
+        .from('wallets')
+        .update({ balance_usdc: updatedBalance })
+        .eq('user_id', profile.id);
+
       if (walletError) throw walletError;
 
-      const { error: orderError } = await supabase.from('orders').update({
-        status: 'completed',
-        exit_price: currentPriceForSettle,
-        pnl_realized: profit - amount
-      }).eq('id', order.id);
+      // Update order status to completed
+      const { data: updatedOrder, error: orderError } = await supabase
+        .from('orders')
+        .update({
+          status: 'completed',
+          exit_price: currentPriceForSettle,
+          pnl_realized: pnlRealized,
+          settled_at: new Date().toISOString()
+        })
+        .eq('id', order.id)
+        .eq('status', 'active') // Safety check: only update if still active
+        .select()
+        .single();
       
       if (orderError) throw orderError;
-
-      // OPTIMISTIC UPDATES for seamless UX
+      if (!updatedOrder) {
+        console.warn("Order was already settled or missing.");
+        return; // Already handled
+      }
+      
+      // 3. OPTIMISTIC UPDATES for seamless UX
       setActivePositions(prev => prev.filter(p => p.id !== order.id));
       setRecentOrders(prev => [{
         ...order,
-        status: 'completed',
-        exit_price: currentPriceForSettle,
-        pnl_realized: profit - amount,
-        created_at: new Date().toISOString()
+        ...updatedOrder,
+        created_at: order.created_at
       }, ...prev].slice(0, 10));
 
-      setWallet({ ...wallet, balance_usdc: newBalance });
+      setWallet({ ...wallet, balance_usdc: updatedBalance });
       
-      const isWin = profit >= amount;
-      addNotification(profile.id, 'Position Settled', `Result: ${isWin ? 'PROFIT' : 'LOSS'} of $${Math.abs(profit - amount).toFixed(2)}`, isWin ? 'success' : 'transaction');
+      const isWin = pnlRealized >= 0;
+      addNotification(
+        profile.id, 
+        'Position Settled', 
+        `Operation: ${order.type.toUpperCase()} @ ${currentPriceForSettle.toLocaleString()} | Result: ${isWin ? 'PROFIT' : 'LOSS'} of $$${Math.abs(pnlRealized).toFixed(2)}`, 
+        isWin ? 'success' : 'transaction'
+      );
 
-      // Sync with DB
-      fetchData();
-    } catch (err) {
-      console.error("Settlement error:", err);
-      addNotification(profile.id, 'Settlement Failure', 'Protocol could not synchronize the exit signal.', 'error');
+      // Force a slight delay before next manual fetch to ensure DB consistency
+      setTimeout(() => fetchData(), 500);
+
+    } catch (err: any) {
+      if (err.message !== 'Price missing') {
+        console.error("Critical Settlement Error:", err);
+        addNotification(profile.id, 'Settlement Failure', `Protocol Error: ${err.message || 'Unknown Network Status'}`, 'error');
+      }
     } finally {
        settlingIds.current.delete(order.id);
+       setIsSettlingIds(prev => {
+         const next = new Set(prev);
+         next.delete(order.id);
+         return next;
+       });
     }
   };
 
@@ -404,10 +460,18 @@ const TradingDashboard: React.FC = () => {
                </div>
                 <div className="flex items-center space-x-3">
                   <button 
-                    onClick={() => activePositions.forEach(p => settleOrder(p))}
-                    className="px-4 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-full text-[8px] font-black text-rose-500 uppercase italic tracking-widest transition-all hover:scale-105 active:scale-95"
+                    disabled={activePositions.some(p => isSettlingIds.has(p.id))}
+                    onClick={async () => {
+                      // Settle sequentially to avoid balance race conditions
+                      for (const p of activePositions) {
+                        if (!isSettlingIds.has(p.id)) {
+                          await settleOrder(p);
+                        }
+                      }
+                    }}
+                    className="px-4 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/30 rounded-full text-[8px] font-black text-rose-500 uppercase italic tracking-widest transition-all hover:scale-105 active:scale-95"
                   >
-                    Purge All Cycles
+                    {activePositions.some(p => isSettlingIds.has(p.id)) ? 'Syncing...' : 'Purge All Cycles'}
                   </button>
                   <Waves size={16} className="text-slate-700 animate-pulse" />
                   <span className="text-[10px] font-black text-slate-600 italic uppercase tracking-widest">Auto-Settlement Core v2.1</span>
@@ -431,7 +495,7 @@ const TradingDashboard: React.FC = () => {
                        key={pos.id} 
                        position={pos} 
                        currentPrice={tickers.find(t => t.symbol === pos.symbol)?.price || currentTicker?.price || 0} 
-                       onClose={() => settleOrder(pos, tickers.find(t => t.symbol === pos.symbol)?.price)}
+                       isSettling={isSettlingIds.has(pos.id)} onClose={() => settleOrder(pos, tickers.find(t => t.symbol === pos.symbol)?.price)}
                      />
                    ))}
                  </AnimatePresence>
@@ -567,7 +631,7 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
   );
 }
 
-function LiveFlashPositionRow({ position, currentPrice, onClose }: any) {
+function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: any) {
   const [timeLeft, setTimeLeft] = useState(60);
   const entryPrice = position.price_at_execution;
   const isLong = position.type === 'long';
@@ -642,9 +706,10 @@ function LiveFlashPositionRow({ position, currentPrice, onClose }: any) {
          <div className="w-full md:w-auto text-right">
             <button 
               onClick={onClose}
-              className="w-full md:w-auto px-6 py-2 bg-rose-500/10 hover:bg-rose-500 text-white border border-rose-500/20 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] italic transition-all group-hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] active:scale-95"
+              disabled={isSettling}
+              className="w-full md:w-auto px-6 py-2 bg-rose-500/10 hover:bg-rose-500 text-white border border-rose-500/20 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] italic transition-all group-hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] active:scale-95 disabled:opacity-50"
             >
-               Close Loop
+               {isSettling ? 'Syncing...' : 'Close Loop'}
             </button>
          </div>
       </div>
