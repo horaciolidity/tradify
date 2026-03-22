@@ -210,7 +210,7 @@ const TradingDashboard: React.FC = () => {
        return;
     }
 
-    // Mark as settling immediately to block other calls
+    // Mark as settling immediately in local refs/state to block other calls
     settlingIds.current.add(order.id);
     setIsSettlingIds(prev => new Set(prev).add(order.id));
 
@@ -235,21 +235,53 @@ const TradingDashboard: React.FC = () => {
       }
       const pnlRealized = profit - amount;
 
-      // 1. Fetch LATEST wallet state to avoid race conditions
+      // 1. UPDATE ORDER STATUS FIRST (Atomic Switch)
+      // This is crucial: only one process will successfully change status from 'active' to 'completed'
+      const { error: orderError, count } = await supabase
+        .from('orders')
+        .update({
+          status: 'completed',
+          exit_price: currentPriceForSettle,
+          pnl_realized: pnlRealized,
+          settled_at: new Date().toISOString()
+        }, { count: 'exact' })
+        .eq('id', order.id)
+        .eq('status', 'active'); // Critical: only update if still active
+      
+      if (orderError) throw orderError;
+
+      // If no rows were updated, it means another process already settled this trade
+      if (count === 0) {
+        console.warn(`Order ${order.id} already settled or unavailable.`);
+        // Clean up state just in case it's still in the active list
+        setActivePositions(prev => prev.filter(p => p.id !== order.id));
+        return;
+      }
+
+      const updatedOrder = {
+        ...order,
+        status: 'completed', 
+        exit_price: currentPriceForSettle,
+        pnl_realized: pnlRealized,
+        settled_at: new Date().toISOString()
+      };
+
+      // 2. FETCH LATEST WALLET AND UPDATE
+      // Since we successfully marked the order as completed, we can now credit the profit
       const { data: latestWallet, error: fetchWalletErr } = await supabase
         .from('wallets')
         .select('balance_usdc')
         .eq('user_id', profile.id)
         .single();
       
-      if (fetchWalletErr || !latestWallet) throw new Error('Could not synchronize wallet state');
+      if (fetchWalletErr || !latestWallet) {
+        // This is a dangerous state: order is closed but wallet not updated.
+        // In a real system, use a DB transaction/RPC.
+        throw new Error('Atomic split: Order closed but wallet sync failed. Contact Support.');
+      }
 
       const updatedBalance = Number(latestWallet.balance_usdc) + profit;
 
-      // 2. Perform DB Updates in a reliable sequence
-      // Note: In production, this should ideally be handled by a Postgres Function (RPC) for atomicity
-      
-      // Update wallet balance
       const { error: walletError } = await supabase
         .from('wallets')
         .update({ balance_usdc: updatedBalance })
@@ -257,33 +289,9 @@ const TradingDashboard: React.FC = () => {
 
       if (walletError) throw walletError;
 
-      // Update order status to completed
-      const { data: updatedOrder, error: orderError } = await supabase
-        .from('orders')
-        .update({
-          status: 'completed',
-          exit_price: currentPriceForSettle,
-          pnl_realized: pnlRealized,
-          settled_at: new Date().toISOString()
-        })
-        .eq('id', order.id)
-        .eq('status', 'active') // Safety check: only update if still active
-        .select()
-        .single();
-      
-      if (orderError) throw orderError;
-      if (!updatedOrder) {
-        console.warn("Order was already settled or missing.");
-        return; // Already handled
-      }
-      
-      // 3. OPTIMISTIC UPDATES for seamless UX
+      // 3. APPLY UI UPDATES
       setActivePositions(prev => prev.filter(p => p.id !== order.id));
-      setRecentOrders(prev => [{
-        ...order,
-        ...updatedOrder,
-        created_at: order.created_at
-      }, ...prev].slice(0, 10));
+      setRecentOrders(prev => [updatedOrder, ...prev].slice(0, 10));
 
       setWallet({ ...wallet, balance_usdc: updatedBalance });
       
@@ -291,17 +299,21 @@ const TradingDashboard: React.FC = () => {
       addNotification(
         profile.id, 
         'Position Settled', 
-        `Operation: ${order.type.toUpperCase()} @ ${currentPriceForSettle.toLocaleString()} | Result: ${isWin ? 'PROFIT' : 'LOSS'} of $$${Math.abs(pnlRealized).toFixed(2)}`, 
+        `Operation: ${order.type.toUpperCase()} @ ${currentPriceForSettle.toLocaleString()} | Result: ${isWin ? 'PROFIT' : 'LOSS'} of $${Math.abs(pnlRealized).toFixed(2)}`, 
         isWin ? 'success' : 'transaction'
       );
 
-      // Force a slight delay before next manual fetch to ensure DB consistency
+      // Delayed sync for data consistency
       setTimeout(() => fetchData(), 500);
 
     } catch (err: any) {
       if (err.message !== 'Price missing') {
-        console.error("Critical Settlement Error:", err);
-        addNotification(profile.id, 'Settlement Failure', `Protocol Error: ${err.message || 'Unknown Network Status'}`, 'error');
+        process.env.NODE_ENV === 'development' && console.error("Settlement Logic Trace:", {
+          orderId: order.id,
+          error: err,
+          message: err.message
+        });
+        addNotification(profile.id, 'Settlement Core Error', `Bridge Sync Failed: ${err.message || 'Network Timeout'}`, 'error');
       }
     } finally {
        settlingIds.current.delete(order.id);
