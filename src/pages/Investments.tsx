@@ -558,9 +558,110 @@ const Investments: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Plans Grid */}
+          {/* === BLACK SOVEREIGN PREMIUM PLAN === */}
+          {plans.filter(p => p.id === 6).map(plan => {
+            const periods = plan.duration_days / plan.interest_period_days;
+            const compoundReturn = calcCompoundReturn(plan.min_amount, plan.interest_rate, periods);
+            const simpleReturn = calcSimpleReturn(plan.min_amount, plan.interest_rate, periods);
+            return (
+              <motion.div
+                key={plan.id}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="relative overflow-hidden rounded-[2rem] border border-yellow-500/30 shadow-[0_0_80px_rgba(234,179,8,0.15),0_40px_100px_rgba(0,0,0,0.8)]"
+                style={{ background: 'linear-gradient(135deg, #0a0a00 0%, #1a1400 30%, #0d0d00 60%, #050500 100%)' }}
+              >
+                {/* Animated border glow */}
+                <div className="absolute inset-0 rounded-[2rem] pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.08) 0%, transparent 50%, rgba(234,179,8,0.05) 100%)' }} />
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-yellow-500/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-yellow-500/30 to-transparent" />
+
+                {/* Corner ornament */}
+                <div className="absolute top-0 right-0 w-64 h-64 pointer-events-none">
+                  <div className="absolute top-6 right-8 opacity-8"><ShieldCheck size={200} className="text-yellow-600/10" /></div>
+                </div>
+
+                <div className="relative z-10 p-8 md:p-12">
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-8">
+                    {/* Left: Identity */}
+                    <div className="lg:w-1/3 space-y-5">
+                      <div className="flex items-center space-x-3">
+                        <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.4em] italic rounded-full border" style={{ background: 'rgba(234,179,8,0.15)', borderColor: 'rgba(234,179,8,0.4)', color: '#facd00' }}>
+                          ♛ SOVEREIGN TIER
+                        </div>
+                        <div className="px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] italic rounded-full bg-white/5 border border-white/10 text-slate-400">
+                          EXCLUSIVE
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-4xl md:text-5xl font-black italic tracking-tighter leading-none" style={{ color: '#facd00', textShadow: '0 0 40px rgba(234,179,8,0.4)' }}>
+                          Black<br />Sovereign
+                        </h3>
+                        <p className="text-slate-400 mt-3 text-sm leading-relaxed max-w-xs">
+                          The apex investment tier. Reserved for elite capital operators. Institutional-grade compounding with maximum yield protection.
+                        </p>
+                      </div>
+
+                      <div className="flex items-end space-x-3">
+                        <span className="text-6xl font-black italic" style={{ color: '#facd00', textShadow: '0 0 30px rgba(234,179,8,0.5)' }}>{plan.interest_rate}%</span>
+                        <div className="pb-2">
+                          <p className="text-slate-400 text-sm font-bold leading-tight">every {plan.interest_period_days} days</p>
+                          <p className="text-[10px] text-slate-600 uppercase tracking-widest">guaranteed yield</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Center: Stats */}
+                    <div className="lg:flex-1 grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {[
+                        { label: 'Lock Duration', value: `${plan.duration_days} Days`, sub: 'Capital lock period', icon: Clock },
+                        { label: 'Payout Cycle', value: `Every ${plan.interest_period_days}d`, sub: 'Withdrawable each cycle', icon: Calendar },
+                        { label: 'Min. Entry', value: `$${plan.min_amount.toLocaleString()}`, sub: 'USDC minimum', icon: DollarSign },
+                        { label: 'Max. Entry', value: `$${plan.max_amount.toLocaleString()}`, sub: 'USDC maximum', icon: TrendingUp },
+                        { label: 'Compound ROI', value: `+${(((compoundReturn - plan.min_amount) / plan.min_amount) * 100).toFixed(1)}%`, sub: `$${(compoundReturn - plan.min_amount).toLocaleString('en', { maximumFractionDigits: 0 })} on min`, icon: BarChart3 },
+                        { label: 'Advantage vs Simple', value: `+$${(compoundReturn - simpleReturn).toFixed(0)}`, sub: 'More by holding full term', icon: Zap },
+                      ].map(({ label, value, sub, icon: Icon }) => (
+                        <div key={label} className="rounded-2xl p-4 border" style={{ background: 'rgba(234,179,8,0.04)', borderColor: 'rgba(234,179,8,0.12)' }}>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Icon size={12} style={{ color: '#facd00' }} />
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: '#facd00', opacity: 0.6 }}>{label}</p>
+                          </div>
+                          <p className="text-lg font-black text-white italic tracking-tighter">{value}</p>
+                          <p className="text-[10px] text-slate-600 mt-0.5">{sub}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Benefits strip */}
+                  <div className="mt-8 pt-6 border-t flex flex-col md:flex-row md:items-center justify-between gap-6" style={{ borderColor: 'rgba(234,179,8,0.12)' }}>
+                    <div className="flex flex-wrap gap-3">
+                      {['♛ Exclusive Tier Access', '🔒 Capital Guarantee', '📊 Real-Time Compound Meter', '💎 Priority Withdrawals', '🏦 Institutional Grade'].map(b => (
+                        <span key={b} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full border" style={{ background: 'rgba(234,179,8,0.06)', borderColor: 'rgba(234,179,8,0.2)', color: 'rgba(250,205,0,0.7)' }}>
+                          {b}
+                        </span>
+                      ))}
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.03, boxShadow: '0 0 50px rgba(234,179,8,0.5)' }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setSelectedPlan(plan)}
+                      className="shrink-0 px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.3em] italic text-black transition-all"
+                      style={{ background: 'linear-gradient(135deg, #facd00, #f59e0b)', boxShadow: '0 10px 40px rgba(234,179,8,0.35)' }}
+                    >
+                      ♛ Access Sovereign Plan
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+
+          {/* Regular Plans Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {plans.map((plan, i) => {
+            {plans.filter(p => p.id !== 6).map((plan, i) => {
               const sampleAmount = plan.min_amount;
               const periods = plan.duration_days / plan.interest_period_days;
               const compoundReturn = calcCompoundReturn(sampleAmount, plan.interest_rate, periods);
@@ -599,7 +700,7 @@ const Investments: React.FC = () => {
                       <span className="text-slate-400 font-bold">+${(simpleReturn - sampleAmount).toFixed(2)}</span>
                     </div>
                     <div className="bg-accent/5 rounded-xl p-2 border border-accent/10 text-[10px] text-accent italic font-bold text-center">
-                      🚀 Compound earns ${(compoundReturn - simpleReturn).toFixed(2)} MORE on $${sampleAmount}
+                      🚀 Compound earns ${(compoundReturn - simpleReturn).toFixed(2)} MORE on ${sampleAmount}
                     </div>
                   </div>
                   <button
@@ -613,6 +714,7 @@ const Investments: React.FC = () => {
               );
             })}
           </div>
+
         </>
       )}
 
