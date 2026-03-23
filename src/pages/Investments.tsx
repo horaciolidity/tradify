@@ -54,18 +54,21 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
   const nextPayoutDays = periodDays - (daysSince(inv.start_date) % periodDays);
   const isUnlocked = new Date() >= new Date(inv.end_date);
 
-  // Compound: principal grows each period
-  const compoundTotal = calcCompoundReturn(inv.amount, rate, totalPeriods);
-  // Simple (withdraw every 15 days): each periodic payout is fixed on original principal
-  const simpleTotal = calcSimpleReturn(inv.amount, rate, totalPeriods);
+  // Interest earned per period (simple: interest_rate % of principal per period)
+  const interestPerPeriod = inv.amount * rate / 100;
 
-  // How much have we earned to date (compound)
-  const earnedToDate = calcCompoundReturn(inv.amount, rate, periodsSoFar) - inv.amount;
+  // Total interest across all periods (simple model — principal doesn't compound since it's withdrawable each period)
+  const totalInterest = interestPerPeriod * totalPeriods;
+  const totalAtMaturity = inv.amount + totalInterest;  // principal + all interest
 
-  // Periodic payout if they withdrew each time (simple)
-  const periodicPayout = inv.amount * rate / 100;
-  // Payout to date (withdrawable)
-  const unlockedPayout = Math.max(0, periodsSoFar * periodicPayout - (inv.withdrawn_amount || 0));
+  // Interest earned to date (how many full periods have passed)
+  const interestEarnedToDate = periodsSoFar * interestPerPeriod;
+
+  // How much interest is available to withdraw right now (earned - already withdrawn)
+  const interestAvailable = Math.max(0, interestEarnedToDate - (inv.withdrawn_amount || 0));
+
+  // For maturity: remaining interest not yet paid + principal
+  const maturityPayout = inv.amount + Math.max(0, totalInterest - (inv.withdrawn_amount || 0));
 
   const progress = Math.min(100, (daysSince(inv.start_date) / plan.duration_days) * 100);
 
@@ -94,39 +97,38 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
             </div>
           </div>
 
-          {/* Stats Grid */}
-          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/3 rounded-xl p-3 border border-white/5">
-              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Principal</p>
-              <p className="text-base font-black text-white italic tracking-tighter">${inv.amount.toFixed(2)}</p>
-              <p className="text-[9px] text-slate-600">USDC</p>
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/3 rounded-xl p-3 border border-white/5">
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Principal 🔒</p>
+                <p className="text-base font-black text-white italic tracking-tighter">${inv.amount.toFixed(2)}</p>
+                <p className="text-[9px] text-slate-600">{isUnlocked ? 'Unlocked!' : `locked ${daysLeft}d`}</p>
+              </div>
+              <div className="bg-accent/5 rounded-xl p-3 border border-accent/10">
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Interest Earned</p>
+                <p className="text-base font-black text-accent italic tracking-tighter">+${interestEarnedToDate.toFixed(4)}</p>
+                <p className="text-[9px] text-slate-600">{periodsSoFar}/{totalPeriods} periods</p>
+              </div>
+              <div className="bg-white/3 rounded-xl p-3 border border-white/5">
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Next Interest</p>
+                <p className="text-base font-black text-primary italic tracking-tighter">{nextPayoutDays}d</p>
+                <p className="text-[9px] text-slate-600">+${interestPerPeriod.toFixed(2)} due</p>
+              </div>
+              <div className={`rounded-xl p-3 border ${interestAvailable > 0 ? 'bg-accent/10 border-accent/20' : 'bg-white/3 border-white/5'}`}>
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Interest Available</p>
+                <p className={`text-base font-black italic tracking-tighter ${interestAvailable > 0 ? 'text-accent' : 'text-slate-600'}`}>${interestAvailable.toFixed(4)}</p>
+                <p className="text-[9px] text-slate-600">withdraw now</p>
+              </div>
             </div>
-            <div className="bg-accent/5 rounded-xl p-3 border border-accent/10">
-              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Earned (Compound)</p>
-              <p className="text-base font-black text-accent italic tracking-tighter">+${earnedToDate.toFixed(4)}</p>
-              <p className="text-[9px] text-slate-600">USDC estimated</p>
-            </div>
-            <div className="bg-white/3 rounded-xl p-3 border border-white/5">
-              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Next Payout</p>
-              <p className="text-base font-black text-primary italic tracking-tighter">{nextPayoutDays}d</p>
-              <p className="text-[9px] text-slate-600">+${periodicPayout.toFixed(2)} due</p>
-            </div>
-            <div className={`rounded-xl p-3 border ${unlockedPayout > 0 ? 'bg-accent/10 border-accent/20' : 'bg-white/3 border-white/5'}`}>
-              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Available Now</p>
-              <p className={`text-base font-black italic tracking-tighter ${unlockedPayout > 0 ? 'text-accent' : 'text-slate-600'}`}>${unlockedPayout.toFixed(4)}</p>
-              <p className="text-[9px] text-slate-600">withdrawable</p>
-            </div>
-          </div>
 
           {/* Actions */}
           <div className="flex items-center space-x-3 shrink-0">
             <button
               onClick={() => !withdrawLoading && onWithdraw(inv, true)}
-              disabled={unlockedPayout <= 0 || withdrawLoading}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest italic transition-all border ${unlockedPayout > 0 ? 'bg-accent/10 hover:bg-accent text-accent hover:text-black border-accent/30' : 'bg-white/3 text-slate-700 border-white/5 cursor-not-allowed'}`}
+              disabled={interestAvailable <= 0 || withdrawLoading}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest italic transition-all border ${interestAvailable > 0 ? 'bg-accent/10 hover:bg-accent text-accent hover:text-black border-accent/30' : 'bg-white/3 text-slate-700 border-white/5 cursor-not-allowed'}`}
             >
-              {unlockedPayout > 0 ? <Unlock size={14} /> : <Lock size={14} />}
-              <span>{unlockedPayout > 0 ? 'Withdraw' : 'Locked'}</span>
+              {interestAvailable > 0 ? <Unlock size={14} /> : <Lock size={14} />}
+              <span>{interestAvailable > 0 ? 'Withdraw Interest' : 'Locked'}</span>
             </button>
 
             <button
@@ -165,64 +167,64 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
             className="overflow-hidden border-t border-white/5"
           >
             <div className="p-6 md:p-8 space-y-8">
-              {/* Compound vs Withdrawal Comparison */}
+              {/* How interest withdrawal works */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Compound Path */}
-                <div className="bg-gradient-to-br from-primary/10 to-transparent rounded-2xl p-6 border border-primary/20 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 opacity-10"><TrendingUp size={60} /></div>
+                {/* Interest withdrawal side */}
+                <div className="bg-gradient-to-br from-accent/10 to-transparent rounded-2xl p-6 border border-accent/20 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10"><DollarSign size={60} /></div>
                   <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 bg-primary/20 rounded-xl"><BarChart3 size={16} className="text-primary" /></div>
+                    <div className="p-2 bg-accent/20 rounded-xl"><Unlock size={16} className="text-accent" /></div>
                     <div>
-                      <h5 className="font-black text-primary italic tracking-tighter text-sm">🚀 Compound Strategy</h5>
-                      <p className="text-[9px] text-slate-500 uppercase tracking-widest">No withdrawals – reinvest all</p>
+                      <h5 className="font-black text-accent italic tracking-tighter text-sm">💸 Your Interest (Withdrawable)</h5>
+                      <p className="text-[9px] text-slate-500 uppercase tracking-widest">Every {periodDays} days — does not reduce principal</p>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Final Return after {plan.duration_days}d</span>
-                      <span className="font-black text-primary italic">${compoundTotal.toFixed(2)}</span>
+                      <span className="text-slate-400">Interest per {periodDays}-day period</span>
+                      <span className="font-black text-accent italic">+${interestPerPeriod.toFixed(4)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Total Profit</span>
-                      <span className="font-black text-accent italic">+${(compoundTotal - inv.amount).toFixed(2)}</span>
+                      <span className="text-slate-400">Total interest ({totalPeriods} periods)</span>
+                      <span className="font-black text-accent italic">+${totalInterest.toFixed(4)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">ROI</span>
-                      <span className="font-black text-accent italic">+{(((compoundTotal - inv.amount) / inv.amount) * 100).toFixed(2)}%</span>
+                      <span className="text-slate-400">Already withdrawn</span>
+                      <span className="font-black text-white italic">${(inv.withdrawn_amount || 0).toFixed(4)}</span>
                     </div>
                     <div className="h-px bg-white/5" />
                     <p className="text-[10px] text-slate-500 italic leading-relaxed">
-                      ✅ Interest is reinvested each cycle, exponentially growing your capital over {totalPeriods} periods.
+                      ✅ Your principal <strong className="text-white">${inv.amount.toLocaleString()}</strong> stays locked and returns in full at maturity regardless of how many interest withdrawals you make.
                     </p>
                   </div>
                 </div>
 
-                {/* Withdraw Every 15 days */}
-                <div className="bg-gradient-to-br from-slate-800/50 to-transparent rounded-2xl p-6 border border-white/10 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 opacity-10"><DollarSign size={60} /></div>
+                {/* Principal & Maturity side */}
+                <div className="bg-gradient-to-br from-primary/10 to-transparent rounded-2xl p-6 border border-primary/20 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10"><Lock size={60} /></div>
                   <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 bg-white/10 rounded-xl"><Unlock size={16} className="text-slate-400" /></div>
+                    <div className="p-2 bg-primary/20 rounded-xl"><ShieldCheck size={16} className="text-primary" /></div>
                     <div>
-                      <h5 className="font-black text-white italic tracking-tighter text-sm">💸 Withdraw Every {periodDays}d</h5>
-                      <p className="text-[9px] text-slate-500 uppercase tracking-widest">Simple interest – cash out each period</p>
+                      <h5 className="font-black text-primary italic tracking-tighter text-sm">🔒 Your Principal (Locked)</h5>
+                      <p className="text-[9px] text-slate-500 uppercase tracking-widest">Returns at maturity · {new Date(inv.end_date).toLocaleDateString()}</p>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Per period payout</span>
-                      <span className="font-black text-white italic">${periodicPayout.toFixed(2)}</span>
+                      <span className="text-slate-400">Principal locked</span>
+                      <span className="font-black text-white italic">${inv.amount.toFixed(2)} USDC</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Total received at end</span>
-                      <span className="font-black text-white italic">${simpleTotal.toFixed(2)}</span>
+                      <span className="text-slate-400">Returns in</span>
+                      <span className={`font-black italic ${isUnlocked ? 'text-accent' : 'text-primary'}`}>{isUnlocked ? '✅ NOW' : `${daysLeft} days`}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">ROI</span>
-                      <span className="font-black text-slate-400 italic">{(((simpleTotal - inv.amount) / inv.amount) * 100).toFixed(2)}%</span>
+                      <span className="text-slate-400">Total at maturity</span>
+                      <span className="font-black text-white italic">${totalAtMaturity.toFixed(2)} USDC</span>
                     </div>
                     <div className="h-px bg-white/5" />
                     <p className="text-[10px] text-slate-500 italic leading-relaxed">
-                      ⚠️ Withdrawing reduces your compound base. You'll earn ${(compoundTotal - simpleTotal).toFixed(2)} <span className="text-primary">less</span> vs. holding to maturity.
+                      ⚠️ Principal is <strong className="text-primary">never</strong> at risk — it is secured by the Tradify Reserve Fund and returns 100% at plan maturity.
                     </p>
                   </div>
                 </div>
@@ -231,29 +233,36 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
               {/* Payout Schedule */}
               <div>
                 <h5 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4 flex items-center">
-                  <Calendar size={12} className="mr-2" /> Payout Schedule
+                  <Calendar size={12} className="mr-2" /> Interest Payout Schedule (every {periodDays} days)
                 </h5>
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-2">
                   {Array.from({ length: totalPeriods }).map((_, i) => {
                     const periodNum = i + 1;
                     const payoutDate = new Date(new Date(inv.start_date).getTime() + periodNum * periodDays * 24 * 60 * 60 * 1000);
                     const isPast = payoutDate <= new Date();
-                    const compoundAtPeriod = calcCompoundReturn(inv.amount, rate, periodNum);
-                    const interestThisPeriod = compoundAtPeriod - calcCompoundReturn(inv.amount, rate, periodNum - 1);
+                    const isWithdrawn = periodNum * interestPerPeriod <= (inv.withdrawn_amount || 0);
                     return (
-                      <div key={i} className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-xs transition-all ${isPast ? 'bg-accent/5 border border-accent/10' : 'bg-white/2 border border-white/5'}`}>
+                      <div key={i} className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-xs transition-all ${
+                        isWithdrawn ? 'bg-white/2 border border-white/5 opacity-40' :
+                        isPast ? 'bg-accent/5 border border-accent/10' : 'bg-white/2 border border-white/5'
+                      }`}>
                         <div className="flex items-center space-x-3">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black ${isPast ? 'bg-accent text-black' : 'bg-white/10 text-slate-500'}`}>
-                            {isPast ? '✓' : periodNum}
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black ${
+                            isWithdrawn ? 'bg-white/10 text-slate-500' :
+                            isPast ? 'bg-accent text-black' : 'bg-white/10 text-slate-500'
+                          }`}>
+                            {isWithdrawn ? '✓' : isPast ? '!' : periodNum}
                           </div>
                           <span className={`font-bold ${isPast ? 'text-slate-300' : 'text-slate-600'}`}>
                             {payoutDate.toLocaleDateString()}
                           </span>
                         </div>
                         <div className="flex items-center space-x-4">
-                          <span className="text-slate-600 text-[10px]">+${interestThisPeriod.toFixed(4)} interest</span>
-                          <span className={`font-black italic text-sm ${isPast ? 'text-accent' : 'text-slate-500'}`}>
-                            ${compoundAtPeriod.toFixed(2)}
+                          <span className={`text-[10px] font-black ${isWithdrawn ? 'text-slate-700 line-through' : isPast ? 'text-accent' : 'text-slate-600'}`}>
+                            {isWithdrawn ? 'withdrawn' : isPast ? '⚡ available' : 'pending'}
+                          </span>
+                          <span className={`font-black italic text-sm ${isPast && !isWithdrawn ? 'text-accent' : 'text-slate-600'}`}>
+                            +${interestPerPeriod.toFixed(4)} USDC
                           </span>
                         </div>
                       </div>
@@ -291,15 +300,15 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
                 >
                   <div>
                     <h5 className="font-black text-accent italic text-lg tracking-tighter mb-1">🎉 Plan Matured!</h5>
-                    <p className="text-sm text-slate-400">Your full capital + compound interest is ready to withdraw.</p>
-                    <p className="text-xl font-black text-white italic mt-1">${compoundTotal.toFixed(4)} <span className="text-xs font-normal text-slate-500">USDC total</span></p>
+                    <p className="text-sm text-slate-400">Your principal <strong className="text-white">${inv.amount.toFixed(2)}</strong> + remaining interest is ready.</p>
+                    <p className="text-xl font-black text-white italic mt-1">${maturityPayout.toFixed(4)} <span className="text-xs font-normal text-slate-500">USDC total</span></p>
                   </div>
                   <button
                     onClick={() => onWithdraw(inv, false)}
                     className="flex items-center space-x-3 px-8 py-4 bg-accent text-black font-black rounded-2xl text-sm uppercase tracking-widest shadow-[0_10px_40px_rgba(74,222,128,0.4)] hover:shadow-[0_15px_50px_rgba(74,222,128,0.6)] transition-all active:scale-95"
                   >
                     <Unlock size={18} />
-                    <span>Withdraw All</span>
+                    <span>Withdraw Principal + Interest</span>
                   </button>
                 </motion.div>
               )}
@@ -375,20 +384,29 @@ const Investments: React.FC = () => {
     const periodDays = plan.interest_period_days;
     const totalPeriods = plan.duration_days / periodDays;
     const periodsSoFar = Math.floor(daysSince(inv.start_date) / periodDays);
-    const periodicPayout = inv.amount * rate / 100;
-    const unlockedPayout = Math.max(0, periodsSoFar * periodicPayout - (inv.withdrawn_amount || 0));
-    const compoundTotal = calcCompoundReturn(inv.amount, rate, totalPeriods);
+    const interestPerPeriod = inv.amount * rate / 100;
+    const totalInterest = interestPerPeriod * totalPeriods;
+    const interestEarnedToDate = periodsSoFar * interestPerPeriod;
+    const interestAvailable = Math.max(0, interestEarnedToDate - (inv.withdrawn_amount || 0));
 
-    const withdrawAmount = partial ? unlockedPayout : compoundTotal;
+    // Maturity payout = principal + any interest not yet withdrawn
+    const maturityPayout = inv.amount + Math.max(0, totalInterest - (inv.withdrawn_amount || 0));
+
+    // partial = withdraw only available interest (principal stays locked)
+    // !partial = plan matured: return principal + remaining interest
+    const withdrawAmount = partial ? interestAvailable : maturityPayout;
     if (withdrawAmount <= 0) return;
 
     setLoading(true);
     try {
       if (!partial) {
-        // Full withdrawal – close investment
-        await supabase.from('investments').update({ status: 'completed' }).eq('id', inv.id);
+        // Full maturity withdrawal — close investment, principal + remaining interest returned
+        await supabase.from('investments').update({ 
+          status: 'completed',
+          withdrawn_amount: (inv.withdrawn_amount || 0) + withdrawAmount
+        }).eq('id', inv.id);
       } else {
-        // Partial – track withdrawn
+        // Interest-only withdrawal — track how much interest has been pulled
         await supabase.from('investments')
           .update({ withdrawn_amount: (inv.withdrawn_amount || 0) + withdrawAmount })
           .eq('id', inv.id);
@@ -398,14 +416,21 @@ const Investments: React.FC = () => {
       await supabase.from('wallets').update({ balance_usdc: newBalance }).eq('user_id', profile.id);
       await supabase.from('transactions').insert({
         user_id: profile.id,
-        type: 'withdrawal',
+        type: 'profit',
         amount: withdrawAmount,
-        description: `${partial ? 'Partial' : 'Full'} withdrawal from ${plan.name}`,
+        description: partial 
+          ? `Interest withdrawal from ${plan.name} (${rate}% / ${periodDays}d)`
+          : `Maturity payout from ${plan.name} — Principal + Interest`,
         status: 'completed'
       });
 
       setWallet({ ...wallet, balance_usdc: newBalance });
-      addNotification(profile.id, 'Withdrawal Processed', `$${withdrawAmount.toFixed(4)} USDC has been credited to your wallet.`, 'success');
+      addNotification(
+        profile.id, 
+        partial ? '💸 Interest Withdrawn' : '🎉 Plan Matured!', 
+        `$${withdrawAmount.toFixed(4)} USDC has been credited to your wallet.`, 
+        'success'
+      );
       fetchActiveInvestments();
       fetchHistoryInvestments();
     } catch (err) {
