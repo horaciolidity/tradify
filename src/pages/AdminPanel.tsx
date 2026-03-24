@@ -88,11 +88,12 @@ const AdminPanel: React.FC = () => {
         .from('profiles')
         .select('*, wallets(balance_usdc)');
       
-      // 2. Fetch Pending Deposits
-      const { data: depositData } = await supabase
+      // 2. Fetch Pending Transactions (Deposits + Withdrawals)
+      const { data: txData } = await supabase
         .from('transactions')
         .select('*, profile:profiles(*)')
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
       
       // 3. Fetch Tokens
       const { data: tokenData } = await supabase
@@ -112,10 +113,8 @@ const AdminPanel: React.FC = () => {
         .select('*')
         .order('id', { ascending: true });
 
-      console.log('Admin Data Fetch Results:', { userData, depositData, tokenData, announceData, planData });
-
       if (userData) setUsers(userData);
-      if (depositData) setPendingDeposits(depositData);
+      if (txData) setPendingDeposits(txData); // Keep same state name to minimize changes
       if (tokenData) setTokens(tokenData);
       if (announceData) setAnnouncements(announceData);
       if (planData) setPlans(planData);
@@ -125,16 +124,14 @@ const AdminPanel: React.FC = () => {
         const totalUsers = userData.length;
         const totalDeposits = userData.reduce((acc, curr: any) => acc + (curr.wallets?.[0]?.balance_usdc || 0), 0);
         
-        const { count: activeInvs, error: invErr } = await supabase
+        const { count: activeInvs } = await supabase
           .from('investments')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'active');
         
-        if (invErr) console.error('Investments fetch error:', invErr);
-
         setStats([
           { label: 'Users Network', value: totalUsers.toString(), icon: Users, change: '+2.4%' },
-          { label: 'Pending Authorizations', value: (depositData?.length || 0).toString(), icon: Database, change: 'Action Required' },
+          { label: 'Pending Authorizations', value: (txData?.length || 0).toString(), icon: Database, change: 'Action Required' },
           { label: 'Active Smart Plans', value: (activeInvs || 0).toString(), icon: Activity, change: '+5.2%' },
           { label: 'Pool Guaranteed', value: `$${(systemSettings.pool_guaranteed?.amount || totalDeposits).toLocaleString()}`, icon: ShieldAlert, change: 'Stable' },
         ]);
@@ -145,6 +142,29 @@ const AdminPanel: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // ── Real-time subscription ──────────────────────────────────────────────
+  React.useEffect(() => {
+    if (profile?.role !== 'admin') return;
+
+    const channel = supabase
+      .channel('admin_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions' },
+        () => fetchAdminData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => fetchAdminData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile]);
 
   const handleUpdateBalance = async (userId: string, newBalance: number) => {
     const { error } = await supabase
@@ -159,53 +179,81 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  const approveDeposit = async (transaction: any) => {
+  const approveTransaction = async (transaction: any) => {
     try {
-      // 1. Update wallet balance
-      const { data: wallet } = await supabase
-        .from('wallets')
-        .select('balance_usdc')
-        .eq('user_id', transaction.user_id)
-        .single();
-      
-      if (!wallet) throw new Error('Wallet not found');
+      if (transaction.type === 'deposit') {
+        const { data: wallet } = await supabase
+          .from('wallets')
+          .select('balance_usdc')
+          .eq('user_id', transaction.user_id)
+          .single();
+        
+        if (!wallet) throw new Error('Wallet not found');
 
-      await supabase
-        .from('wallets')
-        .update({ balance_usdc: wallet.balance_usdc + transaction.amount })
-        .eq('user_id', transaction.user_id);
+        await supabase
+          .from('wallets')
+          .update({ balance_usdc: wallet.balance_usdc + transaction.amount })
+          .eq('user_id', transaction.user_id);
+      }
+      // For withdrawal, funds were already deducted during request to prevent double spending.
+      // So we just mark as completed.
 
-      // 2. Update transaction status
+      // Update transaction status
       await supabase
         .from('transactions')
         .update({ status: 'completed' })
         .eq('id', transaction.id);
       
-      // 3. Notify user
+      // Notify user
       await supabase.from('notifications').insert({
         user_id: transaction.user_id,
-        title: 'Deposit Approved',
-        message: `Your deposit of ${transaction.amount} USDC has been confirmed. Network synchronization complete.`,
+        title: transaction.type === 'deposit' ? 'Deposit Approved' : 'Withdrawal Approved',
+        message: transaction.type === 'deposit' 
+          ? `Your deposit of ${transaction.amount} USDC has been confirmed. Network synchronization complete.`
+          : `Your withdrawal of ${transaction.amount} USDC has been processed. Check your wallet.`,
         type: 'success'
       });
 
-      alert('Transaction approved and funds credited.');
+      alert(`Signal authorized: ${transaction.type} confirmed.`);
       fetchAdminData();
     } catch (err) {
       console.error('Approval error:', err);
+      alert('Approval failed. Error in blockchain synchronization.');
     }
   };
 
-  const rejectDeposit = async (id: string, userId: string) => {
-    await supabase.from('transactions').update({ status: 'failed' }).eq('id', id);
-    await supabase.from('notifications').insert({
-      user_id: userId,
-      title: 'Deposit Failed',
-      message: `Your deposit signal was rejected. Please contact support via neural net if this is an error.`,
-      type: 'error'
-    });
-    alert('Deposit rejected.');
-    fetchAdminData();
+  const rejectTransaction = async (transaction: any) => {
+    try {
+      if (transaction.type === 'withdrawal') {
+        // Refund if withdrawal is rejected
+        const { data: wallet } = await supabase
+          .from('wallets')
+          .select('balance_usdc')
+          .eq('user_id', transaction.user_id)
+          .single();
+        
+        if (wallet) {
+          await supabase
+            .from('wallets')
+            .update({ balance_usdc: wallet.balance_usdc + transaction.amount })
+            .eq('user_id', transaction.user_id);
+        }
+      }
+
+      await supabase.from('transactions').update({ status: 'failed' }).eq('id', transaction.id);
+      
+      await supabase.from('notifications').insert({
+        user_id: transaction.user_id,
+        title: transaction.type === 'deposit' ? 'Deposit Failed' : 'Withdrawal Failed',
+        message: `Your ${transaction.type} request was rejected. Please contact support via neural net for details.`,
+        type: 'error'
+      });
+
+      alert(`${transaction.type} rejected and signal terminated.`);
+      fetchAdminData();
+    } catch (err) {
+      console.error('Rejection error:', err);
+    }
   };
 
   const handleTokenSave = async (tokenData: any) => {
@@ -535,15 +583,16 @@ const AdminPanel: React.FC = () => {
       {activeSection === 'deposits' && (
         <div className="glass-card overflow-hidden">
           <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Auth Inbox (Pending Deposits)</h3>
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Auth Inbox (Pending Transactions)</h3>
           </div>
           <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-white/2 border-b border-white/5">
                   <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Entity</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Type</th>
                   <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Amount</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">TXID / Hash</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Data (TXID/Address)</th>
                   <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Authorization</th>
                 </tr>
               </thead>
@@ -554,21 +603,30 @@ const AdminPanel: React.FC = () => {
                       <p className="text-sm font-black text-white uppercase">{tx.profile?.email}</p>
                       <p className="text-[10px] text-slate-500 font-bold">{new Date(tx.created_at).toLocaleString()}</p>
                     </td>
-                    <td className="px-8 py-6 font-black text-emerald-500 italic text-lg">+${tx.amount.toLocaleString()}</td>
+                    <td className="px-8 py-6 uppercase">
+                      <span className={`px-2 py-1 rounded-lg text-[8px] font-black border ${tx.type === 'deposit' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>
+                        {tx.type}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 font-black italic text-lg">
+                      <span className={tx.type === 'deposit' ? 'text-emerald-500' : 'text-rose-500'}>
+                        {tx.type === 'deposit' ? '+' : '-'}${tx.amount.toLocaleString()}
+                      </span>
+                    </td>
                     <td className="px-8 py-6">
-                      <code className="text-[10px] font-mono text-primary bg-primary/5 px-2 py-1 rounded-lg border border-primary/20">{tx.tx_hash}</code>
+                      <code className="text-[10px] font-mono text-primary bg-primary/5 px-2 py-1 rounded-lg border border-primary/20 max-w-[150px] truncate block">{tx.tx_hash}</code>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center space-x-3">
                         <button 
-                          onClick={() => approveDeposit(tx)}
+                          onClick={() => approveTransaction(tx)}
                           className="flex items-center space-x-2 px-4 py-2 bg-accent/20 text-accent border border-accent/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-accent hover:text-dark transition-all"
                         >
                           <CheckCircle2 size={14} />
                           <span>Approve</span>
                         </button>
                         <button 
-                          onClick={() => rejectDeposit(tx.id, tx.user_id)}
+                          onClick={() => rejectTransaction(tx)}
                           className="flex items-center space-x-2 px-4 py-2 bg-rose-500/20 text-rose-500 border border-rose-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
                         >
                           <XCircle size={14} />
@@ -580,7 +638,7 @@ const AdminPanel: React.FC = () => {
                 ))}
                 {pendingDeposits.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-8 py-20 text-center text-slate-500 italic font-medium uppercase tracking-[0.2em]">No signals detected in queue.</td>
+                    <td colSpan={5} className="px-8 py-20 text-center text-slate-500 italic font-medium uppercase tracking-[0.2em]">No signals detected in queue.</td>
                   </tr>
                 )}
               </tbody>

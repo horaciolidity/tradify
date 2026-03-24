@@ -115,6 +115,27 @@ const Wallet: React.FC = () => {
     else                    { setCopiedAddr(true); setTimeout(() => setCopiedAddr(false), 2000); }
   };
 
+  // ── Notify admin helper ────────────────────────────────────────────────────
+  const notifyAdmin = async (title: string, message: string) => {
+    try {
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'admin')
+        .single();
+      if (adminProfile) {
+        await supabase.from('notifications').insert({
+          user_id: adminProfile.id,
+          title,
+          message,
+          type: 'transaction'
+        });
+      }
+    } catch (e) {
+      console.warn('Could not notify admin:', e);
+    }
+  };
+
   // ── Manual deposit submit ──────────────────────────────────────────────────
   const handleDepositSubmit = async () => {
     if (!depositAmount || !txHash || !profile) return;
@@ -129,6 +150,11 @@ const Wallet: React.FC = () => {
         tx_hash: txHash
       });
       if (error) throw error;
+      // Notify admin
+      await notifyAdmin(
+        '💰 New Deposit Request',
+        `User ${profile.email} submitted a deposit of ${parseFloat(depositAmount).toFixed(2)} USDC. TXID: ${txHash.slice(0, 16)}... Awaiting approval.`
+      );
       setDepositModal(false);
       setDepositAmount('');
       setTxHash('');
@@ -194,6 +220,13 @@ const Wallet: React.FC = () => {
         tx_hash: hash
       });
 
+      // Notify admin
+      const networkName = NETWORKS.find(n => n.id === chainDecimal)?.name || chainDecimal;
+      await notifyAdmin(
+        '💰 New Deposit Request',
+        `User ${profile?.email} submitted a Web3 deposit of ${amount.toFixed(2)} USDC via ${networkName}. TXID: ${hash.slice(0, 16)}... Awaiting approval.`
+      );
+
       setDepositModal(false);
       setDepositAmount('');
       fetchTransactions();
@@ -218,22 +251,46 @@ const Wallet: React.FC = () => {
 
     setWithdrawSubmitting(true);
     try {
-      const { error } = await supabase.from('transactions').insert({
+      // 1. Deduct balance from wallet first
+      const { error: balanceError } = await supabase
+        .from('wallets')
+        .update({ balance_usdc: wallet.balance_usdc - amount })
+        .eq('user_id', profile?.id);
+
+      if (balanceError) throw balanceError;
+
+      // 2. Create the pending withdrawal transaction
+      const { error: txError } = await supabase.from('transactions').insert({
         user_id: profile?.id,
         type: 'withdrawal',
         amount,
-        description: `Withdrawal to ${withdrawAddress.slice(0, 10)}... via ${withdrawNetwork.label}`,
+        description: `Withdrawal request to ${withdrawAddress.slice(0, 10)}... via ${withdrawNetwork.label}`,
         status: 'pending',
         tx_hash: withdrawAddress // store the destination address in tx_hash for admin reference
       });
-      if (error) throw error;
+
+      if (txError) {
+        // Refund if transaction creation fails
+        await supabase
+          .from('wallets')
+          .update({ balance_usdc: wallet.balance_usdc })
+          .eq('user_id', profile?.id);
+        throw txError;
+      }
+
+      // 3. Notify admin
+      await notifyAdmin(
+        '🏧 New Withdrawal Request',
+        `User ${profile?.email} requested a withdrawal of ${amount.toFixed(2)} USDC to ${withdrawAddress.slice(0, 12)}... via ${withdrawNetwork.label}. Awaiting approval.`
+      );
 
       setWithdrawModal(false);
       setWithdrawAmount('');
       setWithdrawAddress('');
       fetchTransactions();
-    } catch {
-      setWithdrawError('Failed to submit withdrawal. Try again.');
+    } catch (err: any) {
+      console.error('Withdrawal error:', err);
+      setWithdrawError('Failed to submit withdrawal. ' + (err.message || 'Try again.'));
     } finally {
       setWithdrawSubmitting(false);
     }
