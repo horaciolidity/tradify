@@ -93,57 +93,116 @@ const Referrals: React.FC = () => {
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -mr-32 -mt-32 rounded-full group-hover:bg-primary/20 transition-all duration-700" />
           
-          <div className="relative z-10 space-y-6">
-            <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight italic">Your Neural Gateway</h3>
-            <p className="text-slate-400 max-w-xl leading-relaxed font-medium">
-              Activate your connection. Earn <span className="text-primary font-black italic">{commissions.level1}%</span> from level 1, 
-              <span className="text-primary font-black italic ml-1">{commissions.level2}%</span> from level 2, and 
-              <span className="text-primary font-black italic ml-1">{commissions.level3}%</span> from level 3 of every protocol investment.
-            </p>
-            <div className="bg-black/40 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-md">
-              <span className="text-sm font-black text-primary font-mono tracking-widest break-all">
-                {window.location.origin}/JOIN?REF={profile?.referral_code || 'TRADIFY-X'}
-              </span>
-              <button 
-                onClick={copyRef}
-                className="shrink-0 p-2 hover:bg-white/5 rounded-lg text-white transition-colors flex items-center space-x-2"
-              >
-                {copied ? <Check size={18} className="text-accent" /> : <Copy size={18} />}
-                <span className="text-xs font-bold uppercase">{copied ? 'Copied' : 'Copy'}</span>
-              </button>
+          <div className="relative z-10 space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight italic">Your Neural Gateway</h3>
+                <p className="text-slate-400 mt-2 max-w-xl leading-relaxed font-medium">
+                  Invite your friends to the Tradify ecosystem and earn continuous passive rewards from every protocol activation they start.
+                </p>
+              </div>
+              <div className="bg-white/5 p-6 rounded-3xl border border-white/10 flex flex-col items-center shrink-0">
+                <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mb-4 border border-primary/30 shadow-[0_0_20px_rgba(243,186,47,0.2)]">
+                  <Gift size={28} className="text-primary" />
+                </div>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Harvested</p>
+                <p className="text-2xl font-black text-white italic tracking-tighter">{stats.rewards.toFixed(2)} <span className="text-xs font-normal text-slate-500">USDC</span></p>
+              </div>
             </div>
-          </div>
-          <div className="bg-white/5 p-6 rounded-3xl border border-white/10 flex flex-col items-center shrink-0">
-            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mb-4">
-              <Gift size={32} className="text-primary" />
+
+            {/* Referral Link */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic">Unique Access Protocol</p>
+              <div className="bg-black/60 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-xl group/link active:scale-[0.98] transition-all">
+                <span className="text-sm font-black text-primary font-mono tracking-widest break-all select-all">
+                  {window.location.origin}/JOIN?REF={profile?.referral_code || 'TRADIFY-X'}
+                </span>
+                <button 
+                  onClick={copyRef}
+                  className="w-full md:w-auto px-8 py-4 bg-primary text-black rounded-xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center space-x-2 shadow-lg shadow-primary/20 active:scale-95"
+                >
+                  {copied ? <Check size={18} /> : <Copy size={18} />}
+                  <span>{copied ? 'Copied' : 'Copy Link'}</span>
+                </button>
+              </div>
             </div>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rewards Earned</p>
-            <p className="text-2xl font-black text-white">{stats.rewards.toFixed(2)} <span className="text-xs font-normal text-slate-500">USDC</span></p>
+
+            {/* 3-Level Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { level: 'Level 1', rate: commissions.level1, sub: 'Direct Partners', desc: 'People who join via your link' },
+                { level: 'Level 2', rate: commissions.level2, sub: 'Secondary Flow', desc: 'Invited by your Level 1 partners' },
+                { level: 'Level 3', rate: commissions.level3, sub: 'Global Reach', desc: 'Invited by your Level 2 partners' },
+              ].map((tier, i) => (
+                <div key={i} className="bg-white/3 border border-white/5 rounded-2xl p-5 hover:bg-white/5 transition-all">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{tier.level}</span>
+                    <span className="text-lg font-black text-primary italic">{tier.rate}%</span>
+                  </div>
+                  <h4 className="text-white font-black italic text-sm mb-1 uppercase tracking-tighter">{tier.sub}</h4>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">{tier.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </motion.div>
 
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="glass-card p-8 space-y-6"
-        >
-          <h3 className="font-bold text-white">Program Stats</h3>
-          <div className="space-y-4">
-            {[
-              { label: 'Total Referrals', value: stats.total.toString(), icon: UserPlus },
-              { label: 'Active Investors', value: stats.active.toString(), icon: TrendingUp },
-              { label: 'Total Commissions', value: `${stats.rewards.toFixed(2)} USDC`, icon: Gift },
-            ].map((stat) => (
-              <div key={stat.label} className="flex items-center justify-between">
-                <div className="flex items-center space-x-3 text-slate-400">
-                  <stat.icon size={18} />
-                  <span className="text-sm font-medium">{stat.label}</span>
+        <div className="space-y-6">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="glass-card p-8 bg-black/40 border-white/5 h-fit"
+          >
+            <h3 className="text-sm font-black text-white uppercase italic mb-6 flex items-center justify-between">
+              <span>Program Insights</span>
+              <TrendingUp size={16} className="text-primary" />
+            </h3>
+            <div className="space-y-6">
+              {[
+                { label: 'Total Referrals', value: stats.total.toString(), icon: UserPlus, color: 'text-primary' },
+                { label: 'Active Investors', value: stats.active.toString(), icon: TrendingUp, color: 'text-accent' },
+                { label: 'Total Commissions', value: `${stats.rewards.toFixed(2)} USDC`, icon: Gift, color: 'text-primary' },
+              ].map((stat) => (
+                <div key={stat.label} className="flex items-center justify-between p-4 bg-white/2 rounded-2xl border border-white/5">
+                  <div className="flex items-center space-x-3 text-slate-400">
+                    <div className={`p-2 bg-white/5 rounded-lg ${stat.color}`}>
+                      <stat.icon size={16} />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-widest">{stat.label}</span>
+                  </div>
+                  <span className="text-sm font-black text-white italic">{stat.value}</span>
                 </div>
-                <span className="text-sm font-bold text-white">{stat.value}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* New Success Steps */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass-card p-8 bg-gradient-to-r from-accent/10 to-transparent border-accent/20"
+          >
+            <h3 className="text-[10px] font-black text-accent uppercase tracking-[0.3em] mb-6 flex items-center">
+              <Gift size={14} className="mr-2" /> Expansion Guide
+            </h3>
+            <div className="space-y-4">
+              {[
+                { step: '01', title: 'Share Link', desc: 'Promote your access key.' },
+                { step: '02', title: 'Onboard Partners', desc: 'Friends initiate protocol.' },
+                { step: '03', title: 'Harvest 24/7', desc: 'Earn USDC on every cycle.' },
+              ].map((s, i) => (
+                <div key={i} className="flex items-start space-x-4">
+                   <div className="text-lg font-black text-white opacity-20 italic">{s.step}</div>
+                   <div>
+                     <p className="text-xs font-black text-white uppercase tracking-tighter">{s.title}</p>
+                     <p className="text-[10px] text-slate-500">{s.desc}</p>
+                   </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
       </div>
 
       <motion.div 
@@ -158,12 +217,12 @@ const Referrals: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/2">
-                <th className="px-6 py-4">Referred Node</th>
-                <th className="px-6 py-4">Activity Status</th>
-                <th className="px-6 py-4">Total Harvested</th>
-                <th className="px-6 py-4">Verification</th>
-                <th className="px-6 py-4">Launch Date</th>
+              <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white/2 italic">
+                <th className="px-6 py-5">Network Entity</th>
+                <th className="px-6 py-5">Operational Status</th>
+                <th className="px-6 py-5">Yield Harvested</th>
+                <th className="px-6 py-5">Node Status</th>
+                <th className="px-6 py-5">Genesis Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
