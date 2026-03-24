@@ -146,10 +146,10 @@ const Tasks: React.FC = () => {
             <div className="shrink-0 pl-4 border-l border-white/5 ml-4 h-16 flex items-center">
               {task.status === 'claim' ? (
                 <button 
-                  onClick={() => handleClaim(task.id, task.reward_amount)}
+                  onClick={() => handleClaim(task.id, parseFloat(task.reward_amount))}
                   className="px-4 py-2 bg-accent text-dark font-black text-[10px] rounded-xl hover:scale-105 transition-all shadow-xl shadow-accent/20 uppercase tracking-widest whitespace-nowrap"
                 >
-                  Claim {task.reward_amount}
+                  Claim {parseFloat(task.reward_amount).toFixed(2)}
                 </button>
               ) : task.status === 'completed' ? (
                 <div className="flex flex-col items-center justify-center text-accent">
