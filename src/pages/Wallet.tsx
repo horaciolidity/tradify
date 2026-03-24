@@ -251,34 +251,19 @@ const Wallet: React.FC = () => {
 
     setWithdrawSubmitting(true);
     try {
-      // 1. Deduct balance from wallet first
-      const { error: balanceError } = await supabase
-        .from('wallets')
-        .update({ balance_usdc: wallet.balance_usdc - amount })
-        .eq('user_id', profile?.id);
-
-      if (balanceError) throw balanceError;
-
-      // 2. Create the pending withdrawal transaction
+      // Create the pending withdrawal transaction
       const { error: txError } = await supabase.from('transactions').insert({
         user_id: profile?.id,
         type: 'withdrawal',
         amount,
         description: `Withdrawal request to ${withdrawAddress.slice(0, 10)}... via ${withdrawNetwork.label}`,
         status: 'pending',
-        tx_hash: withdrawAddress // store the destination address in tx_hash for admin reference
+        tx_hash: withdrawAddress
       });
 
-      if (txError) {
-        // Refund if transaction creation fails
-        await supabase
-          .from('wallets')
-          .update({ balance_usdc: wallet.balance_usdc })
-          .eq('user_id', profile?.id);
-        throw txError;
-      }
+      if (txError) throw txError;
 
-      // 3. Notify admin
+      // Notify admin
       await notifyAdmin(
         '🏧 New Withdrawal Request',
         `User ${profile?.email} requested a withdrawal of ${amount.toFixed(2)} USDC to ${withdrawAddress.slice(0, 12)}... via ${withdrawNetwork.label}. Awaiting approval.`

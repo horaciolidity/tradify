@@ -181,22 +181,32 @@ const AdminPanel: React.FC = () => {
 
   const approveTransaction = async (transaction: any) => {
     try {
-      if (transaction.type === 'deposit') {
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance_usdc')
-          .eq('user_id', transaction.user_id)
-          .single();
-        
-        if (!wallet) throw new Error('Wallet not found');
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('balance_usdc')
+        .eq('user_id', transaction.user_id)
+        .single();
+      
+      if (!wallet) throw new Error('Wallet not found');
 
+      if (transaction.type === 'deposit') {
+        // Add funds to wallet
         await supabase
           .from('wallets')
           .update({ balance_usdc: wallet.balance_usdc + transaction.amount })
           .eq('user_id', transaction.user_id);
+      } else if (transaction.type === 'withdrawal') {
+        // Double check user still has enough balance
+        if (wallet.balance_usdc < transaction.amount) {
+          alert('User has insufficient balance to complete this withdrawal. Please reject.');
+          return;
+        }
+        // Deduct funds from wallet
+        await supabase
+          .from('wallets')
+          .update({ balance_usdc: wallet.balance_usdc - transaction.amount })
+          .eq('user_id', transaction.user_id);
       }
-      // For withdrawal, funds were already deducted during request to prevent double spending.
-      // So we just mark as completed.
 
       // Update transaction status
       await supabase
@@ -224,22 +234,7 @@ const AdminPanel: React.FC = () => {
 
   const rejectTransaction = async (transaction: any) => {
     try {
-      if (transaction.type === 'withdrawal') {
-        // Refund if withdrawal is rejected
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance_usdc')
-          .eq('user_id', transaction.user_id)
-          .single();
-        
-        if (wallet) {
-          await supabase
-            .from('wallets')
-            .update({ balance_usdc: wallet.balance_usdc + transaction.amount })
-            .eq('user_id', transaction.user_id);
-        }
-      }
-
+      // Nothing to refund since we only deduct on approval now.
       await supabase.from('transactions').update({ status: 'failed' }).eq('id', transaction.id);
       
       await supabase.from('notifications').insert({
