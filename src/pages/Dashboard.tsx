@@ -130,8 +130,8 @@ const Dashboard: React.FC = () => {
       {/* Stats Display */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
         {[
-          { label: 'Total Invested', value: `$${stats.totalInvested.toLocaleString()}`, icon: TrendingUp, color: 'text-primary', delay: 0 },
-          { label: 'Active Plans', value: stats.activeInvestments, icon: Zap, color: 'text-accent', delay: 0.1 },
+          { label: 'Deployed Margin', value: `$${stats.totalInvested.toLocaleString()}`, icon: TrendingUp, color: 'text-primary', delay: 0 },
+          { label: 'Running Strategies', value: stats.activeInvestments, icon: Zap, color: 'text-accent', delay: 0.1 },
           { label: 'Referral Credits', value: `$${stats.totalReferralEarned.toLocaleString()}`, icon: Users, color: 'text-indigo-400', delay: 0.2 },
           { label: 'Security Status', value: '100%', icon: ShieldCheck, color: 'text-emerald-400', delay: 0.3 },
         ].map((stat) => (
@@ -209,7 +209,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <p className="text-white font-black uppercase tracking-widest italic">Stream Offline</p>
-                  <p className="text-slate-500 font-medium italic text-xs max-w-xs mx-auto">Execute your first neural investment plan to initiate the tracking sequence.</p>
+                  <p className="text-slate-500 font-medium italic text-xs max-w-xs mx-auto">Execute your first trading strategy to initiate the tracking sequence.</p>
                 </div>
               </div>
             )}
@@ -230,7 +230,7 @@ const Dashboard: React.FC = () => {
               {[
                 { label: 'Market Engine', active: true },
                 { label: 'USDC Bridge', active: true },
-                { label: 'Neural Trading', active: true },
+                { label: 'Neural Models', active: true },
                 { label: 'Referral Mesh', active: true },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-5 bg-white/2 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
@@ -248,7 +248,7 @@ const Dashboard: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             <Zap size={40} className="mx-auto mb-4 group-hover:scale-110 group-hover:rotate-12 transition-transform" />
             <span className="text-xs font-black uppercase tracking-[0.4em]">Get Started</span>
-            <h4 className="text-3xl font-black italic tracking-tighter mt-1">NEW PLAN</h4>
+            <h4 className="text-3xl font-black italic tracking-tighter mt-1">NEW STRATEGY</h4>
           </Link>
         </div>
       </div>

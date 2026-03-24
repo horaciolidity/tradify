@@ -176,7 +176,7 @@ const Profile: React.FC = () => {
             </div>
 
             <div className="space-y-6">
-              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] italic mb-4">Financial Core</h3>
+              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] italic mb-4">Operational Core</h3>
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-white/2 rounded-2xl border border-white/5">
@@ -221,7 +221,7 @@ const Profile: React.FC = () => {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Total Power</p>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Neural Power</p>
               <p className="text-2xl font-black text-white italic tracking-tighter">${totalInvested.toLocaleString()} <span className="text-xs font-normal text-slate-500">USDC</span></p>
             </div>
           </div>
@@ -242,7 +242,7 @@ const Profile: React.FC = () => {
               </div>
               {nextTier && (
                 <p className="text-[9px] text-slate-500 mt-3 font-bold uppercase tracking-widest text-center">
-                  Invest <span className="text-white">${(nextTier.min - totalInvested).toLocaleString()} more</span> to unlock <span className="text-primary">{nextTier.name}</span>
+                  Deploy <span className="text-white">${(nextTier.min - totalInvested).toLocaleString()} more</span> to unlock <span className="text-primary">{nextTier.name}</span>
                 </p>
               )}
             </div>

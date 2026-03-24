@@ -54,20 +54,20 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
   const nextPayoutDays = periodDays - (daysSince(inv.start_date) % periodDays);
   const isUnlocked = new Date() >= new Date(inv.end_date);
 
-  // Interest earned per period (simple: interest_rate % of principal per period)
+  // Strategy yield per cycle (simple: profit_rate % of margin per cycle)
   const interestPerPeriod = inv.amount * rate / 100;
 
-  // Total interest across all periods (simple model — principal doesn't compound since it's withdrawable each period)
+  // Total yield across all cycles
   const totalInterest = interestPerPeriod * totalPeriods;
-  const totalAtMaturity = inv.amount + totalInterest;  // principal + all interest
+  const totalAtMaturity = inv.amount + totalInterest; 
 
-  // Interest earned to date (how many full periods have passed)
+  // Alpha earned to date (how many full cycles have passed)
   const interestEarnedToDate = periodsSoFar * interestPerPeriod;
 
-  // How much interest is available to withdraw right now (earned - already withdrawn)
+  // How much alpha is available to withdraw right now (earned - already withdrawn)
   const interestAvailable = Math.max(0, interestEarnedToDate - (inv.withdrawn_amount || 0));
 
-  // For maturity: remaining interest not yet paid + principal
+  // For maturity: remaining yield not yet paid + principal
   const maturityPayout = inv.amount + Math.max(0, totalInterest - (inv.withdrawn_amount || 0));
 
   const progress = Math.min(100, (daysSince(inv.start_date) / plan.duration_days) * 100);
@@ -99,24 +99,24 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
 
             <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-white/3 rounded-xl p-3 border border-white/5">
-                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Principal 🔒</p>
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Allocated Margin 🔒</p>
                 <p className="text-base font-black text-white italic tracking-tighter">${inv.amount.toFixed(2)}</p>
-                <p className="text-[9px] text-slate-600">{isUnlocked ? 'Unlocked!' : `locked ${daysLeft}d`}</p>
+                <p className="text-[9px] text-slate-600">{isUnlocked ? 'Liquid!' : `locked ${daysLeft}d`}</p>
               </div>
               <div className="bg-accent/5 rounded-xl p-3 border border-accent/10">
-                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Interest Earned</p>
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Alpha Yield</p>
                 <p className="text-base font-black text-accent italic tracking-tighter">+${interestEarnedToDate.toFixed(4)}</p>
-                <p className="text-[9px] text-slate-600">{periodsSoFar}/{totalPeriods} periods</p>
+                <p className="text-[9px] text-slate-600">{periodsSoFar}/{totalPeriods} cycles</p>
               </div>
               <div className="bg-white/3 rounded-xl p-3 border border-white/5">
-                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Next Interest</p>
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Next Settlement</p>
                 <p className="text-base font-black text-primary italic tracking-tighter">{nextPayoutDays}d</p>
                 <p className="text-[9px] text-slate-600">+${interestPerPeriod.toFixed(2)} due</p>
               </div>
               <div className={`rounded-xl p-3 border ${interestAvailable > 0 ? 'bg-accent/10 border-accent/20' : 'bg-white/3 border-white/5'}`}>
-                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Interest Available</p>
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Settled Alpha</p>
                 <p className={`text-base font-black italic tracking-tighter ${interestAvailable > 0 ? 'text-accent' : 'text-slate-600'}`}>${interestAvailable.toFixed(4)}</p>
-                <p className="text-[9px] text-slate-600">withdraw now</p>
+                <p className="text-[9px] text-slate-600">collect now</p>
               </div>
             </div>
 
@@ -128,7 +128,7 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
               className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest italic transition-all border ${interestAvailable > 0 ? 'bg-accent/10 hover:bg-accent text-accent hover:text-black border-accent/30' : 'bg-white/3 text-slate-700 border-white/5 cursor-not-allowed'}`}
             >
               {interestAvailable > 0 ? <Unlock size={14} /> : <Lock size={14} />}
-              <span>{interestAvailable > 0 ? 'Withdraw Interest' : 'Locked'}</span>
+              <span>{interestAvailable > 0 ? 'Collect Alpha' : 'Locked'}</span>
             </button>
 
             <button
@@ -299,8 +299,8 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
                   className="bg-gradient-to-r from-accent/20 to-transparent rounded-2xl p-6 border border-accent/30 flex flex-col md:flex-row items-center justify-between gap-4"
                 >
                   <div>
-                    <h5 className="font-black text-accent italic text-lg tracking-tighter mb-1">🎉 Plan Matured!</h5>
-                    <p className="text-sm text-slate-400">Your principal <strong className="text-white">${inv.amount.toFixed(2)}</strong> + remaining interest is ready.</p>
+                    <h5 className="font-black text-accent italic text-lg tracking-tighter mb-1">🎉 Strategy Settled!</h5>
+                    <p className="text-sm text-slate-400">Your margin <strong className="text-white">${inv.amount.toFixed(2)}</strong> + settled yield is ready.</p>
                     <p className="text-xl font-black text-white italic mt-1">${maturityPayout.toFixed(4)} <span className="text-xs font-normal text-slate-500">USDC total</span></p>
                   </div>
                   <button
@@ -308,7 +308,7 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
                     className="flex items-center space-x-3 px-8 py-4 bg-accent text-black font-black rounded-2xl text-sm uppercase tracking-widest shadow-[0_10px_40px_rgba(74,222,128,0.4)] hover:shadow-[0_15px_50px_rgba(74,222,128,0.6)] transition-all active:scale-95"
                   >
                     <Unlock size={18} />
-                    <span>Withdraw Principal + Interest</span>
+                    <span>Reclaim Margin + Alpha</span>
                   </button>
                 </motion.div>
               )}
@@ -533,14 +533,14 @@ const Investments: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-4xl font-black text-white italic tracking-tighter">Investment Plans</h1>
-          <p className="text-slate-400 mt-1 text-sm">Compound your USDC with guaranteed interest cycles.</p>
+          <h1 className="text-2xl md:text-4xl font-black text-white italic tracking-tighter">Trading Strategies</h1>
+          <p className="text-slate-400 mt-1 text-sm">Execute AI-driven trading models with targeted alpha cycles.</p>
         </div>
         <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 self-start">
           {([
-            { key: 'plans', icon: PlusCircle, label: 'New Plan' },
-            { key: 'active', icon: TrendingUp, label: `Active (${activeInvestments.length})` },
-            { key: 'history', icon: History, label: 'History' }
+            { key: 'plans', icon: PlusCircle, label: 'New Strategy' },
+            { key: 'active', icon: TrendingUp, label: `Running (${activeInvestments.length})` },
+            { key: 'history', icon: History, label: 'Execution Log' }
           ] as const).map(({ key, icon: Icon, label }) => (
             <button
               key={key}
@@ -568,10 +568,10 @@ const Investments: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center space-x-2 text-primary">
                   <ShieldCheck size={18} />
-                  <span className="text-xs font-black uppercase tracking-[0.3em]">Guaranteed Reserve Fund</span>
+                  <span className="text-xs font-black uppercase tracking-[0.3em]">Strategy Reserve Fund</span>
                 </div>
                 <h2 className="text-2xl font-black text-white italic tracking-tighter">Capital Protection Active</h2>
-                <p className="text-slate-400 max-w-xl text-sm">All plans are backed by our 500,000 USDC reserve. Capital and interest are fully guaranteed.</p>
+                <p className="text-slate-400 max-w-xl text-sm">All models are backed by our 500,000 USDC reserve. Margin and alpha are fully guaranteed.</p>
               </div>
               <div className="flex flex-col items-end shrink-0">
                 <span className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Pool Balance</span>
@@ -836,12 +836,12 @@ const Investments: React.FC = () => {
               <button onClick={() => setSelectedPlan(null)} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
                 <X size={24} />
               </button>
-              <h3 className="text-2xl font-black text-white italic tracking-tighter mb-1">Start Investment</h3>
-              <p className="text-slate-400 mb-6 text-sm">{selectedPlan.name} · {selectedPlan.interest_rate}% every {selectedPlan.interest_period_days} days · {selectedPlan.duration_days} day lock</p>
+              <h3 className="text-2xl font-black text-white italic tracking-tighter mb-1">Start Strategy</h3>
+              <p className="text-slate-400 mb-6 text-sm">{selectedPlan.name} · {selectedPlan.interest_rate}% target alpha every {selectedPlan.interest_period_days} days · {selectedPlan.duration_days} day cycle</p>
 
               {/* Amount Input */}
               <div className="mb-6">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Investment Amount</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Allocated Margin</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -884,7 +884,7 @@ const Investments: React.FC = () => {
 
               <div className="flex items-start space-x-3 text-[10px] text-slate-500 mb-6 bg-primary/5 p-3 rounded-xl border border-primary/10">
                 <Info size={14} className="text-primary mt-0.5 shrink-0" />
-                <p>Principal and accumulated interest are 100% guaranteed by the Tradify Reserve Fund. Capital returns to your wallet upon full maturity withdrawal.</p>
+                <p>Allocated margin and settled alpha are 100% guarded by the Tradify Strategy Fund. Capital returns to your wallet upon cycle completion.</p>
               </div>
 
               <button
@@ -892,7 +892,7 @@ const Investments: React.FC = () => {
                 disabled={loading || previewAmount <= 0}
                 className="w-full primary-button py-4 text-sm font-black uppercase tracking-widest italic shadow-xl shadow-primary/30 disabled:opacity-40"
               >
-                {loading ? 'Processing...' : `Confirm Investment · $${previewAmount > 0 ? previewAmount.toFixed(2) : '0.00'} USDC`}
+                {loading ? 'Processing...' : `Execute Strategy · $${previewAmount > 0 ? previewAmount.toFixed(2) : '0.00'} USDC`}
               </button>
             </motion.div>
           </motion.div>

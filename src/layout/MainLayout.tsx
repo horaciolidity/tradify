@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, mobile: true },
   { name: 'Trading', href: '/trading', icon: TrendingUp, mobile: true },
-  { name: 'Investments', href: '/investments', icon: PieChart, mobile: true },
+  { name: 'Strategies', href: '/investments', icon: PieChart, mobile: true },
   { name: 'Wallet', href: '/wallet', icon: WalletIcon, mobile: true },
   { name: 'Referrals', href: '/referrals', icon: Users, mobile: true },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, mobile: true },
