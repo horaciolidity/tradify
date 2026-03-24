@@ -378,7 +378,7 @@ const Wallet: React.FC = () => {
               initial={{ scale: 0.9, y: 20, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.9, y: 20, opacity: 0 }}
-              className="glass-card w-full max-w-xl p-10 relative z-10 border-white/10"
+              className="glass-card w-full max-w-xl p-6 md:p-10 relative z-10 border-white/10 max-h-[90vh] overflow-y-auto"
             >
               <button onClick={() => setDepositModal(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white">
                 <X size={28} />

@@ -31,7 +31,7 @@ const Tasks: React.FC = () => {
       const mapped = allTasks.map(t => ({
         ...t,
         status: userTasks?.find(ut => ut.task_id === t.id) ? 'completed' : (t.task_type === 'daily_login' ? 'claim' : 'ongoing'),
-        progress: [1, 1], // Simplified
+        progress: [0, 1], // Default progress display logic
         icon: t.task_type === 'daily_login' ? Zap : t.task_type === 'referral' ? Users : t.task_type === 'investment' ? Wallet : Trophy
       }));
       setTasks(mapped);
