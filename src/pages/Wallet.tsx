@@ -246,7 +246,7 @@ const Wallet: React.FC = () => {
 
     if (!amount || amount <= 0) { setWithdrawError('Enter a valid amount.'); return; }
     if (!withdrawAddress.match(/^0x[0-9a-fA-F]{40}$/)) { setWithdrawError('Invalid wallet address (must be 0x + 40 hex chars).'); return; }
-    if (amount > wallet.balance_usdc) { setWithdrawError(`Insufficient margin. You have ${wallet?.balance_usdc.toFixed(4)} USDC available.`); return; }
+    if (!wallet || amount > wallet.balance_usdc) { setWithdrawError(`Insufficient margin. You have ${(wallet?.balance_usdc || 0).toFixed(4)} USDC available.`); return; }
     if (amount < 10) { setWithdrawError('Minimum settlement is 10 USDC.'); return; }
 
     setWithdrawSubmitting(true);
