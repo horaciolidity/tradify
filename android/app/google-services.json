@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "302569267717",
+    "project_id": "tradify-99d13",
+    "storage_bucket": "tradify-99d13.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:302569267717:android:5bb450bc402f6a5509b26c",
+        "android_client_info": {
+          "package_name": "com.tradify.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt4gOD1xQwgFKGiv2pLnsnQ5NezPeGhBc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

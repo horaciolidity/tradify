@@ -14,6 +14,9 @@ import Tasks from './pages/Tasks';
 import Profile from './pages/Profile';
 import { useAuthStore } from './store/useAuthStore';
 import { supabase } from './services/supabase';
+import { App as CapApp } from '@capacitor/app';
+import { initializePushNotifications } from './services/pushNotifications';
+
 
 const PageTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <motion.div
@@ -142,7 +145,9 @@ const App: React.FC = () => {
   const { setUser, setProfile, setWallet, loading, setLoading } = useAuthStore();
 
   useEffect(() => {
+    initializePushNotifications();
     let mounted = true;
+
     let authTimeout: any;
 
     // Safety failsafe: If state is truly stuck, force ready after 20s
@@ -221,10 +226,20 @@ const App: React.FC = () => {
 
     const subPromise = setupAuth();
 
+    // Android Back Button Logic
+    const backListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back();
+      } else {
+        CapApp.exitApp();
+      }
+    });
+
     return () => {
       mounted = false;
       clearTimeout(authTimeout);
       subPromise.then(sub => sub.unsubscribe());
+      backListener.then(l => l.remove());
     };
   }, []);
 

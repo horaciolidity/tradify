@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, ISeriesApi } from 'lightweight-charts';
 import { MarketService, TickerData } from '../services/market';
-import { TrendingUp, TrendingDown, Clock, ShieldCheck, Zap, History, ArrowUpRight, ArrowDownLeft, Info, Activity, Waves, ChevronRight, X, PieChart, Database } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, ShieldCheck, Zap, History, ArrowUpRight, ArrowDownLeft, Info, Activity, Waves, ChevronRight, X, PieChart, Database, UserCheck, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TradingChat from '../components/TradingChat';
 import AnnouncementCarousel from '../components/AnnouncementCarousel';
@@ -27,9 +27,26 @@ const TradingDashboard: React.FC = () => {
   const { addNotification } = useNotificationStore();
   const [currentTicker, setCurrentTicker] = useState<TickerData | null>(null);
   const [activePositions, setActivePositions] = useState<any[]>([]);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [othersActivePositions, setOthersActivePositions] = useState<any[]>([]);
+  const [topTraders, setTopTraders] = useState<any[]>([]);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const settlingIds = useRef<Set<string>>(new Set());
   const latestBarRef = useRef<any>(null);
+
+  // Audio effects logic
+  const playSound = (type: 'profit' | 'whale' | 'loss') => {
+    if (!soundEnabled) return;
+    const sounds = {
+      profit: 'https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3',
+      whale: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+      loss: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'
+    };
+    const audio = new Audio(sounds[type]);
+    audio.volume = 0.5;
+    audio.play().catch(() => {}); 
+  };
 
   // Initialize Chart
   useEffect(() => {
@@ -118,24 +135,49 @@ const TradingDashboard: React.FC = () => {
     });
 
     // Add markers
-    const markers = activePositions
+    // Add markers
+    const myMarkers = activePositions
       .filter(p => p.symbol === selectedSymbol && p.status === 'active')
       .map(p => ({
         time: Math.floor(new Date(p.created_at).getTime() / 1000),
         position: p.type === 'long' ? 'belowBar' : 'aboveBar',
         color: p.type === 'long' ? '#0ECB81' : '#F6465D',
         shape: p.type === 'long' ? 'arrowUp' : 'arrowDown',
-        text: 'OPEN NODE',
+        text: 'MY ENTRY',
       }));
-    
-    candlestickSeriesRef.current.setMarkers(markers as any);
 
-  }, [activePositions, selectedSymbol]);
+    const getVolumeColor = (amount: number, isFollowed: boolean) => {
+      if (isFollowed) return '#3B82F6'; // Followed always get priority blue
+      if (amount >= 5000) return '#A855F7'; // Whale: Purple
+      if (amount >= 1000) return '#0EA5E9'; // Large: Cyan
+      if (amount >= 100) return '#F3BA2F';  // Medium: Gold
+      return 'rgba(132, 142, 156, 0.4)';    // Small: Subtle
+    };
+
+    const otherMarkers = othersActivePositions
+      .filter(p => p.symbol === selectedSymbol && p.status === 'active')
+      .map(p => {
+        const isFollowed = followedIds.has(p.user_id);
+        const color = getVolumeColor(p.amount_usdc, isFollowed);
+        
+        return {
+          time: Math.floor(new Date(p.created_at).getTime() / 1000),
+          position: p.type === 'long' ? 'belowBar' : 'aboveBar',
+          color: color,
+          shape: isFollowed ? 'arrowUp' : 'circle',
+          size: isFollowed ? 2 : 1,
+          text: `${p.profiles?.full_name?.split(' ')[0] || 'Trader'} ${p.amount_usdc >= 1000 ? '🔥' : ''}`,
+        };
+      });
+    
+    candlestickSeriesRef.current.setMarkers([...myMarkers, ...otherMarkers].sort((a, b) => a.time - b.time) as any);
+
+  }, [activePositions, othersActivePositions, followedIds, selectedSymbol]);
 
   // 1. STABLE TICKER SUBSCRIPTION & REAL-TIME CHART UPDATE
   useEffect(() => {
     MarketService.startSimulation();
-    const unsubscribe = MarketService.subscribe((allTickers) => {
+    const unsubscribeMarket = MarketService.subscribe((allTickers) => {
       setTickers(allTickers);
       const symbolTicker = allTickers.find(t => t.symbol === selectedSymbol);
       if (symbolTicker) {
@@ -152,27 +194,104 @@ const TradingDashboard: React.FC = () => {
       }
     });
 
+    // SOCIAL REAL-TIME: Listen to all active orders
+    const ordersChannel = supabase
+      .channel('public-active-orders')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'orders',
+        filter: `status=eq.active`
+      }, async (payload) => {
+        const newOrder = payload.new as any;
+        if (newOrder.user_id === profile?.id) {
+          setActivePositions(prev => [newOrder, ...prev]);
+        } else {
+          // Fetch profile for the name
+          const { data: userData } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', newOrder.user_id)
+            .single();
+          
+          const enrichedOrder = { ...newOrder, profiles: userData };
+          
+          setOthersActivePositions(prev => {
+            // Prioritize followed users, then limit to 20
+            const isFollowed = followedIds.has(enrichedOrder.user_id);
+            const newList = [enrichedOrder, ...prev];
+            
+            // Limit logic: keep all followed, then fill with public until 20
+            const followed = newList.filter(p => followedIds.has(p.user_id));
+            const publicTrades = newList.filter(p => !followedIds.has(p.user_id));
+            
+            return [...followed, ...publicTrades].slice(0, 20);
+          });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders'
+      }, (payload) => {
+        const updated = payload.new as any;
+        if (updated.status !== 'active') {
+          if (updated.user_id === profile?.id) {
+            setActivePositions(prev => prev.filter(p => p.id !== updated.id));
+          } else {
+            setOthersActivePositions(prev => prev.filter(p => p.id !== updated.id));
+          }
+        }
+      })
+      .subscribe();
+
     // POLLING FAILSAFE: Refresh data every 10 seconds to ensure consistency
     const pollInterval = setInterval(() => {
       if (profile) fetchData();
     }, 10000);
 
     return () => { 
-      unsubscribe();
+      unsubscribeMarket();
+      supabase.removeChannel(ordersChannel);
       clearInterval(pollInterval);
     };
-  }, [selectedSymbol, profile?.id]);
+  }, [selectedSymbol, profile?.id, followedIds]);
 
   const fetchData = async () => {
-    const { data: ordersData } = await supabase
+    if (!profile?.id) return;
+
+    // 1. Fetch Following List
+    const { data: followsData } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', profile.id);
+    
+    const newFollowedIds = new Set(followsData?.map(f => f.following_id) || []);
+    setFollowedIds(newFollowedIds);
+
+    // 2. Fetch Personal Orders
+    const { data: myOrders } = await supabase
       .from('orders')
       .select('*')
-      .eq('user_id', profile?.id)
+      .eq('user_id', profile.id)
       .order('created_at', { ascending: false });
     
-    if (ordersData) {
-      setActivePositions(ordersData.filter(o => o.status === 'active'));
-      setRecentOrders(ordersData.filter(o => o.status === 'completed').slice(0, 10));
+    if (myOrders) {
+      setActivePositions(myOrders.filter(o => o.status === 'active'));
+      setRecentOrders(myOrders.filter(o => o.status === 'completed').slice(0, 10));
+    }
+
+    // 3. Fetch Others' Active Trades (Limited to 20 for performance)
+    const { data: otherOrders } = await supabase
+      .from('orders')
+      .select('*, profiles(full_name, avatar_url)')
+      .neq('user_id', profile.id)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (otherOrders) {
+      setOthersActivePositions(otherOrders);
     }
   };
 
@@ -359,6 +478,13 @@ const TradingDashboard: React.FC = () => {
     }
   };
 
+  const copyTrade = (order: any) => {
+    setSelectedSymbol(order.symbol);
+    setTradeAmount(order.amount_usdc.toString());
+    addNotification(profile?.id || '', 'Signal Copied', `Synchronized parameters for ${order.symbol}. Check the trade panel.`, 'info');
+    document.getElementById('trade-panel')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const openFlashTrade = async (type: 'long' | 'short') => {
     if (!profile || !wallet || !currentTicker || !tradeAmount || processing) return;
     
@@ -403,6 +529,37 @@ const TradingDashboard: React.FC = () => {
       addNotification(profile.id, 'Critical Link Failure', err.message || 'Network synchrony lost.', 'error');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const toggleFollow = async (userId: string) => {
+    if (!profile) return;
+    
+    if (followedIds.has(userId)) {
+      const { error } = await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', profile.id)
+        .eq('following_id', userId);
+      
+      if (!error) {
+        setFollowedIds(prev => {
+          const next = new Set(prev);
+          next.delete(userId);
+          return next;
+        });
+      }
+    } else {
+      const { error } = await supabase
+        .from('follows')
+        .insert({
+          follower_id: profile.id,
+          following_id: userId
+        });
+      
+      if (!error) {
+        setFollowedIds(prev => new Set(prev).add(userId));
+      }
     }
   };
 
@@ -598,7 +755,23 @@ const TradingDashboard: React.FC = () => {
           </div>
 
           <SettlementArchive orders={recentOrders} />
-          <TradingChat activePositions={activePositions} tickers={tickers} />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-1">
+               <TopTradersSidebar topTraders={topTraders} onFollow={toggleFollow} followedIds={followedIds} />
+            </div>
+            <div className="lg:col-span-3">
+               <TradingChat 
+                 activePositions={activePositions} 
+                 tickers={tickers} 
+                 followedIds={followedIds} 
+                 onToggleFollow={toggleFollow} 
+               />
+            </div>
+          </div>
+
+          <OtherTradersLive othersActivePositions={othersActivePositions} onCopy={copyTrade} onFollow={toggleFollow} followedIds={followedIds} />
+          
           <GlobalNodeTable tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
         </div>
 
@@ -979,6 +1152,109 @@ function GlobalNodeTable({ tickers, selectedSymbol, onSelect }: any) {
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function TopTradersSidebar({ topTraders, onFollow, followedIds }: any) {
+  return (
+    <div className="glass-card p-8 bg-[#0B0E11]/40 border-white/5 flex flex-col space-y-6">
+      <div className="flex items-center space-x-4 border-b border-white/5 pb-6">
+        <div className="p-3 bg-primary/10 rounded-xl border border-primary/20">
+          <TrendingUp className="text-primary" size={20} />
+        </div>
+        <h3 className="text-sm font-black uppercase tracking-[0.3em] italic text-white font-display">Master Entities</h3>
+      </div>
+      <div className="space-y-4">
+        {topTraders.map((trader: any, index: number) => {
+          const isFollowed = followedIds.has(trader.id);
+          return (
+            <div key={trader.id} className="flex items-center justify-between group p-2 hover:bg-white/5 rounded-2xl transition-all">
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black italic border text-xs shadow-lg ${index === 0 ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}>
+                    {trader.avatar ? <img src={trader.avatar} className="w-full h-full rounded-xl object-cover" /> : trader.name.charAt(0)}
+                  </div>
+                  {index === 0 && <div className="absolute -top-2 -right-2 bg-primary text-black text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-lg">#1</div>}
+                </div>
+                <div>
+                  <p className="text-[11px] font-black text-white italic tracking-widest uppercase">{trader.name}</p>
+                  <p className="text-[10px] font-mono font-bold text-accent">+${trader.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => onFollow(trader.id)}
+                className={`p-2 rounded-xl border transition-all ${isFollowed ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-white/5 border-white/10 text-slate-600 hover:text-white'}`}
+              >
+                {isFollowed ? <UserCheck size={16} /> : <UserPlus size={16} />}
+              </button>
+            </div>
+          );
+        })}
+        {topTraders.length === 0 && <p className="text-[9px] text-slate-600 italic text-center p-4">Calculating elite rankings...</p>}
+      </div>
+    </div>
+  );
+}
+
+function OtherTradersLive({ othersActivePositions, onCopy, onFollow, followedIds }: any) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center space-x-4 px-2">
+        <h3 className="text-[10px] font-black text-white italic tracking-[0.4em] uppercase font-display">Live Signal Feed</h3>
+        <div className="h-0.5 flex-1 bg-white/5" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {othersActivePositions.map((pos: any) => {
+          const isFollowed = followedIds.has(pos.user_id);
+          const isWhale = pos.amount_usdc >= 1000;
+          return (
+            <motion.div 
+              key={pos.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className={`p-5 rounded-[1.8rem] border backdrop-blur-xl transition-all hover:translate-y-[-4px] ${isWhale ? 'bg-[#A855F7]/5 border-[#A855F7]/20 shadow-[0_20px_40px_rgba(168,85,247,0.1)]' : 'bg-[#1C2023]/60 border-white/5'}`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic text-[10px] border ${isFollowed ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/5 border-white/10 text-slate-400'}`}>
+                    {pos.profiles?.full_name?.charAt(0) || 'T'}
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[9px] font-black text-white uppercase italic tracking-widest">{pos.profiles?.full_name?.split(' ')[0] || 'Unknown'}</span>
+                      {isWhale && <span className="animate-pulse">🔥</span>}
+                    </div>
+                    <span className={`text-[7px] font-black italic tracking-widest ${pos.type === 'long' ? 'text-accent' : 'text-error'}`}>{pos.type.toUpperCase()} SIGNAL</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => onFollow(pos.user_id)}
+                  className={`p-1.5 rounded-lg border transition-all ${isFollowed ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-white/5 border-white/10 text-slate-700'}`}
+                >
+                  {isFollowed ? <UserCheck size={12} /> : <UserPlus size={12} />}
+                </button>
+              </div>
+              <div className="flex items-end justify-between">
+                <div>
+                  <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest block mb-1">Asset Node</span>
+                  <p className="text-sm font-black text-white font-mono italic tracking-tighter">{pos.symbol}</p>
+                </div>
+                <button 
+                  onClick={() => onCopy(pos)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-white text-black rounded-xl text-[8px] font-black italic tracking-[0.2em] transition-all active:scale-95 shadow-lg shadow-primary/20"
+                >
+                  <Zap size={12} />
+                  <span>COPY NODE</span>
+                </button>
+              </div>
+            </motion.div>
+          );
+        })}
+        {othersActivePositions.length === 0 && (
+          <div className="col-span-full p-10 border border-dashed border-white/5 rounded-[2rem] flex items-center justify-center">
+            <p className="text-[9px] font-black text-slate-700 uppercase italic tracking-widest">Awaiting external signals...</p>
+          </div>
+        )}
       </div>
     </div>
   );
