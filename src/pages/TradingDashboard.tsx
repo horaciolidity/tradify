@@ -136,6 +136,20 @@ const TradingDashboard: React.FC = () => {
 
     // Add markers
     // Add markers
+    const getVolumeColor = (amount: number, isFollowed: boolean, type: 'long' | 'short') => {
+      if (isFollowed) return '#3B82F6'; // Followed: Priority Blue
+      if (amount >= 5000) return '#A855F7'; // Whale: Electric Purple
+      if (amount >= 1000) return '#F3BA2F'; // Large: Gold
+      return type === 'long' ? 'rgba(14, 203, 129, 0.4)' : 'rgba(246, 70, 93, 0.4)';
+    };
+
+    const getMarkerSize = (amount: number, isFollowed: boolean) => {
+      if (isFollowed) return 2;
+      if (amount >= 5000) return 3; // Whale trades are huge
+      if (amount >= 1000) return 2;
+      return 1;
+    };
+
     const myMarkers = activePositions
       .filter(p => p.symbol === selectedSymbol && p.status === 'active')
       .map(p => ({
@@ -144,33 +158,28 @@ const TradingDashboard: React.FC = () => {
         color: p.type === 'long' ? '#0ECB81' : '#F6465D',
         shape: p.type === 'long' ? 'arrowUp' : 'arrowDown',
         text: 'MY ENTRY',
+        size: 2
       }));
 
-    const getVolumeColor = (amount: number, isFollowed: boolean) => {
-      if (isFollowed) return '#3B82F6'; // Followed always get priority blue
-      if (amount >= 5000) return '#A855F7'; // Whale: Purple
-      if (amount >= 1000) return '#0EA5E9'; // Large: Cyan
-      if (amount >= 100) return '#F3BA2F';  // Medium: Gold
-      return 'rgba(132, 142, 156, 0.4)';    // Small: Subtle
-    };
-
     const otherMarkers = othersActivePositions
-      .filter(p => p.symbol === selectedSymbol && p.status === 'active')
+      .filter(p => p.symbol === selectedSymbol)
       .map(p => {
         const isFollowed = followedIds.has(p.user_id);
-        const color = getVolumeColor(p.amount_usdc, isFollowed);
+        const isWhale = p.amount_usdc >= 5000;
+        const color = getVolumeColor(p.amount_usdc, isFollowed, p.type);
+        const isActive = p.status === 'active';
         
         return {
-          time: Math.floor(new Date(p.created_at).getTime() / 1000),
+          time: Math.floor(new Date(isActive ? p.created_at : p.settled_at).getTime() / 1000),
           position: p.type === 'long' ? 'belowBar' : 'aboveBar',
-          color: color,
-          shape: isFollowed ? 'arrowUp' : 'circle',
-          size: isFollowed ? 2 : 1,
-          text: `${p.profiles?.full_name?.split(' ')[0] || 'Trader'} ${p.amount_usdc >= 1000 ? '🔥' : ''}`,
+          color: isActive ? color : 'rgba(255,255,255,0.2)',
+          shape: !isActive ? 'square' : (p.type === 'long' ? 'arrowUp' : 'arrowDown'),
+          size: getMarkerSize(p.amount_usdc, isFollowed),
+          text: `${p.profiles?.full_name?.split(' ')[0] || 'Trader'} ${isActive ? (isWhale ? '🐳' : '') : '🔚'}`,
         };
       });
     
-    candlestickSeriesRef.current.setMarkers([...myMarkers, ...otherMarkers].sort((a, b) => a.time - b.time) as any);
+    candlestickSeriesRef.current.setMarkers([...myMarkers, ...otherMarkers].sort((a, b) => a.time - b.time).slice(-50) as any);
 
   }, [activePositions, othersActivePositions, followedIds, selectedSymbol]);
 
@@ -201,31 +210,33 @@ const TradingDashboard: React.FC = () => {
         event: 'INSERT', 
         schema: 'public', 
         table: 'orders',
-        filter: `status=eq.active`
+        filter: 'status=eq.active'
       }, async (payload) => {
         const newOrder = payload.new as any;
+        
+        // Fetch profile for the name and sound logic
+        const { data: userData } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', newOrder.user_id)
+          .single();
+        
+        const enrichedOrder = { ...newOrder, profiles: userData };
+
         if (newOrder.user_id === profile?.id) {
           setActivePositions(prev => [newOrder, ...prev]);
         } else {
-          // Fetch profile for the name
-          const { data: userData } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('id', newOrder.user_id)
-            .single();
-          
-          const enrichedOrder = { ...newOrder, profiles: userData };
+          if (newOrder.amount_usdc >= 5000) {
+            playSound('whale');
+            addNotification(profile?.id || '', 'WHALE ALERT 🐳', `${userData?.full_name || 'A trader'} just opened a $${newOrder.amount_usdc.toLocaleString()} position!`, 'info');
+          }
           
           setOthersActivePositions(prev => {
-            // Prioritize followed users, then limit to 20
             const isFollowed = followedIds.has(enrichedOrder.user_id);
             const newList = [enrichedOrder, ...prev];
-            
-            // Limit logic: keep all followed, then fill with public until 20
             const followed = newList.filter(p => followedIds.has(p.user_id));
             const publicTrades = newList.filter(p => !followedIds.has(p.user_id));
-            
-            return [...followed, ...publicTrades].slice(0, 20);
+            return [...followed, ...publicTrades].slice(0, 30);
           });
         }
       })
@@ -233,13 +244,23 @@ const TradingDashboard: React.FC = () => {
         event: 'UPDATE',
         schema: 'public',
         table: 'orders'
-      }, (payload) => {
+      }, async (payload) => {
         const updated = payload.new as any;
         if (updated.status !== 'active') {
           if (updated.user_id === profile?.id) {
             setActivePositions(prev => prev.filter(p => p.id !== updated.id));
           } else {
-            setOthersActivePositions(prev => prev.filter(p => p.id !== updated.id));
+            // Fetch profile for the name if not present
+            const { data: userData } = await supabase
+              .from('profiles')
+              .select('full_name, avatar_url')
+              .eq('id', updated.user_id)
+              .single();
+            
+            setOthersActivePositions(prev => {
+               const filtered = prev.filter(p => p.id !== updated.id);
+               return [{ ...updated, profiles: userData }, ...filtered].slice(0, 30);
+            });
           }
         }
       })
@@ -281,14 +302,13 @@ const TradingDashboard: React.FC = () => {
       setRecentOrders(myOrders.filter(o => o.status === 'completed').slice(0, 10));
     }
 
-    // 3. Fetch Others' Active Trades (Limited to 20 for performance)
+    // 3. Fetch Others' Active Trades (Limited to 30 for performance)
     const { data: otherOrders } = await supabase
       .from('orders')
       .select('*, profiles(full_name, avatar_url)')
       .neq('user_id', profile.id)
-      .eq('status', 'active')
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(30);
     
     if (otherOrders) {
       setOthersActivePositions(otherOrders);
