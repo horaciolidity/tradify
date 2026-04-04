@@ -246,8 +246,8 @@ const Wallet: React.FC = () => {
 
     if (!amount || amount <= 0) { setWithdrawError('Enter a valid amount.'); return; }
     if (!withdrawAddress.match(/^0x[0-9a-fA-F]{40}$/)) { setWithdrawError('Invalid wallet address (must be 0x + 40 hex chars).'); return; }
-    if (!wallet || amount > wallet.balance_usdc) { setWithdrawError(`Insufficient balance. You have ${wallet?.balance_usdc.toFixed(4)} USDC available.`); return; }
-    if (amount < 10) { setWithdrawError('Minimum withdrawal is 10 USDC.'); return; }
+    if (amount > wallet.balance_usdc) { setWithdrawError(`Insufficient margin. You have ${wallet?.balance_usdc.toFixed(4)} USDC available.`); return; }
+    if (amount < 10) { setWithdrawError('Minimum settlement is 10 USDC.'); return; }
 
     setWithdrawSubmitting(true);
     try {
@@ -256,7 +256,7 @@ const Wallet: React.FC = () => {
         user_id: profile?.id,
         type: 'withdrawal',
         amount,
-        description: `Withdrawal request to ${withdrawAddress.slice(0, 10)}... via ${withdrawNetwork.label}`,
+        description: `Settlement signal to ${withdrawAddress.slice(0, 10)}... via ${withdrawNetwork.label}`,
         status: 'pending',
         tx_hash: withdrawAddress
       });
@@ -265,8 +265,8 @@ const Wallet: React.FC = () => {
 
       // Notify admin
       await notifyAdmin(
-        '🏧 New Withdrawal Request',
-        `User ${profile?.email} requested a withdrawal of ${amount.toFixed(2)} USDC to ${withdrawAddress.slice(0, 12)}... via ${withdrawNetwork.label}. Awaiting approval.`
+        '🏧 New Settlement Signal',
+        `User ${profile?.email} requested a settlement of ${amount.toFixed(2)} USDC to ${withdrawAddress.slice(0, 12)}... via ${withdrawNetwork.label}. Awaiting authorization.`
       );
 
       setWithdrawModal(false);
@@ -274,8 +274,8 @@ const Wallet: React.FC = () => {
       setWithdrawAddress('');
       fetchTransactions();
     } catch (err: any) {
-      console.error('Withdrawal error:', err);
-      setWithdrawError('Failed to submit withdrawal. ' + (err.message || 'Try again.'));
+      console.error('Settlement error:', err);
+      setWithdrawError('Failed to submit settlement. ' + (err.message || 'Try again.'));
     } finally {
       setWithdrawSubmitting(false);
     }
@@ -316,14 +316,14 @@ const Wallet: React.FC = () => {
               className="flex items-center space-x-3 bg-white text-dark font-black px-8 py-4 rounded-2xl hover:bg-slate-200 transition-all active:scale-95 shadow-2xl shadow-white/10 uppercase tracking-widest text-xs"
             >
               <Plus size={20} />
-              <span>Deposit USDC</span>
+              <span>Credit Assets</span>
             </button>
             <button
               onClick={() => setWithdrawModal(true)}
               className="flex items-center space-x-3 bg-white/5 text-white font-black px-8 py-4 rounded-2xl hover:bg-white/10 transition-all border border-white/10 backdrop-blur-xl uppercase tracking-widest text-xs"
             >
               <ArrowUpRight size={20} />
-              <span>Withdraw</span>
+              <span>Settle to Node</span>
             </button>
           </div>
         </motion.div>
@@ -337,7 +337,7 @@ const Wallet: React.FC = () => {
           <div className="absolute bottom-0 right-0 p-8 opacity-5"><QrCode size={120} /></div>
           <div className="space-y-5 relative z-10">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-white uppercase tracking-tighter italic text-lg">Deposit Address</h3>
+              <h3 className="font-black text-white uppercase tracking-tighter italic text-lg">Input Terminal</h3>
               <QrCode size={22} className="text-primary" />
             </div>
             <div className="bg-black/50 border border-primary/20 rounded-2xl p-5 flex flex-col items-center space-y-4 group/addr relative overflow-hidden">
@@ -389,7 +389,7 @@ const Wallet: React.FC = () => {
                   <ArrowDownLeft size={28} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Deposit USDC</h3>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Credit Assets</h3>
                   <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">BSC · Optimism · Ethereum</p>
                 </div>
               </div>
@@ -398,7 +398,7 @@ const Wallet: React.FC = () => {
               <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 mb-8">
                 <button onClick={() => { setDepositTab('manual'); setWeb3Error(''); }}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${depositTab === 'manual' ? 'bg-primary text-white' : 'text-slate-500'}`}>
-                  Manual (paste tx)
+                  Hash Authorization
                 </button>
                 <button onClick={() => { setDepositTab('web3'); setWeb3Error(''); }}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${depositTab === 'web3' ? 'bg-accent/20 text-accent border border-accent/20' : 'text-slate-500'}`}>
@@ -460,7 +460,7 @@ const Wallet: React.FC = () => {
 
                   <button onClick={handleDepositSubmit} disabled={isSubmitting || !depositAmount || !txHash}
                     className="w-full primary-button py-5 text-xs font-black uppercase tracking-[0.3em] disabled:opacity-40">
-                    {isSubmitting ? 'Submitting...' : 'Submit Deposit for Review'}
+                    {isSubmitting ? 'Verifying...' : 'Authorize Transaction'}
                   </button>
                 </div>
               ) : (
@@ -528,8 +528,8 @@ const Wallet: React.FC = () => {
                   <ArrowUpRight size={28} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Withdraw USDC</h3>
-                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Balance: {(wallet?.balance_usdc || 0).toFixed(4)} USDC</p>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Asset Settlement</h3>
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Available Margin: {(wallet?.balance_usdc || 0).toFixed(4)} USDC</p>
                 </div>
               </div>
 
@@ -590,14 +590,14 @@ const Wallet: React.FC = () => {
                 )}
 
                 <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 space-y-1">
-                  <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Important</p>
-                  <p className="text-[10px] text-slate-500 leading-relaxed">Withdrawals are processed manually within 24 hours. Minimum: 10 USDC. Always double-check the address — transactions on blockchain are irreversible.</p>
+                  <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Node Compliance</p>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">Settlements are processed manually within 24 hours. Minimum: 10 USDC. Always double-check the endpoint — blockchain transfers are irreversible.</p>
                 </div>
 
                 <button onClick={handleWithdrawSubmit} disabled={withdrawSubmitting || !withdrawAmount || !withdrawAddress}
                   className="w-full py-5 bg-rose-500 text-white font-black text-xs uppercase tracking-[0.3em] rounded-2xl shadow-xl shadow-rose-500/30 hover:scale-[1.02] transition-all disabled:opacity-40 flex items-center justify-center space-x-2">
                   <ArrowUpRight size={18} />
-                  <span>{withdrawSubmitting ? 'Submitting...' : `Withdraw ${withdrawAmount || '0'} USDC → ${withdrawNetwork.name}`}</span>
+                  <span>{withdrawSubmitting ? 'Syncing...' : `Settle ${withdrawAmount || '0'} USDC → ${withdrawNetwork.name}`}</span>
                 </button>
               </div>
             </motion.div>

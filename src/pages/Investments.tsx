@@ -92,7 +92,7 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
             <div>
               <h4 className="font-black text-white text-lg italic tracking-tighter">{plan.name}</h4>
               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em]">
-                {isUnlocked ? '✅ MATURED' : `${daysLeft}d remaining`}
+                {isUnlocked ? '✅ TERMINATED' : `${daysLeft}d left in cycle`}
               </p>
             </div>
           </div>
@@ -128,7 +128,7 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
               className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest italic transition-all border ${interestAvailable > 0 ? 'bg-accent/10 hover:bg-accent text-accent hover:text-black border-accent/30' : 'bg-white/3 text-slate-700 border-white/5 cursor-not-allowed'}`}
             >
               {interestAvailable > 0 ? <Unlock size={14} /> : <Lock size={14} />}
-              <span>{interestAvailable > 0 ? 'Collect Alpha' : 'Locked'}</span>
+              <span>{interestAvailable > 0 ? 'Protocol Settlement' : 'Locked'}</span>
             </button>
 
             <button
@@ -175,8 +175,8 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
                   <div className="flex items-center space-x-3 mb-4">
                     <div className="p-2 bg-accent/20 rounded-xl"><Unlock size={16} className="text-accent" /></div>
                     <div>
-                      <h5 className="font-black text-accent italic tracking-tighter text-sm">💸 Your Interest (Withdrawable)</h5>
-                      <p className="text-[9px] text-slate-500 uppercase tracking-widest">Every {periodDays} days — does not reduce principal</p>
+                      <h5 className="font-black text-accent italic tracking-tighter text-sm">💸 Alpha Performance (Withdrawable)</h5>
+                      <p className="text-[9px] text-slate-500 uppercase tracking-widest">Calculated every {periodDays} days</p>
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -194,7 +194,7 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
                     </div>
                     <div className="h-px bg-white/5" />
                     <p className="text-[10px] text-slate-500 italic leading-relaxed">
-                      ✅ Your principal <strong className="text-white">${inv.amount.toLocaleString()}</strong> stays locked and returns in full at maturity regardless of how many interest withdrawals you make.
+                      ✅ Your active margin <strong className="text-white">${inv.amount.toLocaleString()}</strong> remains deployed and returns in full upon cycle completion.
                     </p>
                   </div>
                 </div>
@@ -233,7 +233,7 @@ function ActiveInvestmentCard({ inv, onWithdraw }: { inv: Investment; onWithdraw
               {/* Payout Schedule */}
               <div>
                 <h5 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4 flex items-center">
-                  <Calendar size={12} className="mr-2" /> Interest Payout Schedule (every {periodDays} days)
+                  <Calendar size={12} className="mr-2" /> Alpha Payout Schedule (every {periodDays} days)
                 </h5>
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-2">
                   {Array.from({ length: totalPeriods }).map((_, i) => {
@@ -419,23 +419,23 @@ const Investments: React.FC = () => {
         type: 'profit',
         amount: withdrawAmount,
         description: partial 
-          ? `Interest withdrawal from ${plan.name} (${rate}% / ${periodDays}d)`
-          : `Maturity payout from ${plan.name} — Principal + Interest`,
+          ? `Settlement from ${plan.name} Node (${rate}% / ${periodDays}d)`
+          : `Final settlement from ${plan.name} — Margin + Alpha`,
         status: 'completed'
       });
 
       setWallet({ ...wallet, balance_usdc: newBalance });
       addNotification(
         profile.id, 
-        partial ? '💸 Interest Withdrawn' : '🎉 Plan Matured!', 
-        `$${withdrawAmount.toFixed(4)} USDC has been credited to your wallet.`, 
+        partial ? '💸 Yield Settled' : '🎉 Cycle Terminated!', 
+        `$${withdrawAmount.toFixed(4)} USDC has been credited to your node.`, 
         'success'
       );
       fetchActiveInvestments();
       fetchHistoryInvestments();
     } catch (err) {
       console.error(err);
-      addNotification(profile.id, 'Withdrawal Error', 'Could not process withdrawal. Please try again.', 'error');
+      addNotification(profile.id, 'Execution Error', 'Could not process settlement. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -450,7 +450,7 @@ const Investments: React.FC = () => {
       return;
     }
     if (amount > wallet.balance_usdc) {
-      addNotification(profile.id, 'Insufficient Balance', 'You do not have enough USDC in your wallet.', 'error');
+      addNotification(profile.id, 'Insufficient Assets', 'You do not have enough USDC available for this allocation.', 'error');
       return;
     }
 
@@ -477,20 +477,20 @@ const Investments: React.FC = () => {
         user_id: profile.id,
         type: 'investment',
         amount,
-        description: `Investment in ${selectedPlan.name}`,
+        description: `Deployment in ${selectedPlan.name}`,
         status: 'completed'
       });
 
       await handleReferralRewards(profile.id, amount);
-      addNotification(profile.id, '🚀 Investment Active', `$${amount.toFixed(2)} USDC locked in ${selectedPlan.name}. Compound interest starts now.`, 'success');
+      addNotification(profile.id, '🚀 Strategy Active', `$${amount.toFixed(2)} USDC allocated in ${selectedPlan.name}. Logic execution starts now.`, 'success');
       setWallet({ ...wallet, balance_usdc: newBalance });
       setSelectedPlan(null);
       setInvestmentAmount('');
       fetchActiveInvestments();
       setActiveTab('active');
     } catch (error: any) {
-      console.error('Investment error:', error);
-      addNotification(profile.id, 'Investment Failed', error.message || 'An error occurred. Please try again.', 'error');
+      console.error('Deployment error:', error);
+      addNotification(profile.id, 'Deployment Failed', error.message || 'An error occurred during execution.', 'error');
     } finally {
       setLoading(false);
     }
@@ -533,14 +533,14 @@ const Investments: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-4xl font-black text-white italic tracking-tighter">Trading Strategies</h1>
-          <p className="text-slate-400 mt-1 text-sm">Execute AI-driven trading models with targeted alpha cycles.</p>
+          <h1 className="text-2xl md:text-4xl font-black text-white italic tracking-tighter">Execution Strategies</h1>
+          <p className="text-slate-400 mt-1 text-sm">Monitor and trigger high-frequency algorithmic models.</p>
         </div>
         <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 self-start">
           {([
-            { key: 'plans', icon: PlusCircle, label: 'New Strategy' },
-            { key: 'active', icon: TrendingUp, label: `Running (${activeInvestments.length})` },
-            { key: 'history', icon: History, label: 'Execution Log' }
+            { key: 'plans', icon: PlusCircle, label: 'Add Logic' },
+            { key: 'active', icon: TrendingUp, label: `Active (${activeInvestments.length})` },
+            { key: 'history', icon: History, label: 'Execution Logs' }
           ] as const).map(({ key, icon: Icon, label }) => (
             <button
               key={key}
@@ -570,8 +570,8 @@ const Investments: React.FC = () => {
                   <ShieldCheck size={18} />
                   <span className="text-xs font-black uppercase tracking-[0.3em]">Strategy Reserve Fund</span>
                 </div>
-                <h2 className="text-2xl font-black text-white italic tracking-tighter">Capital Protection Active</h2>
-                <p className="text-slate-400 max-w-xl text-sm">All models are backed by our 500,000 USDC reserve. Margin and alpha are fully guaranteed.</p>
+                <h2 className="text-2xl font-black text-white italic tracking-tighter">Margin Protection Active</h2>
+                <p className="text-slate-400 max-w-xl text-sm">All models are backed by our security framework. Executed margin is 1:1 asset backed.</p>
               </div>
               <div className="flex flex-col items-end shrink-0">
                 <span className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Pool Balance</span>
@@ -625,7 +625,7 @@ const Investments: React.FC = () => {
                           Black<br />Sovereign
                         </h3>
                         <p className="text-slate-400 mt-3 text-sm leading-relaxed max-w-xs">
-                          The apex investment tier. Reserved for elite capital operators. Institutional-grade compounding with maximum yield protection.
+                          Tier 1 execution protocol. Professional-grade algorithmic cycle with high-density output optimization.
                         </p>
                       </div>
 
@@ -633,7 +633,7 @@ const Investments: React.FC = () => {
                         <span className="text-6xl font-black italic" style={{ color: '#facd00', textShadow: '0 0 30px rgba(234,179,8,0.5)' }}>{plan.interest_rate}%</span>
                         <div className="pb-2">
                           <p className="text-slate-400 text-sm font-bold leading-tight">every {plan.interest_period_days} days</p>
-                          <p className="text-[10px] text-slate-600 uppercase tracking-widest">guaranteed yield</p>
+                          <p className="text-[10px] text-slate-600 uppercase tracking-widest">cycle efficiency</p>
                         </div>
                       </div>
                     </div>
@@ -641,12 +641,12 @@ const Investments: React.FC = () => {
                     {/* Center: Stats */}
                     <div className="lg:flex-1 grid grid-cols-2 md:grid-cols-3 gap-4">
                       {[
-                        { label: 'Lock Duration', value: `${plan.duration_days} Days`, sub: 'Capital lock period', icon: Clock },
-                        { label: 'Payout Cycle', value: `Every ${plan.interest_period_days}d`, sub: 'Withdrawable each cycle', icon: Calendar },
-                        { label: 'Min. Entry', value: `$${plan.min_amount.toLocaleString()}`, sub: 'USDC minimum', icon: DollarSign },
-                        { label: 'Max. Entry', value: `$${plan.max_amount.toLocaleString()}`, sub: 'USDC maximum', icon: TrendingUp },
-                        { label: 'Compound ROI', value: `+${(((compoundReturn - plan.min_amount) / plan.min_amount) * 100).toFixed(1)}%`, sub: `$${(compoundReturn - plan.min_amount).toLocaleString('en', { maximumFractionDigits: 0 })} on min`, icon: BarChart3 },
-                        { label: 'Advantage vs Simple', value: `+$${(compoundReturn - simpleReturn).toFixed(0)}`, sub: 'More by holding full term', icon: Zap },
+                        { label: 'Cycle Length', value: `${plan.duration_days} Days`, sub: 'Logic execution term', icon: Clock },
+                        { label: 'Payout Cluster', value: `Every ${plan.interest_period_days}d`, sub: 'Distributable alpha', icon: Calendar },
+                        { label: 'Min. Margin', value: `$${plan.min_amount.toLocaleString()}`, sub: 'Required to start', icon: DollarSign },
+                        { label: 'Max. Cap', value: `$${plan.max_amount.toLocaleString()}`, sub: 'Upper capacity', icon: TrendingUp },
+                        { label: 'Cumulative ROI', value: `+${(((compoundReturn - plan.min_amount) / plan.min_amount) * 100).toFixed(1)}%`, sub: `+$${(compoundReturn - plan.min_amount).toLocaleString('en', { maximumFractionDigits: 0 })} projected`, icon: BarChart3 },
+                        { label: 'Optimal Delta', value: `+$${(compoundReturn - simpleReturn).toFixed(0)}`, sub: 'Compounded bonus', icon: Zap },
                       ].map(({ label, value, sub, icon: Icon }) => (
                         <div key={label} className="rounded-2xl p-4 border" style={{ background: 'rgba(234,179,8,0.04)', borderColor: 'rgba(234,179,8,0.12)' }}>
                           <div className="flex items-center space-x-2 mb-2">
@@ -676,7 +676,7 @@ const Investments: React.FC = () => {
                       className="shrink-0 px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.3em] italic text-black transition-all"
                       style={{ background: 'linear-gradient(135deg, #facd00, #f59e0b)', boxShadow: '0 10px 40px rgba(234,179,8,0.35)' }}
                     >
-                      ♛ Access Sovereign Plan
+                      ♛ Deploy Sovereign Strategy
                     </motion.button>
                   </div>
                 </div>
@@ -732,7 +732,7 @@ const Investments: React.FC = () => {
                     onClick={() => setSelectedPlan(plan)}
                     className="w-full primary-button py-3 text-sm font-black flex items-center justify-center space-x-2 uppercase tracking-widest italic"
                   >
-                    <span>Start Plan</span>
+                    <span>Deploy Logic</span>
                     <ChevronRight size={18} />
                   </button>
                 </motion.div>
@@ -749,8 +749,8 @@ const Investments: React.FC = () => {
           {activeInvestments.length === 0 ? (
             <div className="glass-card p-16 flex flex-col items-center justify-center text-slate-700">
               <Zap size={48} className="mb-4 opacity-20" />
-              <p className="text-sm font-black uppercase italic tracking-widest text-center">No active investments. Start a plan to begin earning compound interest.</p>
-              <button onClick={() => setActiveTab('plans')} className="mt-6 primary-button text-sm px-6 py-3">Browse Plans</button>
+              <p className="text-sm font-black uppercase italic tracking-widest text-center">No active strategies. Deploy a node to begin algorithm execution.</p>
+              <button onClick={() => setActiveTab('plans')} className="mt-6 primary-button text-sm px-6 py-3">Browse Models</button>
             </div>
           ) : (
             activeInvestments.map(inv => (
@@ -766,7 +766,7 @@ const Investments: React.FC = () => {
           {historyInvestments.length === 0 ? (
             <div className="glass-card p-16 flex flex-col items-center justify-center text-slate-700">
               <History size={48} className="mb-4 opacity-20" />
-              <p className="text-sm font-black uppercase italic tracking-widest">No completed investments yet.</p>
+              <p className="text-sm font-black uppercase italic tracking-widest">No previous execution logs.</p>
             </div>
           ) : (
             historyInvestments.map((inv) => {
@@ -793,7 +793,7 @@ const Investments: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-3 gap-6 text-sm">
                       <div>
-                        <p className="text-[9px] text-slate-600 uppercase font-black tracking-widest mb-1">Invested</p>
+                        <p className="text-[9px] text-slate-600 uppercase font-black tracking-widest mb-1">Allocated</p>
                         <p className="text-white font-black italic">${inv.amount.toFixed(2)}</p>
                       </div>
                       <div>

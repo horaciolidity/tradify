@@ -42,9 +42,9 @@ const AdminPanel: React.FC = () => {
   const [editingAnnouncement, setEditingAnnouncement] = useState<any>(null);
   const [newBalanceValue, setNewBalanceValue] = useState<string>('');
   const [stats, setStats] = useState([
-    { label: 'Total Users', value: '0', icon: Users, change: '0' },
-    { label: 'Pending Deposits', value: '0', icon: Database, change: 'Critical' },
-    { label: 'Active Investments', value: '0', icon: Activity, change: '0' },
+    { label: 'Network Entities', value: '0', icon: Users, change: '0' },
+    { label: 'Pending Auth', value: '0', icon: Database, change: 'Critical' },
+    { label: 'Active Nodes', value: '0', icon: Activity, change: '0' },
     { label: 'Liquidity Pool', value: '$500,000', icon: ShieldAlert, change: 'Stable' },
   ]);
 
@@ -130,9 +130,9 @@ const AdminPanel: React.FC = () => {
           .eq('status', 'active');
         
         setStats([
-          { label: 'Users Network', value: totalUsers.toString(), icon: Users, change: '+2.4%' },
+          { label: 'Network Entities', value: totalUsers.toString(), icon: Users, change: '+2.4%' },
           { label: 'Pending Authorizations', value: (txData?.length || 0).toString(), icon: Database, change: 'Action Required' },
-          { label: 'Active Smart Plans', value: (activeInvs || 0).toString(), icon: Activity, change: '+5.2%' },
+          { label: 'Active Logic Nodes', value: (activeInvs || 0).toString(), icon: Activity, change: '+5.2%' },
           { label: 'Pool Guaranteed', value: `$${(systemSettings.pool_guaranteed?.amount || totalDeposits).toLocaleString()}`, icon: ShieldAlert, change: 'Stable' },
         ]);
       }
@@ -217,10 +217,10 @@ const AdminPanel: React.FC = () => {
       // Notify user
       await supabase.from('notifications').insert({
         user_id: transaction.user_id,
-        title: transaction.type === 'deposit' ? 'Deposit Approved' : 'Withdrawal Approved',
+        title: transaction.type === 'deposit' ? 'Asset Credit Confirmed' : 'Settlement Authorized',
         message: transaction.type === 'deposit' 
-          ? `Your deposit of ${transaction.amount} USDC has been confirmed. Network synchronization complete.`
-          : `Your withdrawal of ${transaction.amount} USDC has been processed. Check your wallet.`,
+          ? `Your credit of ${transaction.amount} USDC has been confirmed. Network synchronization complete.`
+          : `Your settlement of ${transaction.amount} USDC has been processed. Check your node terminal.`,
         type: 'success'
       });
 
@@ -430,12 +430,12 @@ const AdminPanel: React.FC = () => {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {[
-                  { key: 'reg_gate', name: 'User Registrations' },
-                  { key: 'deposit_gate', name: 'USDC Deposits' },
-                  { key: 'withdraw_gate', name: 'Withdrawals' },
-                  { key: 'yield_gate', name: 'Yield Distribution' },
-                  { key: 'asset_gate', name: 'Asset Creation' },
-                  { key: 'ref_gate', name: 'Referral Engine' },
+                  { key: 'reg_gate', name: 'Entity Registrations' },
+                  { key: 'deposit_gate', name: 'Asset Injections' },
+                  { key: 'withdraw_gate', name: 'Settlements' },
+                  { key: 'yield_gate', name: 'Alpha Distribution' },
+                  { key: 'asset_gate', name: 'Market Creation' },
+                  { key: 'ref_gate', name: 'Signal Engine' },
                 ].map((item) => {
                   const isActive = (systemSettings.system_gates || {})[item.key] !== false;
                   return (
@@ -618,7 +618,7 @@ const AdminPanel: React.FC = () => {
                           className="flex items-center space-x-2 px-4 py-2 bg-accent/20 text-accent border border-accent/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-accent hover:text-dark transition-all"
                         >
                           <CheckCircle2 size={14} />
-                          <span>Approve</span>
+                          <span>Authorize</span>
                         </button>
                         <button 
                           onClick={() => rejectTransaction(tx)}
@@ -707,7 +707,7 @@ const AdminPanel: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Protocol Configuration</h3>
-                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Interest Engine Parameters</p>
+                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Alpha Generation Engine</p>
                   </div>
                 </div>
 
