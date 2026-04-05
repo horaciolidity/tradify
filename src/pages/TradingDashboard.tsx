@@ -785,8 +785,8 @@ const TradingDashboard: React.FC = () => {
             <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-10">
-            <div className="xl:col-span-8 space-y-6 md:space-y-8">
+          <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6 md:gap-10">
+            <div className="2xl:col-span-8 space-y-6 md:space-y-8">
               <div className="flex items-center justify-between px-2">
                  <div className="flex items-center space-x-4">
                     <h3 className="terminal-label">Active Trades //</h3>
@@ -830,7 +830,7 @@ const TradingDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="xl:col-span-4 shrink-0">
+            <div className="2xl:col-span-4 shrink-0">
                <div className="flex items-center space-x-4 mb-8 px-2 border-b border-white/5 pb-4">
                   <h3 className="terminal-label">Social Trading Feed //</h3>
                </div>
@@ -984,73 +984,122 @@ function LiveFlashPositionRow({ position, currentPrice, isSettling, onClose }: a
     <motion.div 
       initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="group transition-all hover:bg-white/[0.03] relative"
+      className="group transition-all hover:bg-white/[0.03] relative border-b border-white/5 last:border-0"
     >
       {(pnlPct > 5) && (
         <div className="absolute inset-0 bg-accent/5 blur-xl pointer-events-none" />
       )}
-      <div className="flex flex-col md:grid md:grid-cols-6 gap-4 p-6 md:px-8 md:py-6 items-center">
-         <div className="w-full md:w-auto flex items-center space-x-4">
-            <div className={`p-3 rounded-xl ${isLong ? 'bg-accent/10 text-accent ring-1 ring-accent/20' : 'bg-error/10 text-error ring-1 ring-error/20'} transition-all group-hover:scale-110 shadow-lg`}>
+      
+      {/* PROFESSIONAL PC LAYOUT (Table-like density) */}
+      <div className="hidden lg:grid grid-cols-[1.5fr,1fr,2fr,1.5fr,1.2fr,1.2fr] gap-4 px-8 py-5 items-center">
+         {/* Asset & Direction */}
+         <div className="flex items-center space-x-4">
+            <div className={`p-2.5 rounded-xl ${isLong ? 'bg-accent/10 text-accent ring-1 ring-accent/20' : 'bg-error/10 text-error ring-1 ring-error/20'} transition-all group-hover:scale-105`}>
                {isLong ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
             </div>
-            <div>
-               <p className="text-sm font-black text-white italic tracking-tighter uppercase leading-none mb-1">{position.symbol}</p>
-               <span className={`text-[9px] font-black uppercase italic tracking-[0.2em] ${isLong ? 'text-accent' : 'text-error'}`}>{isLong ? 'BUY' : 'SELL'} OPERATION</span>
+            <div className="min-w-0">
+               <p className="text-sm font-black text-white uppercase tracking-tighter truncate">{position.symbol}</p>
+               <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${isLong ? 'text-accent' : 'text-error'}`}>{isLong ? 'LONG-NODE' : 'SHORT-NODE'}</span>
             </div>
          </div>
 
-         <div className="w-full md:w-auto flex justify-between md:block px-2">
-            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Size</span>
-            <div className="text-right md:text-left">
-               <p className="text-sm font-mono font-bold text-slate-300 italic opacity-80">${position.amount_usdc.toFixed(2)}</p>
-               <p className="text-[10px] font-mono font-bold text-slate-500 tracking-tighter opacity-80">
-                  {(position.amount_asset || (position.amount_usdc / entryPrice)).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 6 })} {position.symbol.split('/')[0]}
+         {/* Position Size */}
+         <div className="flex flex-col">
+            <span className="terminal-label !text-[8px] opacity-40 mb-1">MARGIN //</span>
+            <p className="text-sm font-mono font-bold text-white tracking-tighter">${position.amount_usdc.toFixed(2)}</p>
+         </div>
+
+         {/* Price Flow */}
+         <div className="flex items-center space-x-4">
+            <div className="flex flex-col">
+               <span className="terminal-label !text-[8px] opacity-40 mb-1">ENTRY //</span>
+               <p className="text-xs font-mono font-bold text-slate-500">{entryPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            </div>
+            <ChevronRight size={14} className="text-slate-800 mt-2" />
+            <div className="flex flex-col">
+               <span className="terminal-label !text-[8px] opacity-40 mb-1">MARK //</span>
+               <p className="text-xs font-mono font-black text-white">{currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            </div>
+         </div>
+
+         {/* PnL Engine */}
+         <div className="flex flex-col items-end text-right px-4">
+            <div className="flex items-center space-x-2">
+               <p className={`text-base font-mono font-black tracking-tighter ${(pnlPct || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+                  {(pnlPct || 0) >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(2)}%
                </p>
+               <div className={`w-1.5 h-1.5 rounded-full ${(pnlPct || 0) >= 0 ? 'bg-accent shadow-[0_0_10px_#4ade80]' : 'bg-error shadow-[0_0_10px_#fb7185]'} animate-pulse`} />
+            </div>
+            <p className={`text-[9px] font-mono font-black tracking-wider ${(pnlUsdc || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+               {(pnlUsdc || 0) >= 0 ? '+' : '-'}${Math.abs(pnlUsdc || 0).toFixed(2)} USDC
+            </p>
+         </div>
+
+         {/* Mode */}
+         <div className="flex justify-center">
+            <div className="flex items-center space-x-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 shadow-inner">
+               <Activity size={10} className="text-primary opacity-50" />
+               <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">PERPETUAL</span>
             </div>
          </div>
 
-         <div className="w-full md:w-auto flex justify-between md:block px-2">
-            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Prices</span>
-            <div className="text-right md:text-left">
-               <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-tighter opacity-70">En: {entryPrice.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</p>
-               <p className="text-sm font-mono font-black text-white italic tracking-tighter">Mk: {currentPrice.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</p>
-            </div>
-         </div>
-
-          <div className="w-full md:w-auto flex justify-between md:block px-2">
-            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Live Result</span>
-            <div className="text-right md:text-left">
-               <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1 block">Live Result</span>
-               <div className="flex items-center md:justify-start justify-end space-x-3">
-                  <p className={`text-base font-mono font-black italic tracking-tighter ${(pnlPct || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
-                     {(pnlPct || 0) >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(4)}%
-                  </p>
-                  <div className={`w-1.5 h-1.5 rounded-full ${(pnlPct || 0) >= 0 ? 'bg-accent shadow-[0_0_10px_#4ade80]' : 'bg-error shadow-[0_0_10px_#fb7185]'} animate-pulse`} />
-               </div>
-               <p className={`text-[10px] font-mono font-black italic tracking-wide ${(pnlUsdc || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
-                  {(pnlUsdc || 0) >= 0 ? '+' : '-'}${Math.abs(pnlUsdc || 0).toFixed(4)} USDC
-               </p>
-            </div>
-         </div>
-
-         <div className="w-full md:w-auto flex justify-between md:block px-2">
-            <span className="md:hidden text-[9px] font-black text-slate-600 uppercase tracking-widest">Type</span>
-            <div className="flex items-center space-x-3 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 w-fit shadow-inner">
-               <Activity size={12} className="text-primary animate-pulse" />
-               <span className="text-sm font-mono font-black text-white italic tracking-widest">PERPETUAL</span>
-            </div>
-         </div>
-
-         <div className="w-full md:w-auto text-right">
+         {/* Action */}
+         <div className="text-right">
             <button 
               onClick={onClose}
               disabled={isSettling}
-              className="w-full md:w-auto px-6 py-2 bg-rose-500/10 hover:bg-rose-500 text-white border border-rose-500/20 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] italic transition-all group-hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] active:scale-95 disabled:opacity-50"
+              className="w-full px-4 py-2 bg-rose-500/10 hover:bg-rose-500 text-white border border-rose-500/20 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all group-hover:shadow-[0_0_20px_rgba(244,63,94,0.3)] active:scale-95 disabled:opacity-50"
             >
-               {isSettling ? 'Syncing...' : 'Close Trade'}
+               {isSettling ? 'SYNCING' : 'CLOSE NODE'}
             </button>
          </div>
+      </div>
+
+      {/* MOBILE / TABLET LAYOUT (The one that was already working) */}
+      <div className="lg:hidden flex flex-col gap-4 p-6 items-center">
+         <div className="w-full flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+               <div className={`p-3 rounded-xl ${isLong ? 'bg-accent/10 text-accent ring-1 ring-accent/20' : 'bg-error/10 text-error ring-1 ring-error/20'}`}>
+                  {isLong ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
+               </div>
+               <div>
+                  <p className="text-sm font-black text-white italic tracking-tighter uppercase leading-none mb-1">{position.symbol}</p>
+                  <span className={`text-[9px] font-black uppercase italic tracking-[0.2em] ${isLong ? 'text-accent' : 'text-error'}`}>{isLong ? 'BUY' : 'SELL'} OPERATION</span>
+               </div>
+            </div>
+            <div className="text-right">
+               <p className={`text-lg font-mono font-black italic tracking-tighter ${(pnlPct || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+                  {(pnlPct || 0) >= 0 ? '+' : ''}${(pnlPct || 0).toFixed(2)}%
+               </p>
+            </div>
+         </div>
+
+         <div className="w-full grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+            <div className="space-y-1">
+               <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Entry Price</span>
+               <p className="text-xs font-mono font-bold text-slate-300">${entryPrice.toLocaleString()}</p>
+            </div>
+            <div className="space-y-1 text-right">
+               <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Mark Price</span>
+               <p className="text-xs font-mono font-bold text-white">${currentPrice.toLocaleString()}</p>
+            </div>
+            <div className="space-y-1">
+               <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Margin Value</span>
+               <p className="text-xs font-mono font-bold text-slate-300">${position.amount_usdc.toFixed(2)}</p>
+            </div>
+            <div className="space-y-1 text-right">
+               <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Contract</span>
+               <p className="text-[10px] font-black text-primary italic uppercase tracking-widest">PERPETUAL</p>
+            </div>
+         </div>
+
+         <button 
+           onClick={onClose}
+           disabled={isSettling}
+           className="w-full mt-2 py-3 bg-rose-500/10 hover:bg-rose-500 text-white border border-rose-500/20 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] italic active:scale-95 disabled:opacity-50"
+         >
+            {isSettling ? 'Settling...' : 'Close Flash Position'}
+         </button>
       </div>
     </motion.div>
   );
@@ -1293,7 +1342,7 @@ function OtherTradersLive({ othersActivePositions, onCopy, onFollow, followedIds
         <h3 className="text-[10px] font-black text-white italic tracking-[0.4em] uppercase font-display">Live Signal Feed</h3>
         <div className="h-0.5 flex-1 bg-white/5" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
         {othersActivePositions.map((pos: any) => {
           const isFollowed = followedIds.has(pos.user_id);
           const isWhale = pos.amount_usdc >= 1000;
