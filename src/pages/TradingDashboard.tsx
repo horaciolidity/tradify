@@ -848,7 +848,6 @@ const TradingDashboard: React.FC = () => {
           <TopTradersSidebar topTraders={topTraders} onFollow={toggleFollow} followedIds={followedIds} />
         </div>
       </div>
-      </div>
     </div>
   );
 };
