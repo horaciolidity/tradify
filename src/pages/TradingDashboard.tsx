@@ -671,12 +671,12 @@ const TradingDashboard: React.FC = () => {
                 </div>
              </div>
              <div className="flex items-center space-x-12">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] md:text-[10px] font-black text-slate-600 uppercase italic tracking-[0.3em] mb-0.5 md:mb-1">Market Benchmark</span>
-                    <span className="text-xl md:text-5xl font-mono font-black italic tracking-tighter font-display">
-                      ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                    </span>
-                 </div>
+                <div className="flex flex-col">
+                  <span className="terminal-label mb-1">Market Benchmark //</span>
+                  <span className="text-xl md:text-5xl font-mono font-black italic tracking-tighter font-display uppercase">
+                    ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                  </span>
+                </div>
                 <div className={`px-3 py-1 md:px-5 md:py-2.5 rounded-xl md:rounded-2xl text-[12px] md:text-[16px] font-black flex items-center italic shadow-2xl backdrop-blur-md ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/20 text-accent border border-accent/20' : 'bg-error/20 text-error border border-error/20'}`}>
                    {(currentTicker?.change || 0) >= 0 ? <TrendingUp size={20} className="mr-3" /> : <TrendingDown size={20} className="mr-3" />}
                    {((currentTicker?.change || 0) >= 0 ? '+' : '') + (currentTicker?.change || 0).toFixed(2)}%
@@ -785,13 +785,13 @@ const TradingDashboard: React.FC = () => {
             <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
           </div>
 
-          <div className="flex flex-col xl:flex-row gap-6 md:gap-8">
-            <div className="flex-1 space-y-6 md:space-y-8">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-10">
+            <div className="xl:col-span-8 space-y-6 md:space-y-8">
               <div className="flex items-center justify-between px-2">
                  <div className="flex items-center space-x-4">
-                    <h3 className="text-[10px] font-black text-white italic tracking-[0.4em] uppercase font-display">Active Trades</h3>
+                    <h3 className="terminal-label">Active Trades //</h3>
                     <div className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
-                      <span className="text-[8px] font-black text-primary uppercase italic tracking-widest">{activePositions.length}</span>
+                      <span className="text-[8px] font-black text-primary uppercase tracking-widest">{activePositions.length}</span>
                     </div>
                  </div>
                   <button 
@@ -824,13 +824,16 @@ const TradingDashboard: React.FC = () => {
                 {activePositions.length === 0 && (
                   <div className="glass-card p-12 flex flex-col items-center justify-center text-slate-700 bg-[#0B0E11]/40 border-white/5 border-dashed">
                      <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4"><Database size={24} className="opacity-20" /></div>
-                     <p className="text-[10px] font-black uppercase italic tracking-[0.2em] text-center leading-loose">Awaiting tactical signals. Deploy your first node above.</p>
+                     <p className="terminal-label text-center leading-loose">Awaiting tactical signals. Deploy your first node above.</p>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="xl:w-[400px] shrink-0">
+            <div className="xl:col-span-4 shrink-0">
+               <div className="flex items-center space-x-4 mb-8 px-2 border-b border-white/5 pb-4">
+                  <h3 className="terminal-label">Social Trading Feed //</h3>
+               </div>
                <OtherTradersLive othersActivePositions={othersActivePositions} onCopy={copyTrade} onFollow={toggleFollow} followedIds={followedIds} />
             </div>
           </div>

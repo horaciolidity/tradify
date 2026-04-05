@@ -114,9 +114,9 @@ const Dashboard: React.FC = () => {
             <Wallet className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-0.5 md:mb-1">Available Balance</p>
+            <p className="terminal-label mb-1">Available Balance //</p>
             <p className="text-xl md:text-4xl font-black text-white italic tracking-tighter">
-              {(wallet?.balance_usdc || 0).toLocaleString()} <span className="text-[8px] md:text-sm font-normal text-slate-500 not-italic uppercase tracking-widest ml-1">USDC</span>
+              {(wallet?.balance_usdc || 0).toLocaleString()} <span className="terminal-label !text-slate-500 ml-2">USDC</span>
             </p>
           </div>
             <ChevronRight size={20} className="text-slate-800 ml-auto md:ml-4 group-hover:text-primary transition-all group-hover:translate-x-1" />
@@ -149,8 +149,8 @@ const Dashboard: React.FC = () => {
             <div className={`p-2.5 md:p-4 bg-white/5 rounded-xl md:rounded-2xl w-fit mb-4 md:mb-8 border border-white/5 ${stat.color} group-hover:scale-110 transition-transform`}>
               <stat.icon className="w-5 h-5 md:w-7 md:h-7" />
             </div>
-            <p className="text-[7px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] md:tracking-[0.3em] mb-1 md:mb-2">{stat.label}</p>
-            <h3 className="text-lg md:text-4xl font-black text-white italic tracking-tighter leading-none">{stat.value}</h3>
+            <p className="terminal-label mb-2">{stat.label} //</p>
+            <h3 className="text-lg md:text-4xl font-black text-white tracking-tighter leading-none">{stat.value}</h3>
           </motion.div>
         ))}
       </div>
@@ -236,10 +236,10 @@ const Dashboard: React.FC = () => {
                 { label: 'Referral Mesh', active: true },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-5 bg-white/2 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
+                  <span className="terminal-label">{item.label}</span>
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 rounded-full bg-accent shadow-[0_0_15px_rgba(16,185,129,0.8)] animate-pulse" />
-                    <span className="text-[9px] font-black text-accent uppercase tracking-[0.2em]">Active</span>
+                    <span className="terminal-label !text-accent">Active</span>
                   </div>
                 </div>
               ))}
