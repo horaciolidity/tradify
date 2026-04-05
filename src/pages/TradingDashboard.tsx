@@ -194,14 +194,21 @@ const TradingDashboard: React.FC = () => {
 
     const myMarkers = activePositions
       .filter(p => p.symbol === selectedSymbol && p.status === 'active')
-      .map(p => ({
-        time: snapToBar(p.created_at),
-        position: p.type === 'long' ? 'belowBar' : 'aboveBar',
-        color: p.type === 'long' ? '#0ECB81' : '#F6465D',
-        shape: p.type === 'long' ? 'arrowUp' : 'arrowDown',
-        text: 'ENTRY',
-        size: 2
-      }));
+      .map(p => {
+        const entry = p.price_at_execution;
+        const current = tickers.find(t => t.symbol === p.symbol)?.price || currentTicker?.price || entry;
+        const pnl = ((current - entry) / entry) * 100 * (p.type === 'long' ? 1 : -1);
+        const pnlText = (pnl >= 0 ? '+' : '') + pnl.toFixed(1) + '%';
+        
+        return {
+          time: snapToBar(p.created_at),
+          position: p.type === 'long' ? 'belowBar' : 'aboveBar',
+          color: p.type === 'long' ? '#0ECB81' : '#F6465D',
+          shape: p.type === 'long' ? 'arrowUp' : 'arrowDown',
+          text: `MY ENTRY ${pnlText}`,
+          size: 2
+        };
+      });
 
     const otherMarkers = othersActivePositions
       .filter(p => p.symbol === selectedSymbol)
@@ -212,13 +219,22 @@ const TradingDashboard: React.FC = () => {
         const isActive = p.status === 'active';
         const eventTime = isActive ? p.created_at : p.settled_at;
         
+        // Calculate PnL for live trades
+        let pnlText = '';
+        if (isActive) {
+          const entry = p.price_at_execution;
+          const current = tickers.find(t => t.symbol === p.symbol)?.price || currentTicker?.price || entry;
+          const pnl = ((current - entry) / entry) * 100 * (p.type === 'long' ? 1 : -1);
+          pnlText = ` ${(pnl >= 0 ? '+' : '')}${pnl.toFixed(1)}%`;
+        }
+
         return {
           time: snapToBar(eventTime),
           position: p.type === 'long' ? 'belowBar' : 'aboveBar',
           color: isActive ? color : 'rgba(255,255,255,0.2)',
           shape: !isActive ? 'square' : (p.type === 'long' ? 'arrowUp' : 'arrowDown'),
           size: getMarkerSize(p.amount_usdc, isFollowed),
-          text: isActive ? `${p.profiles?.full_name?.split(' ')[0] || 'Trader'} ${isWhale ? '🐳' : ''}` : '🔚',
+          text: isActive ? `${p.profiles?.full_name?.split(' ')[0] || 'Trader'}${isWhale ? ' 🐳' : ''}${pnlText}` : '🔚',
         };
       });
     
