@@ -91,11 +91,13 @@ const Dashboard: React.FC = () => {
             <div className="w-8 md:w-10 h-[2px] bg-primary/30 rounded-full" />
             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Trading Dashboard</span>
           </div>
-          <h1 className="text-3xl md:text-7xl font-black text-white tracking-tighter italic leading-tight md:leading-none font-display">
-            Welcome, <br className="hidden md:block" />
-            <span className="bg-gradient-to-r from-primary via-indigo-400 to-accent bg-clip-text text-transparent">
-              {profile?.full_name?.split(' ')[0] || 'Member'}
+          <h1 className="text-[10px] md:text-[12px] font-medium text-slate-500 uppercase tracking-[0.5em] flex items-center">
+            <span className="w-6 h-[1px] bg-primary/30 mr-4" />
+            WELCOME //  
+            <span className="ml-3 text-white font-black tracking-[0.2em]">
+              {profile?.full_name?.toUpperCase() || 'MEMBER'}
             </span>
+            <span className="ml-4 w-2 h-2 rounded-full bg-primary animate-pulse" />
           </h1>
           <p className="text-slate-500 font-bold italic tracking-wide flex items-center text-xs md:text-sm">
             <Zap size={14} className="text-accent mr-2" />

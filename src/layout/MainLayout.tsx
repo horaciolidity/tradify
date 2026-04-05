@@ -111,11 +111,11 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
       `}>
         <div className="flex flex-col h-full p-6">
-          <div className="flex items-center space-x-3 mb-10 px-2">
-            <div className="w-10 h-10 flex items-center justify-center">
+          <div className="flex items-center space-x-4 mb-12 px-2 bg-black/20 p-3 rounded-full border border-white/5 shadow-inner">
+            <div className="w-10 h-10 flex items-center justify-center bg-dark rounded-full border border-white/10 p-1.5 shadow-2xl">
               <img src="/tradify_logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-xl md:text-2xl font-bold tracking-tight text-white italic">Tradify</span>
+            <span className="text-xl font-black tracking-[0.2em] text-white uppercase font-display italic">Tradify</span>
           </div>
 
           <nav className="flex-1 space-y-2">
