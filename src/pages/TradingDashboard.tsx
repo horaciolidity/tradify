@@ -84,6 +84,23 @@ const TradingDashboard: React.FC = () => {
       wickDownColor: '#F6465D',
     });
 
+    const volumeSeries = chart.addHistogramSeries({
+      color: '#26a69a',
+      priceFormat: { type: 'volume' },
+      priceScaleId: '', 
+    });
+
+    volumeSeries.priceScale().applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
+
+    const emaSeries = chart.addLineSeries({
+      color: 'rgba(252, 186, 44, 0.4)',
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+    });
+
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
 
@@ -91,6 +108,24 @@ const TradingDashboard: React.FC = () => {
       const data = await MarketService.getHistory(selectedSymbol, selectedTimeframe);
       if (candlestickSeriesRef.current && data.length > 0) {
         candlestickSeriesRef.current.setData(data as any);
+        
+        // Add Volume Data
+        const volData = data.map((d: any) => ({
+          time: d.time,
+          value: Math.random() * 100, 
+          color: d.close >= d.open ? 'rgba(14, 203, 129, 0.3)' : 'rgba(246, 70, 93, 0.3)'
+        }));
+        volumeSeries.setData(volData as any);
+
+        // Add EMA Data (Simple 20-period for visualization)
+        const emaData = data.map((d: any, i: number) => {
+          if (i < 20) return null;
+          const subset = data.slice(i - 20, i);
+          const avg = subset.reduce((acc: number, curr: any) => acc + curr.close, 0) / 20;
+          return { time: d.time, value: avg };
+        }).filter(Boolean);
+        emaSeries.setData(emaData as any);
+
         latestBarRef.current = { ...data[data.length - 1] };
       }
     };
@@ -145,19 +180,26 @@ const TradingDashboard: React.FC = () => {
 
     const getMarkerSize = (amount: number, isFollowed: boolean) => {
       if (isFollowed) return 2;
-      if (amount >= 5000) return 3; // Whale trades are huge
+      if (amount >= 5000) return 3; 
       if (amount >= 1000) return 2;
       return 1;
+    };
+
+    // Helper to snap a timestamp to the nearest bar time (assuming 15m default if not found)
+    const snapToBar = (timestamp: string | number) => {
+      const timeSec = Math.floor(new Date(timestamp).getTime() / 1000);
+      // Snap to 1-minute intervals (the smallest unit in the sim) to ensure markers stick to bars
+      return Math.floor(timeSec / 60) * 60;
     };
 
     const myMarkers = activePositions
       .filter(p => p.symbol === selectedSymbol && p.status === 'active')
       .map(p => ({
-        time: Math.floor(new Date(p.created_at).getTime() / 1000),
+        time: snapToBar(p.created_at),
         position: p.type === 'long' ? 'belowBar' : 'aboveBar',
         color: p.type === 'long' ? '#0ECB81' : '#F6465D',
         shape: p.type === 'long' ? 'arrowUp' : 'arrowDown',
-        text: 'MY ENTRY',
+        text: 'ENTRY',
         size: 2
       }));
 
@@ -168,14 +210,15 @@ const TradingDashboard: React.FC = () => {
         const isWhale = p.amount_usdc >= 5000;
         const color = getVolumeColor(p.amount_usdc, isFollowed, p.type);
         const isActive = p.status === 'active';
+        const eventTime = isActive ? p.created_at : p.settled_at;
         
         return {
-          time: Math.floor(new Date(isActive ? p.created_at : p.settled_at).getTime() / 1000),
+          time: snapToBar(eventTime),
           position: p.type === 'long' ? 'belowBar' : 'aboveBar',
           color: isActive ? color : 'rgba(255,255,255,0.2)',
           shape: !isActive ? 'square' : (p.type === 'long' ? 'arrowUp' : 'arrowDown'),
           size: getMarkerSize(p.amount_usdc, isFollowed),
-          text: `${p.profiles?.full_name?.split(' ')[0] || 'Trader'} ${isActive ? (isWhale ? '🐳' : '') : '🔚'}`,
+          text: isActive ? `${p.profiles?.full_name?.split(' ')[0] || 'Trader'} ${isWhale ? '🐳' : ''}` : '🔚',
         };
       });
     
@@ -638,62 +681,72 @@ const TradingDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 md:gap-8">
-        <div className="lg:col-span-3 space-y-6 md:space-y-8 order-1">
-          {/* Main Visual Terminal */}
+      <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 md:gap-8 overflow-visible">
+        {/* Main Content: Chart + Lists (3 Columns on Desktop) */}
+        <div className="lg:col-span-3 space-y-6 md:space-y-8">
+          
+          {/* Main Visual Terminal / CHART */}
           <motion.div 
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-4 md:p-10 h-[400px] md:h-[800px] flex flex-col relative group overflow-hidden border-white/5 bg-[#0B0E11]/60 shadow-[0_40px_100px_rgba(0,0,0,0.5)]"
+            initial={{ opacity: 0, scale: 0.98 }} 
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-card p-4 md:p-8 h-[500px] md:h-[700px] flex flex-col relative group overflow-hidden border-white/5 bg-[#0B0E11]/80 shadow-[0_40px_100px_rgba(0,0,0,0.6)]"
           >
             <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[150px] pointer-events-none" />
-            
-            <div className="flex items-center justify-between mb-10 border-b border-white/5 pb-10">
-               <div className="flex space-x-16">
-                  <div>
-                     <span className="text-[12px] font-black text-slate-600 uppercase italic tracking-widest mb-2 block">Live Price Stream</span>
+            <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-6">
+               <div className="flex items-center space-x-12">
+                  <div className="flex flex-col">
+                     <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest mb-1 block">Live Price Stream</span>
                      <div className="flex items-center space-x-3">
                         <Activity size={16} className="text-primary animate-pulse" />
-                        <span className="text-sm font-black text-white italic tracking-widest uppercase">STABLE CONNECTION</span>
+                        <span className="text-xs font-black text-white italic tracking-widest uppercase">STABLE SYNC</span>
                      </div>
                   </div>
-                  <div className="hidden md:block">
-                     <span className="text-[12px] font-black text-slate-600 uppercase italic tracking-widest mb-2 block">Trading Security</span>
+                  <div className="hidden md:flex flex-col">
+                     <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest mb-1 block">Visual Strategy</span>
                      <div className="flex items-center space-x-3 text-accent">
-                        <ShieldCheck size={16} />
-                        <span className="text-sm font-black italic tracking-widest uppercase">PROTECTED</span>
+                        <Waves size={16} />
+                        <span className="text-xs font-black italic tracking-widest uppercase">AUTO-INDICATORS ACTIVE</span>
                      </div>
                   </div>
                </div>
-               <div className="flex items-center space-x-6">
-                  <div className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
-                     <span className="text-[10px] font-black text-primary italic tracking-[0.3em] uppercase tracking-tighter">ACCOUNT ID: {profile?.id?.substring(0,8)}</span>
+               <div className="flex items-center space-x-4">
+                  <div className="px-4 py-1 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
+                     <span className="text-[8px] font-black text-primary italic tracking-widest uppercase uppercase">U-ID: {profile?.id?.substring(0,6)}</span>
                   </div>
                </div>
             </div>
+            
             <div ref={chartContainerRef} className="flex-1 w-full" />
 
-            {/* FLOATING PNL MONITOR */}
+            {/* LIVE PNL FLOATING CARD */}
             <AnimatePresence>
                {activePositions.filter(p => p.symbol === selectedSymbol).length > 0 && (
                   <motion.div 
-                    initial={{ opacity: 0, scale: 0.8, x: 20 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.8, x: 20 }}
-                    className="absolute top-32 right-12 z-[50]"
+                    initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+                    className="absolute top-24 right-8 z-[50]"
                   >
-                     <div className={`px-6 py-4 rounded-[1.5rem] border backdrop-blur-3xl shadow-2xl transition-all duration-500 ${
+                     <div className={`p-6 rounded-3xl border backdrop-blur-3xl shadow-2xl transition-all duration-500 bg-[#0B0E11]/80 ${
                         activePositions.reduce((acc, p) => {
                            if (p.symbol !== selectedSymbol) return acc;
                            const entry = p.price_at_execution;
                            const curr = tickers.find(t => t.symbol === p.symbol)?.price || currentTicker?.price || entry;
                            const diff = (curr - entry) / entry;
                            return acc + (p.type === 'long' ? diff : -diff);
-                        }, 0) >= 0 ? 'bg-accent/10 border-accent/20 text-accent shadow-accent/20' : 'bg-error/10 border-error/20 text-error shadow-error/20'
+                        }, 0) >= 0 ? 'border-accent/40 shadow-accent/10' : 'border-error/40 shadow-error/10'
                      }`}>
                         <div className="flex flex-col items-end">
-                           <span className="text-[10px] font-black uppercase tracking-[0.3em] mb-1 opacity-60 italic">Live Position PnL</span>
-                           <div className="flex items-center space-x-3">
-                              <span className="text-4xl font-black italic tracking-tighter">
+                           <span className="text-[8px] font-black uppercase tracking-[0.3em] mb-1 text-slate-500 italic">Live Deployment PnL</span>
+                           <div className="flex items-center space-x-2">
+                              <span className={`text-4xl font-black italic tracking-tighter ${
+                                activePositions.reduce((acc, p) => {
+                                  if (p.symbol !== selectedSymbol) return acc;
+                                  const entry = p.price_at_execution;
+                                  const curr = tickers.find(t => t.symbol === p.symbol)?.price || currentTicker?.price || entry;
+                                  const diff = (curr - entry) / entry;
+                                  const gain = p.type === 'long' ? p.amount_usdc * diff : -p.amount_usdc * diff;
+                                  return acc + gain;
+                                }, 0) >= 0 ? 'text-accent' : 'text-error'
+                              }`}>
                                  {activePositions.reduce((acc, p) => {
                                     if (p.symbol !== selectedSymbol) return acc;
                                     const entry = p.price_at_execution;
@@ -703,22 +756,7 @@ const TradingDashboard: React.FC = () => {
                                     return acc + gain;
                                  }, 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                               </span>
-                              <span className="text-[14px] font-black italic tracking-widest mt-1">USDC</span>
-                           </div>
-                           <div className="w-full h-1 bg-white/5 rounded-full mt-3 overflow-hidden">
-                              <motion.div 
-                                 className={`h-full ${
-                                    activePositions.reduce((acc, p) => {
-                                       if (p.symbol !== selectedSymbol) return acc;
-                                       const entry = p.price_at_execution;
-                                       const curr = tickers.find(t => t.symbol === p.symbol)?.price || currentTicker?.price || entry;
-                                       const diff = (curr - entry) / entry;
-                                       return acc + (p.type === 'long' ? diff : -diff);
-                                    }, 0) >= 0 ? 'bg-accent shadow-[0_0_15px_#4ade80]' : 'bg-error shadow-[0_0_15px_#fb7185]'
-                                 }`}
-                                 animate={{ width: '100%' }}
-                                 transition={{ repeat: Infinity, duration: 1 }}
-                              />
+                              <span className="text-[12px] font-black italic text-slate-500 tracking-widest mt-1">USDC</span>
                            </div>
                         </div>
                      </div>
@@ -727,55 +765,60 @@ const TradingDashboard: React.FC = () => {
             </AnimatePresence>
           </motion.div>
 
-          <div className="block lg:hidden mb-8">
+          <div className="lg:hidden block mb-8">
             <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
           </div>
 
-          <div className="space-y-6">
-            <div className="flex items-center justify-between px-2">
-               <div className="flex items-center space-x-4">
-                  <h3 className="text-[10px] font-black text-white italic tracking-[0.4em] uppercase font-display">Active Trades</h3>
-                  <div className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
-                    <span className="text-[8px] font-black text-primary uppercase italic tracking-widest">{activePositions.length}</span>
-                  </div>
-               </div>
-                <button 
-                  disabled={activePositions.some(p => isSettlingIds.has(p.id))}
-                  onClick={async () => {
-                    for (const p of activePositions) {
-                      if (!isSettlingIds.has(p.id)) {
-                        await settleOrder(p);
+          <div className="flex flex-col xl:flex-row gap-6 md:gap-8">
+            <div className="flex-1 space-y-6 md:space-y-8">
+              <div className="flex items-center justify-between px-2">
+                 <div className="flex items-center space-x-4">
+                    <h3 className="text-[10px] font-black text-white italic tracking-[0.4em] uppercase font-display">Active Trades</h3>
+                    <div className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
+                      <span className="text-[8px] font-black text-primary uppercase italic tracking-widest">{activePositions.length}</span>
+                    </div>
+                 </div>
+                  <button 
+                    disabled={activePositions.some(p => isSettlingIds.has(p.id))}
+                    onClick={async () => {
+                      for (const p of activePositions) {
+                        if (!isSettlingIds.has(p.id)) {
+                          await settleOrder(p);
+                        }
                       }
-                    }
-                  }}
-                  className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/30 rounded-full text-[8px] font-black text-rose-500 uppercase italic tracking-widest transition-all"
-                >
-                  {activePositions.some(p => isSettlingIds.has(p.id)) ? 'Syncing...' : 'Close All'}
-                </button>
+                    }}
+                    className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/30 rounded-full text-[8px] font-black text-rose-500 uppercase italic tracking-widest transition-all"
+                  >
+                    {activePositions.some(p => isSettlingIds.has(p.id)) ? 'Syncing...' : 'Close All'}
+                  </button>
+              </div>
+
+              <div className="space-y-3">
+                <AnimatePresence mode="popLayout">
+                  {activePositions.map((pos) => (
+                    <LiveFlashPositionRow 
+                      key={pos.id} 
+                      position={pos} 
+                      currentPrice={tickers.find(t => t.symbol === pos.symbol)?.price || currentTicker?.price || 0} 
+                      isSettling={isSettlingIds.has(pos.id)} 
+                      onClose={() => settleOrder(pos, tickers.find(t => t.symbol === pos.symbol)?.price)}
+                    />
+                  ))}
+                </AnimatePresence>
+                {activePositions.length === 0 && (
+                  <div className="glass-card p-12 flex flex-col items-center justify-center text-slate-700 bg-[#0B0E11]/40 border-white/5 border-dashed">
+                     <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4"><Database size={24} className="opacity-20" /></div>
+                     <p className="text-[10px] font-black uppercase italic tracking-[0.2em] text-center leading-loose">Awaiting tactical signals. Deploy your first node above.</p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-3">
-              <AnimatePresence mode="popLayout">
-                {activePositions.map((pos) => (
-                  <LiveFlashPositionRow 
-                    key={pos.id} 
-                    position={pos} 
-                    currentPrice={tickers.find(t => t.symbol === pos.symbol)?.price || currentTicker?.price || 0} 
-                    isSettling={isSettlingIds.has(pos.id)} 
-                    onClose={() => settleOrder(pos, tickers.find(t => t.symbol === pos.symbol)?.price)}
-                  />
-                ))}
-              </AnimatePresence>
-              {activePositions.length === 0 && (
-                <div className="glass-card p-8 flex flex-col items-center justify-center text-slate-700 bg-[#0B0E11]/20">
-                   <p className="text-[9px] font-black uppercase italic tracking-[0.2em] text-center leading-loose">No active trades. Start a trade to see the results here.</p>
-                </div>
-              )}
+            <div className="xl:w-[400px] shrink-0">
+               <OtherTradersLive othersActivePositions={othersActivePositions} onCopy={copyTrade} onFollow={toggleFollow} followedIds={followedIds} />
             </div>
           </div>
 
-          <SettlementArchive orders={recentOrders} />
-          
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-1">
                <TopTradersSidebar topTraders={topTraders} onFollow={toggleFollow} followedIds={followedIds} />
@@ -789,15 +832,22 @@ const TradingDashboard: React.FC = () => {
                />
             </div>
           </div>
-
-          <OtherTradersLive othersActivePositions={othersActivePositions} onCopy={copyTrade} onFollow={toggleFollow} followedIds={followedIds} />
           
           <GlobalNodeTable tickers={tickers} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
         </div>
 
-        <div className="hidden lg:block space-y-8 lg:sticky lg:top-8 self-start order-2">
-          <FlashTradePanel tradeAmount={tradeAmount} setTradeAmount={setTradeAmount} wallet={wallet} processing={processing} onOpen={openFlashTrade} />
+        {/* Sidebar: Trade Panel (Sticky on PC) */}
+        <div className="hidden lg:block space-y-8 lg:sticky lg:top-8 self-start overflow-visible pb-10">
+          <FlashTradePanel 
+            tradeAmount={tradeAmount} 
+            setTradeAmount={setTradeAmount} 
+            wallet={wallet} 
+            processing={processing} 
+            onOpen={openFlashTrade} 
+          />
+          <TopTradersSidebar topTraders={topTraders} onFollow={toggleFollow} followedIds={followedIds} />
         </div>
+      </div>
       </div>
     </div>
   );
