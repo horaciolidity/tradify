@@ -56,7 +56,7 @@ const TradingDashboard: React.FC = () => {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: '#848E9C',
-        fontFamily: 'JetBrains Mono',
+        fontFamily: "'Inter', sans-serif",
       },
       grid: {
         vertLines: { color: 'rgba(255, 255, 255, 0.02)' },
@@ -163,7 +163,7 @@ const TradingDashboard: React.FC = () => {
           lineWidth: 2,
           lineStyle: 2, // Dashed
           axisLabelVisible: true,
-          title: `ENTRY ${pos.type.toUpperCase()}`,
+          title: `E-${pos.type.toUpperCase()}`,
         });
         priceLinesRef.current[pos.id] = line;
       }
@@ -205,8 +205,8 @@ const TradingDashboard: React.FC = () => {
           position: p.type === 'long' ? 'belowBar' : 'aboveBar',
           color: p.type === 'long' ? '#0ECB81' : '#F6465D',
           shape: p.type === 'long' ? 'arrowUp' : 'arrowDown',
-          text: `MY ENTRY ${pnlText}`,
-          size: 2
+          text: pnlText,
+          size: 1
         };
       });
 
@@ -233,8 +233,8 @@ const TradingDashboard: React.FC = () => {
           position: p.type === 'long' ? 'belowBar' : 'aboveBar',
           color: isActive ? color : 'rgba(255,255,255,0.2)',
           shape: !isActive ? 'square' : (p.type === 'long' ? 'arrowUp' : 'arrowDown'),
-          size: getMarkerSize(p.amount_usdc, isFollowed),
-          text: isActive ? `${p.profiles?.full_name?.split(' ')[0] || 'Trader'}${isWhale ? ' 🐳' : ''}${pnlText}` : '🔚',
+          size: 1,
+          text: isActive ? pnlText : '🔚',
         };
       });
     
