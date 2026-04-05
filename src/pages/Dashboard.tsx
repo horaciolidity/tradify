@@ -78,7 +78,7 @@ const Dashboard: React.FC = () => {
         <div className="px-6 md:px-12 mb-3 md:mb-4">
           <div className="flex items-center space-x-3 text-primary">
             <TrendingUp size={14} className="text-primary animate-pulse" />
-            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Real-time Market Updates</span>
+            <span className="terminal-label !text-primary/70">Real-time Market Updates //</span>
           </div>
         </div>
         <MarketTicker />
@@ -89,15 +89,15 @@ const Dashboard: React.FC = () => {
         <div className="space-y-3 md:space-y-4">
           <div className="flex items-center space-x-3 text-primary">
             <div className="w-8 md:w-10 h-[2px] bg-primary/30 rounded-full" />
-            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] italic opacity-70">Trading Dashboard</span>
+            <span className="terminal-label !text-primary/70">Trading Dashboard //</span>
           </div>
-          <h1 className="text-[10px] md:text-[12px] font-medium text-slate-500 uppercase tracking-[0.5em] flex items-center">
+          <h1 className="terminal-label !text-slate-500 flex items-center">
             <span className="w-6 h-[1px] bg-primary/30 mr-4" />
             WELCOME //  
-            <span className="ml-3 text-white font-black tracking-[0.2em]">
+            <span className="ml-3 text-white font-black tracking-[0.2em] text-[12px] md:text-[14px]">
               {profile?.full_name?.toUpperCase() || 'MEMBER'}
             </span>
-            <span className="ml-4 w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span className="ml-4 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           </h1>
           <p className="text-slate-500 font-bold italic tracking-wide flex items-center text-xs md:text-sm">
             <Zap size={14} className="text-accent mr-2" />

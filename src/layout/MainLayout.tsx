@@ -115,7 +115,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="w-10 h-10 flex items-center justify-center bg-dark rounded-full border border-white/10 p-1.5 shadow-2xl">
               <img src="/tradify_logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-xl font-black tracking-[0.2em] text-white uppercase font-display italic">Tradify</span>
+            <span className="text-xl font-black tracking-[0.25em] text-white uppercase font-display">Tradify</span>
           </div>
 
           <nav className="flex-1 space-y-2">
@@ -182,8 +182,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </button>
             
             <div className="hidden sm:flex flex-col items-end mr-2 text-right">
-              <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">Live Balance</span>
-              <span className="text-sm md:text-xl font-black text-accent italic tracking-tighter">
+              <span className="terminal-label mb-1">Live Balance //</span>
+              <span className="text-sm md:text-xl font-black text-accent tracking-tighter">
                 {(wallet?.balance_usdc ?? 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} <span className="text-[10px] md:text-xs font-normal text-slate-500">USDC</span>
               </span>
             </div>
@@ -201,7 +201,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               {/* Notification Dropdown */}
               <div className="absolute right-[-60px] md:right-0 mt-2 w-[calc(100vw-40px)] sm:w-[400px] bg-dark-lighter border border-white/10 rounded-3xl shadow-2xl opacity-0 translate-y-4 pointer-events-none group-hover/notif:opacity-100 group-hover/notif:translate-y-0 group-hover/notif:pointer-events-auto transition-all duration-300 z-50 overflow-hidden backdrop-blur-2xl">
                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
-                  <h3 className="font-black text-white uppercase tracking-tighter italic">Notifications</h3>
+                  <h3 className="font-black text-white uppercase tracking-tighter">Notifications</h3>
                   <button 
                     onClick={() => profile && markAllAsRead(profile.id)}
                     className="text-[10px] font-black text-primary hover:text-white uppercase tracking-[0.2em] transition-colors"

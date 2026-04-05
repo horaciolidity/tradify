@@ -17,8 +17,8 @@
   --secondary: #1E2329;
 
   --font-main: 'Inter', sans-serif;
-  --font-display: 'Sora', sans-serif;
-  --font-accent: 'Outfit', sans-serif;
+  --font-display: 'Inter', sans-serif;
+  --font-accent: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
@@ -33,7 +33,11 @@
 
   h1, h2, h3, h4, .font-display {
     font-family: var(--font-display);
-    @apply tracking-tighter;
+    @apply uppercase tracking-[0.2em] font-black;
+  }
+
+  .terminal-label {
+    @apply text-[10px] uppercase tracking-[0.4em] font-medium text-slate-500;
   }
 
   .font-accent {
@@ -59,7 +63,7 @@
   }
   
   .glass-button {
-    @apply px-8 py-4 rounded-xl transition-all duration-500 active:scale-95 disabled:opacity-30 disabled:pointer-events-none font-black uppercase tracking-[0.1em] text-[11px] italic;
+    @apply px-8 py-4 rounded-xl transition-all duration-500 active:scale-95 disabled:opacity-30 disabled:pointer-events-none font-black uppercase tracking-[0.3em] text-[10px];
   }
 
   .primary-button {
@@ -80,7 +84,7 @@
   }
 
   .sidebar-link {
-    @apply flex items-center space-x-4 px-6 py-5 rounded-xl transition-all duration-500 text-slate-500 hover:text-primary hover:bg-white/2 font-black uppercase tracking-[0.15em] text-[10px] italic;
+    @apply flex items-center space-x-4 px-6 py-5 rounded-xl transition-all duration-500 text-slate-500 hover:text-primary hover:bg-white/2 font-black uppercase tracking-[0.2em] text-[9px];
   }
 
   .sidebar-link.active {
