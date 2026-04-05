@@ -296,35 +296,35 @@ const Wallet: React.FC = () => {
             <CreditCard size={180} />
           </div>
           <div className="relative z-10 flex justify-between items-start">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2 text-primary bg-primary/10 w-fit px-4 py-1.5 rounded-full border border-primary/20 backdrop-blur-xl mb-4">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Live Balance</span>
-              </div>
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Available USDC</p>
-              <h2 className="text-6xl font-black text-white tracking-tighter italic">
-                {(wallet?.balance_usdc || 0).toFixed(4)} <span className="text-2xl font-normal text-slate-500 not-italic">USDC</span>
-              </h2>
+            <div className="flex-1">
+             <span className="terminal-label block mb-2">Available Assets //</span>
+             <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none">
+                {(wallet?.balance_usdc || 0).toLocaleString()} <span className="text-primary text-xl md:text-2xl font-black ml-2">USDC</span>
+             </h2>
+             <div className="flex items-center space-x-2 mt-4 text-accent">
+                <ShieldCheck size={12} />
+                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Secured by Protocol v2.4</span>
+             </div>
             </div>
             <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center backdrop-blur-2xl border border-white/10 shadow-2xl">
               <Building2 className="text-primary" size={32} />
             </div>
           </div>
           <div className="relative z-10 flex flex-wrap gap-4 mt-10">
-            <button
-              onClick={() => setDepositModal(true)}
-              className="flex items-center space-x-3 bg-white text-dark font-black px-8 py-4 rounded-2xl hover:bg-slate-200 transition-all active:scale-95 shadow-2xl shadow-white/10 uppercase tracking-widest text-xs"
-            >
-              <Plus size={20} />
-              <span>Credit Assets</span>
-            </button>
-            <button
-              onClick={() => setWithdrawModal(true)}
-              className="flex items-center space-x-3 bg-white/5 text-white font-black px-8 py-4 rounded-2xl hover:bg-white/10 transition-all border border-white/10 backdrop-blur-xl uppercase tracking-widest text-xs"
-            >
-              <ArrowUpRight size={20} />
-              <span>Settle to Node</span>
-            </button>
+             <button 
+               onClick={() => setDepositModal(true)}
+               className="flex items-center space-x-3 px-8 py-4 bg-primary text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20"
+             >
+                <Plus size={18} />
+                <span>Inject Assets</span>
+             </button>
+             <button 
+               onClick={() => setWithdrawModal(true)}
+               className="flex items-center space-x-3 px-8 py-4 bg-white/5 text-white border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+             >
+                <ArrowUpRight size={18} />
+                <span>Initialize Settlement</span>
+             </button>
           </div>
         </motion.div>
 
@@ -337,7 +337,7 @@ const Wallet: React.FC = () => {
           <div className="absolute bottom-0 right-0 p-8 opacity-5"><QrCode size={120} /></div>
           <div className="space-y-5 relative z-10">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-white uppercase tracking-tighter italic text-lg">Input Terminal</h3>
+              <h3 className="font-black text-white uppercase tracking-tighter text-lg">Input Terminal</h3>
               <QrCode size={22} className="text-primary" />
             </div>
             <div className="bg-black/50 border border-primary/20 rounded-2xl p-5 flex flex-col items-center space-y-4 group/addr relative overflow-hidden">
@@ -389,7 +389,7 @@ const Wallet: React.FC = () => {
                   <ArrowDownLeft size={28} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Credit Assets</h3>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Credit Assets</h3>
                   <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">BSC · Optimism · Ethereum</p>
                 </div>
               </div>
@@ -437,13 +437,13 @@ const Wallet: React.FC = () => {
                       <div className="relative">
                         <input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)}
                           placeholder="0.00"
-                          className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-white font-black italic focus:border-primary/50 transition-all outline-none pr-16" />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary italic">USDC</span>
+                          className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-white font-black focus:border-primary/50 transition-all outline-none pr-16" />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary">USDC</span>
                       </div>
                     </div>
                     <div>
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Network</label>
-                      <div className="w-full bg-white/3 border border-white/5 rounded-2xl p-4 text-slate-400 font-black italic flex items-center space-x-2 uppercase">
+                      <div className="w-full bg-white/3 border border-white/5 rounded-2xl p-4 text-slate-400 font-black flex items-center space-x-2 uppercase">
                         <span className="text-emerald-400">USDC</span>
                         <span className="text-slate-600">·</span>
                         <span className="text-slate-400 text-xs">BSC/OP/ETH</span>
@@ -467,7 +467,7 @@ const Wallet: React.FC = () => {
                 <div className="space-y-6">
                   <div className="p-6 bg-accent/5 border border-accent/20 rounded-2xl text-center">
                     <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center text-accent mx-auto mb-4"><ShieldCheck size={36} /></div>
-                    <h4 className="text-lg font-black text-white italic mb-2">Direct USDC Transfer via MetaMask</h4>
+                    <h4 className="text-lg font-black text-white mb-2">Direct USDC Transfer via MetaMask</h4>
                     <p className="text-slate-400 text-xs leading-relaxed">Connects to your wallet and sends USDC directly. We verify your balance before sending — no failed transactions.</p>
                   </div>
 
@@ -475,7 +475,7 @@ const Wallet: React.FC = () => {
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Amount (USDC)</label>
                     <input type="number" value={depositAmount} onChange={(e) => { setDepositAmount(e.target.value); setWeb3Error(''); }}
                       placeholder="0.00"
-                      className="w-full bg-black/40 border border-white/5 rounded-2xl p-5 text-2xl font-black italic text-primary focus:border-primary/50 transition-all outline-none text-center" />
+                      className="w-full bg-black/40 border border-white/5 rounded-2xl p-5 text-2xl font-black text-primary focus:border-primary/50 transition-all outline-none text-center" />
                   </div>
 
                   {web3Error && (
@@ -528,7 +528,7 @@ const Wallet: React.FC = () => {
                   <ArrowUpRight size={28} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Asset Settlement</h3>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Asset Settlement</h3>
                   <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Available Margin: {(wallet?.balance_usdc || 0).toFixed(4)} USDC</p>
                 </div>
               </div>
@@ -574,8 +574,8 @@ const Wallet: React.FC = () => {
                     <input type="number" value={withdrawAmount}
                       onChange={(e) => { setWithdrawAmount(e.target.value); setWithdrawError(''); }}
                       placeholder="0.00"
-                      className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-white font-black italic text-lg focus:border-primary/50 transition-all outline-none pr-20" />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary italic">USDC</span>
+                      className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-white font-black text-lg focus:border-primary/50 transition-all outline-none pr-20" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary">USDC</span>
                   </div>
                   {withdrawAmount && wallet && parseFloat(withdrawAmount) > wallet.balance_usdc && (
                     <p className="text-[10px] text-error font-bold mt-1">⚠️ Exceeds available balance ({wallet.balance_usdc.toFixed(4)} USDC)</p>
@@ -611,7 +611,7 @@ const Wallet: React.FC = () => {
           <div className="flex items-center space-x-4">
             <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20"><History size={24} className="text-primary" /></div>
             <div>
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Transaction History</h3>
+              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Transaction History</h3>
               <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">All activity · Real-time</p>
             </div>
           </div>
@@ -648,16 +648,19 @@ const Wallet: React.FC = () => {
                           <div className={`p-3 rounded-xl border ${isPositive ? 'bg-accent/10 text-accent border-accent/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>
                             {isPositive ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
                           </div>
-                          <span className="text-xs font-black uppercase tracking-widest text-white italic">{tx.type}</span>
+                          <span className="text-xs font-black uppercase tracking-widest text-white">{tx.type}</span>
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className={`text-lg font-black italic tracking-tighter ${isPositive ? 'text-accent' : 'text-slate-300'}`}>
-                          {isPositive ? '+' : '-'}{tx.amount.toFixed(4)} <span className="text-[10px] font-normal text-slate-500">USDC</span>
-                        </span>
+                        <div className="text-right">
+                          <p className={`text-sm font-black tracking-tighter ${tx.type === 'deposit' ? 'text-accent' : 'text-rose-500'}`}>
+                            {tx.type === 'deposit' ? '+' : '-'}{tx.amount.toLocaleString()} USDC
+                          </p>
+                          <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">{tx.status}</span>
+                        </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="text-xs text-slate-500 font-bold italic">{tx.description}</span>
+                        <span className="text-xs text-slate-500 font-bold">{tx.description}</span>
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center space-x-2">

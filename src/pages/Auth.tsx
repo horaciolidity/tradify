@@ -103,10 +103,11 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-8xl font-black text-white leading-[0.85] tracking-tighter italic"
+              className="text-5xl font-black text-white leading-[0.9] tracking-tighter uppercase"
             >
-              THE ART OF <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-indigo-400 to-accent">PRECISION.</span>
+              The Next <br />
+              <span className="text-primary">Generation</span> <br />
+              of Trading
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0, y: 30 }}
@@ -131,7 +132,7 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
                 transition={{ delay: 0.4 + (i * 0.1) }}
               >
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{stat.label}</p>
-                <p className="text-2xl font-black text-white italic tracking-tighter">{stat.value}</p>
+                <p className="text-lg font-black text-white tracking-widest uppercase">{stat.value}</p>
               </motion.div>
             ))}
           </div>
@@ -146,7 +147,7 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
               <TrendingUp className="text-primary w-8 h-8" />
             </div>
             <div>
-              <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase">Tradify</h2>
+              <h3 className="text-lg font-black text-white uppercase tracking-tighter">Market Assets Management</h3>
               <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Access Point: Alpha-01</p>
             </div>
           </div>

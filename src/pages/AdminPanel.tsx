@@ -329,8 +329,8 @@ const AdminPanel: React.FC = () => {
       <div className="flex flex-col items-center justify-center p-20 glass-card text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-rose-500/5 animate-pulse" />
         <ShieldAlert size={80} className="text-rose-500 mb-8 animate-bounce relative z-10" />
-        <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic relative z-10">Restricted Access</h2>
-        <p className="text-slate-500 mt-6 max-w-lg font-medium italic relative z-10 text-lg">
+        <h2 className="text-2xl font-black text-white uppercase tracking-tighter relative z-10">Restricted Access</h2>
+        <p className="text-slate-500 mt-6 max-w-lg font-medium relative z-10 text-base">
           Attention: You have attempted to access the protocol's master core. Unauthorized access is strictly prohibited and monitored by Tradify Security.
         </p>
         <button 
@@ -349,12 +349,12 @@ const AdminPanel: React.FC = () => {
         <div>
           <div className="flex items-center space-x-2 text-primary mb-2">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] italic">System Core Connected</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em]">System Core Connected</span>
           </div>
-          <h1 className="text-5xl font-black text-white tracking-tighter uppercase italic leading-none">
+          <h1 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">
             Control <span className="text-primary">Center</span>
           </h1>
-          <p className="text-slate-500 mt-2 font-medium italic text-sm">Advanced neural terminal for Tradify platform orchestration.</p>
+          <p className="text-slate-500 mt-2 font-medium text-xs">Advanced neural terminal for Tradify platform orchestration.</p>
         </div>
         <div className="flex bg-white/2 p-2 rounded-3xl border border-white/5 backdrop-blur-xl">
           <button className="flex items-center space-x-3 px-6 py-3 hover:bg-white/5 rounded-2xl text-slate-400 group transition-all">
@@ -416,15 +416,15 @@ const AdminPanel: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2">{stat.label}</p>
-                <h3 className="text-4xl font-black text-white tracking-tighter italic">{stat.value}</h3>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">{stat.label}</p>
+                <h3 className="text-2xl font-black text-white tracking-tighter">{stat.value}</h3>
               </motion.div>
             ))}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
             <div className="glass-card p-10 bg-gradient-to-br from-primary/5 to-transparent">
-              <h3 className="text-xl font-black text-white mb-10 flex items-center uppercase tracking-tighter italic">
+              <h3 className="text-lg font-black text-white mb-10 flex items-center uppercase tracking-tighter">
                 <ShieldAlert size={24} className="mr-4 text-primary" />
                 System Core Gates
               </h3>
@@ -454,7 +454,7 @@ const AdminPanel: React.FC = () => {
             </div>
 
             <div className="glass-card p-8 bg-gradient-to-br from-indigo-500/5 to-transparent">
-              <h3 className="text-lg font-black text-white mb-8 uppercase tracking-tighter italic">Neural Alert Stream</h3>
+              <h3 className="text-base font-black text-white mb-8 uppercase tracking-tighter">Neural Alert Stream</h3>
               <div className="space-y-4">
                 {[
                   { msg: 'Security firewall intercepted suspicious request', type: 'warning', time: '1m ago' },
@@ -463,9 +463,9 @@ const AdminPanel: React.FC = () => {
                   { msg: 'Daily tasks verified for 1,240 users', type: 'success', time: '4h ago' },
                 ].map((alert, i) => (
                   <div key={i} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/2 border border-white/5">
-                    <div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_10px_currentcolor] ${alert.type === 'warning' ? 'bg-amber-500' : alert.type === 'success' ? 'bg-accent' : 'bg-primary'}`} />
-                    <span className="flex-1 text-xs font-bold text-slate-300 uppercase tracking-wide leading-tight">{alert.msg}</span>
-                    <span className="text-[10px] font-black text-slate-600 italic whitespace-nowrap uppercase">{alert.time}</span>
+                    <div className={`w-2 h-2 rounded-full shadow-[0_0_10px_currentcolor] ${alert.type === 'warning' ? 'bg-amber-500' : alert.type === 'success' ? 'bg-accent' : 'bg-primary'}`} />
+                    <span className="flex-1 text-[10px] font-bold text-slate-300 uppercase tracking-wide leading-tight">{alert.msg}</span>
+                    <span className="text-[9px] font-black text-slate-600 whitespace-nowrap uppercase">{alert.time}</span>
                   </div>
                 ))}
               </div>
@@ -476,7 +476,7 @@ const AdminPanel: React.FC = () => {
       {activeSection === 'users' && (
         <div className="glass-card overflow-hidden border-white/5">
           <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Entity Distribution</h3>
+            <h3 className="text-lg font-black text-white uppercase tracking-tighter">Entity Distribution</h3>
             <div className="relative w-full md:w-96">
               <Search className="absolute left-4 top-3.5 text-slate-500" size={18} />
               <input 
@@ -516,7 +516,7 @@ const AdminPanel: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-8 py-6">
-                      <p className="text-lg font-black text-white italic tracking-tighter">
+                      <p className="text-base font-black text-white tracking-tighter">
                         ${(user.wallets?.[0]?.balance_usdc || 0).toLocaleString()}
                       </p>
                     </td>
@@ -543,7 +543,7 @@ const AdminPanel: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card p-10 max-w-lg w-full relative">
             <button onClick={() => setEditingUser(null)} className="absolute top-8 right-8 text-slate-500 hover:text-white"><XCircle size={28} /></button>
-            <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-8">Override Balance</h3>
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-8">Override Balance</h3>
             <div className="space-y-6">
               <div className="p-6 bg-white/2 rounded-3xl border border-white/5">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Target Entity</p>
@@ -557,7 +557,7 @@ const AdminPanel: React.FC = () => {
                     type="number" 
                     value={newBalanceValue}
                     onChange={(e) => setNewBalanceValue(e.target.value)}
-                    className="w-full bg-black/40 border border-primary/20 rounded-2xl py-4 pl-12 pr-6 text-xl font-black text-white italic outline-none focus:border-primary/50 transition-all"
+                    className="w-full bg-black/40 border border-primary/20 rounded-2xl py-4 pl-12 pr-6 text-lg font-black text-white outline-none focus:border-primary/50 transition-all"
                   />
                 </div>
               </div>
@@ -578,7 +578,7 @@ const AdminPanel: React.FC = () => {
       {activeSection === 'deposits' && (
         <div className="glass-card overflow-hidden">
           <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Auth Inbox (Pending Transactions)</h3>
+            <h3 className="text-lg font-black text-white uppercase tracking-tighter">Auth Inbox (Pending)</h3>
           </div>
           <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left">
@@ -603,7 +603,7 @@ const AdminPanel: React.FC = () => {
                         {tx.type}
                       </span>
                     </td>
-                    <td className="px-8 py-6 font-black italic text-lg">
+                    <td className="px-8 py-6 font-black text-base">
                       <span className={tx.type === 'deposit' ? 'text-emerald-500' : 'text-rose-500'}>
                         {tx.type === 'deposit' ? '+' : '-'}${tx.amount.toLocaleString()}
                       </span>
@@ -633,7 +633,7 @@ const AdminPanel: React.FC = () => {
                 ))}
                 {pendingDeposits.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-8 py-20 text-center text-slate-500 italic font-medium uppercase tracking-[0.2em]">No signals detected in queue.</td>
+                    <td colSpan={5} className="px-8 py-20 text-center text-slate-500 font-medium uppercase tracking-[0.2em]">No signals detected in queue.</td>
                   </tr>
                 )}
               </tbody>
@@ -645,7 +645,7 @@ const AdminPanel: React.FC = () => {
       {activeSection === 'plans' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Protocol Orchestration</h3>
+            <h3 className="text-lg font-black text-white uppercase tracking-tighter">Protocol Orchestration</h3>
             <button 
               onClick={() => setEditingPlan({ name: '', interest_rate: 5, duration_days: 30, interest_period_days: 15, min_amount: 50, max_amount: 1000, max_simultaneous: 5, is_active: true })}
               className="flex items-center space-x-3 px-6 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-primary/40 hover:scale-105 transition-all"
@@ -661,7 +661,7 @@ const AdminPanel: React.FC = () => {
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent opacity-30 group-hover:opacity-100 transition-opacity" />
                 <div className="flex justify-between items-start mb-8">
                   <div>
-                    <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-1">{plan.name}</h4>
+                    <h4 className="text-lg font-black text-white uppercase tracking-tighter mb-1">{plan.name}</h4>
                     <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${plan.is_active ? 'bg-primary/20 text-primary' : 'bg-white/5 text-slate-500'}`}>
                       {plan.is_active ? 'Operational' : 'Decommissioned'}
                     </span>
@@ -673,13 +673,13 @@ const AdminPanel: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-6 mb-8">
-                  <div className="p-4 bg-white/2 rounded-[1.5rem] border border-white/5">
+                  <div className="p-4 bg-white/2 rounded-[1.5rem] border border-white/5 text-center">
                     <p className="text-[9px] font-black text-slate-600 uppercase mb-2 tracking-widest">Yield Rate</p>
-                    <p className="text-2xl font-black text-primary italic leading-none">{plan.interest_rate}%</p>
+                    <p className="text-lg font-black text-primary leading-none">{plan.interest_rate}%</p>
                   </div>
-                  <div className="p-4 bg-white/2 rounded-[1.5rem] border border-white/5">
+                  <div className="p-4 bg-white/2 rounded-[1.5rem] border border-white/5 text-center">
                     <p className="text-[9px] font-black text-slate-600 uppercase mb-2 tracking-widest">Maturity</p>
-                    <p className="text-xl font-black text-white italic leading-none">{plan.duration_days}D</p>
+                    <p className="text-lg font-black text-white leading-none">{plan.duration_days}D</p>
                   </div>
                 </div>
 

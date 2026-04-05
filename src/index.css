@@ -23,25 +23,23 @@
 }
 
 @layer base {
+  * {
+    font-family: 'Inter', sans-serif !important;
+  }
+
   body {
     @apply transition-all duration-1000 antialiased selection:bg-primary/20 overflow-x-hidden;
     background: #0B0E11;
     color: var(--foreground);
-    font-family: var(--font-main);
     letter-spacing: -0.01em;
   }
 
   h1, h2, h3, h4, .font-display {
-    font-family: var(--font-display);
     @apply uppercase tracking-[0.2em] font-black;
   }
 
   .terminal-label {
     @apply text-[10px] uppercase tracking-[0.4em] font-medium text-slate-500;
-  }
-
-  .font-accent {
-    font-family: var(--font-accent);
   }
 }
 

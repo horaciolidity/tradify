@@ -1239,51 +1239,57 @@ function SettlementArchive({ orders }: any) {
 
 function GlobalNodeTable({ tickers, selectedSymbol, onSelect }: any) {
   return (
-    <div className="bg-[#1C2023] rounded-[2rem] border border-white/10 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.4)]">
-      <div className="p-8 bg-[#252930] flex items-center justify-between border-b border-white/10">
-         <div className="flex items-center space-x-4">
-            <h3 className="font-black text-[12px] uppercase tracking-[0.4em] italic text-white font-display">Market List</h3>
-            <div className="px-3 py-1 bg-accent/20 border border-accent/40 rounded-full">
-               <span className="text-[8px] font-black text-accent uppercase tracking-widest italic">{tickers.length} PAIRS</span>
+    <div className="bg-[#1C2023] rounded-3xl border border-white/10 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.4)]">
+      <div className="p-5 bg-[#252930] flex items-center justify-between border-b border-white/10">
+         <div className="flex items-center space-x-3">
+            <h3 className="terminal-label !text-white opacity-80">Market Assets //</h3>
+            <div className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
+               <span className="text-[8px] font-black text-primary uppercase tracking-widest">{tickers.length} NODE PAIRS</span>
             </div>
          </div>
-         <div className="flex items-center space-x-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-            <span className="text-[9px] font-black text-slate-500 uppercase italic tracking-widest">ONLINE</span>
+         <div className="flex items-center space-x-1.5">
+            <div className="w-1 h-1 rounded-full bg-accent animate-pulse" />
+            <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">REAL-TIME FEED ACTIVE</span>
          </div>
       </div>
-      <div className="max-h-[600px] overflow-y-auto no-scrollbar divide-y divide-white/[0.02]">
+      <div className="max-h-[500px] overflow-y-auto no-scrollbar divide-y divide-white/[0.02]">
+        {/* Table Header for Desktop */}
+        <div className="hidden md:grid grid-cols-[1.5fr,1.2fr,1.2fr] gap-4 px-6 py-2 bg-black/10 border-b border-white/5">
+           <span className="terminal-label !text-slate-600">Asset Node</span>
+           <span className="terminal-label !text-slate-600 text-right">Market Value</span>
+           <span className="terminal-label !text-slate-600 text-right">24h Vector</span>
+        </div>
         {tickers.map((ticker: any) => {
           const isSelected = selectedSymbol === ticker.symbol;
           return (
             <button
               key={ticker.symbol} onClick={() => onSelect(ticker.symbol)}
-              className={`w-full flex items-center justify-between px-10 py-8 hover:bg-white/5 transition-all relative group ${isSelected ? 'bg-primary/10' : ''}`}
+              className={`w-full grid grid-cols-[1.2fr,1.2fr,1fr] md:grid-cols-[1.5fr,1.2fr,1.2fr] gap-4 px-6 py-3.5 hover:bg-white/[0.03] transition-all relative group items-center ${isSelected ? 'bg-primary/5' : ''}`}
             >
               {isSelected && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_30px_#F3BA2F]" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_20px_#F3BA2F]" />
               )}
-              <div className="flex items-center space-x-6">
-                <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-xl font-black italic border transition-all font-display ${isSelected ? 'bg-primary text-black border-primary' : 'bg-white/5 text-white border-white/10 group-hover:border-primary/40'}`}>
+              <div className="flex items-center space-x-4">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black border transition-all ${isSelected ? 'bg-primary text-black border-primary' : 'bg-white/5 text-white border-white/10 group-hover:border-primary/40'}`}>
                   {ticker.symbol.charAt(0)}
                 </div>
                 <div className="text-left">
-                  <p className="text-2xl font-black text-white italic leading-none mb-2 tracking-tighter">{ticker.symbol}</p>
-                  <div className="flex items-center space-x-2">
-                     <span className="text-[9px] font-black text-slate-600 uppercase italic tracking-widest">VOLATILITY</span>
-                     <div className="w-10 h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-slate-700" style={{ width: `${Math.random() * 100}%` }} />
-                     </div>
+                  <p className="text-sm font-black text-white tracking-tighter leading-none mb-1">{ticker.symbol}</p>
+                  <div className="flex items-center space-x-1.5">
+                     <div className="w-1.5 h-0.5 bg-slate-800 rounded-full" />
+                     <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">NODE_LINK ACTIVE</span>
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-2xl font-mono font-bold italic tracking-tighter leading-none mb-2 transition-all ${isSelected ? 'text-primary scale-110' : 'text-white'}`}>
+                <p className={`text-sm font-bold tracking-tighter leading-none transition-all ${isSelected ? 'text-primary' : 'text-white'}`}>
                    ${ticker.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </p>
-                <div className={`flex items-center justify-end space-x-2 transition-colors ${(ticker.change || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
-                   {(ticker.change || 0) >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                   <span className="text-[12px] font-black italic tracking-widest uppercase">{(ticker.change || 0) >= 0 ? '+' : ''}{(ticker.change || 0).toFixed(2)}%</span>
+              </div>
+              <div className="text-right">
+                <div className={`flex items-center justify-end space-x-1.5 transition-colors ${(ticker.change || 0) >= 0 ? 'text-accent' : 'text-error'}`}>
+                   {(ticker.change || 0) >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                   <span className="text-[10px] font-black tracking-widest uppercase">{(ticker.change || 0) >= 0 ? '+' : ''}{(ticker.change || 0).toFixed(2)}%</span>
                 </div>
               </div>
             </button>

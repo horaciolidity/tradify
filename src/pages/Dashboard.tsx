@@ -99,7 +99,7 @@ const Dashboard: React.FC = () => {
             </span>
             <span className="ml-4 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           </h1>
-          <p className="text-slate-500 font-bold italic tracking-wide flex items-center text-xs md:text-sm">
+          <p className="text-slate-500 font-bold tracking-wide flex items-center text-xs md:text-sm">
             <Zap size={14} className="text-accent mr-2" />
             Status: System Online & Protected
           </p>
@@ -115,8 +115,8 @@ const Dashboard: React.FC = () => {
           </div>
           <div>
             <p className="terminal-label mb-1">Available Balance //</p>
-            <p className="text-xl md:text-4xl font-black text-white italic tracking-tighter">
-              {(wallet?.balance_usdc || 0).toLocaleString()} <span className="terminal-label !text-slate-500 ml-2">USDC</span>
+            <p className="text-lg md:text-xl font-black text-white tracking-tighter">
+              {(wallet?.balance_usdc || 0).toLocaleString()} <span className="terminal-label !text-slate-600 ml-2">USDC</span>
             </p>
           </div>
             <ChevronRight size={20} className="text-slate-800 ml-auto md:ml-4 group-hover:text-primary transition-all group-hover:translate-x-1" />
