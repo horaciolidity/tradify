@@ -655,30 +655,30 @@ const TradingDashboard: React.FC = () => {
         
         <div className="flex items-center space-x-8 relative z-10">
           <div className="relative">
-             <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-             <div className="p-3 md:p-6 bg-[#1C2023] rounded-2xl md:rounded-3xl border border-white/10 backdrop-blur-xl group cursor-default">
-               <div className="w-10 h-10 md:w-20 md:h-20 bg-primary rounded-xl flex items-center justify-center text-black font-black text-xl md:text-3xl italic shadow-[0_10px_40px_rgba(252,186,44,0.3)] transition-transform group-hover:scale-105">
+             <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full" />
+             <div className="p-2 md:p-3 bg-[#1C2023] rounded-xl border border-white/10 backdrop-blur-xl group cursor-default">
+               <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-lg flex items-center justify-center text-black font-black text-sm md:text-base transition-transform group-hover:scale-105">
                  {selectedSymbol.split('/')[0].charAt(0)}
                </div>
              </div>
           </div>
           <div className="flex-1">
-             <div className="flex items-center space-x-3 md:space-x-6 mb-1 md:mb-2">
-                <h1 className="text-2xl md:text-7xl font-black italic uppercase tracking-tighter font-display leading-none">{selectedSymbol}</h1>
-                <div className="px-3 py-1 md:px-5 md:py-2 bg-primary/20 border border-primary/40 rounded-full flex items-center space-x-2">
-                   <div className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-                   <span className="text-[8px] md:text-[12px] font-black text-primary uppercase tracking-[0.4em] italic">ACTIVE TERMINAL</span>
+             <div className="flex items-center space-x-3 md:space-x-4 mb-0.5 md:mb-1">
+                <h1 className="text-xl md:text-3xl font-black uppercase tracking-tighter leading-none">{selectedSymbol}</h1>
+                <div className="px-2 py-0.5 md:px-3 md:py-1 bg-primary/10 border border-primary/20 rounded-full flex items-center space-x-1.5 md:space-x-2">
+                   <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
+                   <span className="text-[7px] md:text-[9px] font-black text-primary uppercase tracking-[0.3em]">OPERATIONAL</span>
                 </div>
              </div>
-             <div className="flex items-center space-x-12">
+             <div className="flex items-center space-x-6 md:space-x-10">
                 <div className="flex flex-col">
-                  <span className="terminal-label mb-1">Market Benchmark //</span>
-                  <span className="text-xl md:text-5xl font-mono font-black italic tracking-tighter font-display uppercase">
+                  <span className="text-[7px] md:text-[8px] font-black text-slate-600 uppercase tracking-widest mb-0.5">Benchmark //</span>
+                  <span className="text-lg md:text-2xl font-black tracking-tighter uppercase leading-none">
                     ${currentTicker?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                   </span>
                 </div>
-                <div className={`px-3 py-1 md:px-5 md:py-2.5 rounded-xl md:rounded-2xl text-[12px] md:text-[16px] font-black flex items-center italic shadow-2xl backdrop-blur-md ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/20 text-accent border border-accent/20' : 'bg-error/20 text-error border border-error/20'}`}>
-                   {(currentTicker?.change || 0) >= 0 ? <TrendingUp size={20} className="mr-3" /> : <TrendingDown size={20} className="mr-3" />}
+                <div className={`px-2 py-0.5 md:px-3 md:py-1 rounded-lg md:rounded-xl text-[10px] md:text-[12px] font-black flex items-center shadow-xl backdrop-blur-md ${(currentTicker?.change || 0) >= 0 ? 'bg-accent/10 text-accent border border-accent/10' : 'bg-rose-500/10 text-rose-500 border border-rose-500/10'}`}>
+                   {(currentTicker?.change || 0) >= 0 ? <TrendingUp size={14} className="mr-2" /> : <TrendingDown size={14} className="mr-2" />}
                    {((currentTicker?.change || 0) >= 0 ? '+' : '') + (currentTicker?.change || 0).toFixed(2)}%
                 </div>
              </div>
@@ -689,7 +689,7 @@ const TradingDashboard: React.FC = () => {
           {timeframes.map(tf => (
              <button
                key={tf} onClick={() => setSelectedTimeframe(tf)}
-               className={`px-4 md:px-8 py-2 md:py-4 rounded-xl md:rounded-2xl text-[10px] md:text-[12px] font-black uppercase tracking-[0.2em] italic transition-all shrink-0 ${selectedTimeframe === tf ? 'bg-primary text-black shadow-[0_10px_30px_rgba(252,186,44,0.3)]' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+               className={`px-3 md:px-5 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-[0.1em] transition-all shrink-0 ${selectedTimeframe === tf ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
              >
               {tf}
             </button>
@@ -891,66 +891,62 @@ function FlashTradePanel({ tradeAmount, setTradeAmount, wallet, processing, onOp
             <div className="p-3 bg-primary/20 rounded-xl border border-primary/30 shadow-[0_0_20px_rgba(252,186,44,0.3)]">
                <TrendingUp size={20} className="text-primary" />
             </div>
-            <h3 className="font-black text-[12px] uppercase tracking-[0.4em] italic text-white font-display">Trade Panel</h3>
+            <h3 className="font-black text-[9px] uppercase tracking-[0.3em] text-white">Trade Console</h3>
          </div>
-         <div className="bg-primary/95 text-black px-4 py-1.5 rounded-full text-[9px] font-black italic tracking-widest shadow-lg shadow-primary/20">REAL-TIME SYNC</div>
+         <div className="bg-primary text-black px-3 py-1 rounded-full text-[7px] font-black tracking-widest shadow-md shadow-primary/20 uppercase">Core Sync</div>
       </div>
-      <div className="p-4 md:p-10 space-y-8">
-         <div className="space-y-4">
-            <div className="flex justify-between items-end px-2">
+      <div className="p-4 md:p-6 space-y-6">
+         <div className="space-y-3">
+            <div className="flex justify-between items-end px-1">
                <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-widest mb-1">Trade Amount</span>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase italic px-2 py-0.5 bg-white/5 rounded border border-white/5">USDC</span>
+                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Margin Amount</span>
                </div>
                <div className="text-right">
-                  <span className="text-[10px] font-black text-slate-600 uppercase italic tracking-widest block mb-1">Available Liquidity</span>
-                  <span className="text-sm font-bold text-primary italic tracking-widest">${(wallet?.balance_usdc || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                  <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest block mb-0.5">Liquidity Available</span>
+                  <span className="text-[10px] font-bold text-primary tracking-widest">${(wallet?.balance_usdc || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                </div>
             </div>
             
             <div className="relative group">
-               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity blur-lg rounded-2xl" />
                <input 
                  type="number" value={tradeAmount} onChange={(e) => setTradeAmount(e.target.value)}
-                 className="relative w-full bg-[#0B0E11] p-6 pr-20 rounded-2xl border border-white/10 text-2xl font-black italic font-display focus:border-primary/50 text-white focus:ring-0 transition-all shadow-inner outline-none placeholder:text-slate-800"
+                 className="relative w-full bg-[#0B0E11] p-4 pr-16 rounded-xl border border-white/5 text-lg font-black text-white focus:border-primary/50 transition-all outline-none placeholder:text-slate-800"
                  placeholder="0.00"
                />
-               <span className="absolute right-8 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary italic tracking-[0.3em]">USDC</span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2">
-               {[25, 50, 75, 100].map(pct => (
-                 <button 
-                   key={pct} onClick={() => setPercentage(pct)}
-                   className="py-2.5 bg-white/2 hover:bg-white/5 rounded-lg border border-white/5 text-[9px] font-black text-slate-500 hover:text-primary transition-all uppercase italic tracking-widest active:scale-95"
-                 >
-                   {pct === 100 ? 'MAX' : `${pct}%`}
-                 </button>
-               ))}
+               <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[8px] font-black text-primary tracking-widest">USDC</span>
             </div>
          </div>
 
-         <div className="grid grid-cols-2 gap-8 pt-2">
+         <div className="grid grid-cols-4 gap-2">
+            {[25, 50, 75, 100].map(pct => (
+              <button 
+                key={pct} onClick={() => setPercentage(pct)}
+                className="py-2.5 bg-white/2 hover:bg-white/5 rounded-lg border border-white/5 text-[9px] font-black text-slate-500 hover:text-primary transition-all uppercase tracking-widest active:scale-95"
+              >
+                {pct === 100 ? 'MAX' : `${pct}%`}
+              </button>
+            ))}
+         </div>
+
+         <div className="grid grid-cols-2 gap-4 pt-0">
             <button 
               onClick={() => onOpen('long')} disabled={processing}
-              className="group relative flex flex-col items-center justify-center p-8 bg-[#0ECB81] hover:bg-[#12e291] text-black rounded-3xl shadow-[0_20px_40px_rgba(14,203,129,0.3)] transition-all hover:translate-y-[-6px] active:translate-y-0 overflow-hidden"
+              className="group flex items-center justify-center space-x-3 py-3.5 bg-accent hover:bg-[#12e291] text-black rounded-xl shadow-lg shadow-accent/10 transition-all hover:scale-[1.02] active:scale-95"
             >
-               <div className="absolute inset-0 bg-white/30 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-                <TrendingUp size={28} className="mb-2 relative z-10" />
-                <span className="text-xs font-black italic tracking-[0.3em] uppercase relative z-10">BUY (UP)</span>
-             </button>
-             <button 
-               onClick={() => onOpen('short')} disabled={processing}
-               className="group relative flex flex-col items-center justify-center p-8 bg-[#F6465D] hover:bg-[#ff5d72] text-white rounded-3xl shadow-[0_20px_40px_rgba(246,70,93,0.3)] transition-all hover:translate-y-[-6px] active:translate-y-0 overflow-hidden"
+               <TrendingUp size={18} />
+               <span className="text-[9px] font-black tracking-widest uppercase">BUY (UP)</span>
+            </button>
+            <button 
+              onClick={() => onOpen('short')} disabled={processing}
+              className="group flex items-center justify-center space-x-3 py-3.5 bg-rose-500 hover:bg-[#ff5d72] text-white rounded-xl shadow-lg shadow-rose-500/10 transition-all hover:scale-[1.02] active:scale-95"
             >
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-                <TrendingDown size={28} className="mb-2 relative z-10" />
-                <span className="text-xs font-black italic tracking-[0.3em] uppercase relative z-10">SELL (DOWN)</span>
-             </button>
+               <TrendingDown size={18} />
+               <span className="text-[9px] font-black tracking-widest uppercase">SELL (DOWN)</span>
+            </button>
          </div>
 
          <div className="p-8 bg-gradient-to-b from-white/2 to-transparent rounded-[2rem] border border-white/5 space-y-5 backdrop-blur-sm">
-            <div className="flex justify-between items-center text-[10px] font-black italic tracking-[0.2em]">
+            <div className="flex justify-between items-center text-[10px] font-black tracking-[0.2em]">
                <div className="flex items-center space-x-3 text-slate-500">
                   <Clock size={14} />
                   <span className="uppercase">Contract Type</span>

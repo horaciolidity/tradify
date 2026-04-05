@@ -23,8 +23,16 @@
 }
 
 @layer base {
-  * {
+  .font-display {
     font-family: 'Inter', sans-serif !important;
+    letter-spacing: -0.04em !important;
+    font-style: normal !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif !important;
+    letter-spacing: -0.02em !important;
+    font-style: normal !important;
   }
 
   body {
@@ -34,7 +42,6 @@
     letter-spacing: -0.01em;
   }
 
-  h1, h2, h3, h4, .font-display {
     @apply uppercase tracking-[0.2em] font-black;
   }
 

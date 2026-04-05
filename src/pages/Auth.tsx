@@ -94,26 +94,26 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="flex items-center space-x-3 text-primary text-sm font-black uppercase tracking-[0.5em] italic"
+              className="flex items-center space-x-3 text-primary text-sm font-black uppercase tracking-[0.5em]"
             >
               <div className="w-12 h-[2px] bg-primary" />
               <span>Tradify Protocol 1.0.4</span>
             </motion.div>
             <motion.h1 
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-5xl font-black text-white leading-[0.9] tracking-tighter uppercase"
+              className="text-3xl md:text-5xl font-black text-white leading-[0.9] tracking-tighter uppercase"
             >
               The Next <br />
-              <span className="text-primary">Generation</span> <br />
+              <span className="text-primary text-2xl md:text-4xl">Generation</span> <br />
               of Trading
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-slate-500 text-2xl font-bold leading-relaxed max-w-lg italic opacity-80"
+              className="text-slate-500 text-lg md:text-xl font-bold leading-relaxed max-w-lg opacity-80"
             >
               Secure high-yield neural assets with the most advanced trading ecosystem on the block.
             </motion.p>
@@ -152,22 +152,21 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <h2 className="text-5xl font-black text-white tracking-tighter italic leading-none">
+          <div className="space-y-2">
+            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tighter leading-none uppercase">
               {mode === 'login' ? 'SIGN IN' : 'REGISTER'}
             </h2>
-            <p className="text-slate-500 font-bold italic text-sm">
+            <p className="text-slate-500 font-bold text-xs uppercase tracking-wide">
               {mode === 'login' ? 'Access your trading account.' : 'Create your account to start trading and investing.'}
             </p>
           </div>
-
           <div className="space-y-8">
             <form className="space-y-6" onSubmit={handleAuth}>
               {error && (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-500 text-xs font-black uppercase tracking-widest italic flex items-center"
+                  className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-500 text-[10px] font-black uppercase tracking-widest flex items-center"
                 >
                   <div className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-3 animate-pulse" />
                   {error}
@@ -239,7 +238,7 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-white/5"></div>
               </div>
-              <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest italic">
+              <div className="relative flex justify-center text-[9px] font-black uppercase tracking-widest">
                 <span className="bg-black px-4 text-slate-600">Secure Bridge</span>
               </div>
             </div>

@@ -533,10 +533,10 @@ const Investments: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-4xl font-black text-white italic tracking-tighter">Execution Strategies</h1>
-          <p className="text-slate-400 mt-1 text-sm">Monitor and trigger high-frequency algorithmic models.</p>
+          <h1 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-none">Execution Strategies</h1>
+          <p className="text-slate-500 mt-1.5 text-xs font-medium">Monitor and trigger high-frequency algorithmic models.</p>
         </div>
-        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 self-start">
+        <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 self-start">
           {([
             { key: 'plans', icon: PlusCircle, label: 'Add Logic' },
             { key: 'active', icon: TrendingUp, label: `Active (${activeInvestments.length})` },
@@ -545,9 +545,9 @@ const Investments: React.FC = () => {
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest italic transition-all ${activeTab === key ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === key ? 'bg-primary text-black' : 'text-slate-500 hover:text-white'}`}
             >
-              <Icon size={15} />
+              <Icon size={12} />
               <span>{label}</span>
             </button>
           ))}
@@ -565,18 +565,18 @@ const Investments: React.FC = () => {
           >
             <div className="absolute top-0 right-0 p-8 opacity-10"><ShieldCheck size={100} className="text-primary" /></div>
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <div className="flex items-center space-x-2 text-primary">
-                  <ShieldCheck size={18} />
-                  <span className="text-xs font-black uppercase tracking-[0.3em]">Strategy Reserve Fund</span>
+                  <ShieldCheck size={14} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">Strategy Reserve Fund</span>
                 </div>
-                <h2 className="text-2xl font-black text-white italic tracking-tighter">Margin Protection Active</h2>
-                <p className="text-slate-400 max-w-xl text-sm">All models are backed by our security framework. Executed margin is 1:1 asset backed.</p>
+                <h2 className="text-lg md:text-xl font-black text-white tracking-tighter uppercase leading-none">Margin Protection Active</h2>
+                <p className="text-slate-500 max-w-xl text-[10px] leading-relaxed font-medium">All models are backed by our security framework. Executed margin is 1:1 asset backed.</p>
               </div>
               <div className="flex flex-col items-end shrink-0">
-                <span className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Pool Balance</span>
-                <span className="text-3xl font-black text-white italic tracking-tighter">{poolBalance.toLocaleString()} <span className="text-sm font-normal text-slate-500">USDC</span></span>
-                <div className="w-48 h-2 bg-white/5 rounded-full mt-3 overflow-hidden border border-white/5">
+                <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest mb-1 leading-none">Pool Balance</span>
+                <span className="text-xl md:text-2xl font-black text-white tracking-tighter leading-none">{poolBalance.toLocaleString()} <span className="text-[10px] font-normal text-slate-600 ml-1">USDC</span></span>
+                <div className="w-48 h-1.5 bg-white/5 rounded-full mt-3 overflow-hidden border border-white/5">
                   <motion.div initial={{ width: 0 }} animate={{ width: '85%' }} transition={{ duration: 1.5, ease: 'easeOut' }} className="h-full bg-primary shadow-[0_0_15px_rgba(252,186,44,0.5)] rounded-full" />
                 </div>
               </div>
@@ -621,19 +621,19 @@ const Investments: React.FC = () => {
                       </div>
 
                       <div>
-                        <h3 className="text-4xl md:text-5xl font-black italic tracking-tighter leading-none" style={{ color: '#facd00', textShadow: '0 0 40px rgba(234,179,8,0.4)' }}>
+                        <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none" style={{ color: '#facd00' }}>
                           Black<br />Sovereign
                         </h3>
-                        <p className="text-slate-400 mt-3 text-sm leading-relaxed max-w-xs">
+                        <p className="text-slate-400 mt-2 text-xs leading-relaxed max-w-xs">
                           Tier 1 execution protocol. Professional-grade algorithmic cycle with high-density output optimization.
                         </p>
                       </div>
 
-                      <div className="flex items-end space-x-3">
-                        <span className="text-6xl font-black italic" style={{ color: '#facd00', textShadow: '0 0 30px rgba(234,179,8,0.5)' }}>{plan.interest_rate}%</span>
-                        <div className="pb-2">
-                          <p className="text-slate-400 text-sm font-bold leading-tight">every {plan.interest_period_days} days</p>
-                          <p className="text-[10px] text-slate-600 uppercase tracking-widest">cycle efficiency</p>
+                      <div className="flex items-end space-x-2">
+                        <span className="text-3xl md:text-4xl font-black" style={{ color: '#facd00' }}>{plan.interest_rate}%</span>
+                        <div className="pb-1">
+                          <p className="text-slate-400 text-[10px] font-bold leading-tight uppercase">every {plan.interest_period_days} days</p>
+                          <p className="text-[8px] text-slate-600 uppercase tracking-widest">cycle efficiency</p>
                         </div>
                       </div>
                     </div>
@@ -653,8 +653,8 @@ const Investments: React.FC = () => {
                             <Icon size={12} style={{ color: '#facd00' }} />
                             <p className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: '#facd00', opacity: 0.6 }}>{label}</p>
                           </div>
-                          <p className="text-lg font-black text-white italic tracking-tighter">{value}</p>
-                          <p className="text-[10px] text-slate-600 mt-0.5">{sub}</p>
+                          <p className="text-base font-black text-white tracking-tighter">{value}</p>
+                          <p className="text-[9px] text-slate-600 mt-0.5">{sub}</p>
                         </div>
                       ))}
                     </div>
@@ -670,10 +670,10 @@ const Investments: React.FC = () => {
                       ))}
                     </div>
                     <motion.button
-                      whileHover={{ scale: 1.03, boxShadow: '0 0 50px rgba(234,179,8,0.5)' }}
-                      whileTap={{ scale: 0.97 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setSelectedPlan(plan)}
-                      className="shrink-0 px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.3em] italic text-black transition-all"
+                      className="shrink-0 px-8 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-black transition-all"
                       style={{ background: 'linear-gradient(135deg, #facd00, #f59e0b)', boxShadow: '0 10px 40px rgba(234,179,8,0.35)' }}
                     >
                       ♛ Deploy Sovereign Strategy
@@ -701,9 +701,9 @@ const Investments: React.FC = () => {
                   className="glass-card p-6 flex flex-col relative group border border-white/5 hover:border-primary/20 transition-colors"
                 >
                   <div className="absolute top-4 right-4 text-[10px] font-black px-3 py-1 bg-primary/10 text-primary rounded-full border border-primary/20">PLAN {i + 1}</div>
-                  <h3 className="text-xl font-black text-white italic tracking-tighter mb-1">{plan.name}</h3>
-                  <div className="flex items-baseline space-x-2 mb-5">
-                    <span className="text-3xl font-black text-primary italic">{plan.interest_rate}%</span>
+                  <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-1 leading-none">{plan.name}</h3>
+                  <div className="flex items-baseline space-x-2 mb-4">
+                    <span className="text-2xl font-black text-primary">{plan.interest_rate}%</span>
                     <span className="text-sm text-slate-500">every {plan.interest_period_days} days</span>
                   </div>
                   <div className="space-y-3 mb-6 flex-1">
@@ -724,16 +724,16 @@ const Investments: React.FC = () => {
                       <span className="text-slate-500 text-[10px] uppercase tracking-widest">Simple (withdraw) on min</span>
                       <span className="text-slate-400 font-bold">+${(simpleReturn - sampleAmount).toFixed(2)}</span>
                     </div>
-                    <div className="bg-accent/5 rounded-xl p-2 border border-accent/10 text-[10px] text-accent italic font-bold text-center">
+                    <div className="bg-accent/5 rounded-xl p-2 border border-accent/10 text-[10px] text-accent font-bold text-center">
                       🚀 Compound earns ${(compoundReturn - simpleReturn).toFixed(2)} MORE on ${sampleAmount}
                     </div>
                   </div>
                   <button
                     onClick={() => setSelectedPlan(plan)}
-                    className="w-full primary-button py-3 text-sm font-black flex items-center justify-center space-x-2 uppercase tracking-widest italic"
+                    className="w-full primary-button py-2.5 text-xs font-black flex items-center justify-center space-x-2 uppercase tracking-widest"
                   >
                     <span>Deploy Logic</span>
-                    <ChevronRight size={18} />
+                    <ChevronRight size={14} />
                   </button>
                 </motion.div>
               );
@@ -749,7 +749,7 @@ const Investments: React.FC = () => {
           {activeInvestments.length === 0 ? (
             <div className="glass-card p-16 flex flex-col items-center justify-center text-slate-700">
               <Zap size={48} className="mb-4 opacity-20" />
-              <p className="text-sm font-black uppercase italic tracking-widest text-center">No active strategies. Deploy a node to begin algorithm execution.</p>
+              <p className="text-sm font-black uppercase tracking-widest text-center">No active strategies. Deploy a node to begin algorithm execution.</p>
               <button onClick={() => setActiveTab('plans')} className="mt-6 primary-button text-sm px-6 py-3">Browse Models</button>
             </div>
           ) : (
@@ -766,7 +766,7 @@ const Investments: React.FC = () => {
           {historyInvestments.length === 0 ? (
             <div className="glass-card p-16 flex flex-col items-center justify-center text-slate-700">
               <History size={48} className="mb-4 opacity-20" />
-              <p className="text-sm font-black uppercase italic tracking-widest">No previous execution logs.</p>
+              <p className="text-sm font-black uppercase tracking-widest">No previous execution logs.</p>
             </div>
           ) : (
             historyInvestments.map((inv) => {
@@ -783,26 +783,26 @@ const Investments: React.FC = () => {
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center space-x-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black italic text-sm border ${inv.status === 'completed' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-error/10 text-error border-error/20'}`}>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm border ${inv.status === 'completed' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-error/10 text-error border-error/20'}`}>
                         {inv.status === 'completed' ? '✓' : '✗'}
                       </div>
                       <div>
-                        <h4 className="font-black text-white italic tracking-tighter">{plan.name}</h4>
+                        <h4 className="font-black text-white tracking-tighter uppercase text-sm">{plan.name}</h4>
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest">{new Date(inv.start_date).toLocaleDateString()} → {new Date(inv.end_date).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-6 text-sm">
                       <div>
                         <p className="text-[9px] text-slate-600 uppercase font-black tracking-widest mb-1">Allocated</p>
-                        <p className="text-white font-black italic">${inv.amount.toFixed(2)}</p>
+                        <p className="text-white font-black">${inv.amount.toFixed(2)}</p>
                       </div>
                       <div>
                         <p className="text-[9px] text-slate-600 uppercase font-black tracking-widest mb-1">Withdrawn</p>
-                        <p className="text-white font-black italic">${(inv.withdrawn_amount || 0).toFixed(4)}</p>
+                        <p className="text-white font-black">${(inv.withdrawn_amount || 0).toFixed(4)}</p>
                       </div>
                       <div>
                         <p className="text-[9px] text-slate-600 uppercase font-black tracking-widest mb-1">Net P&L</p>
-                        <p className={`font-black italic ${isProfit ? 'text-accent' : 'text-error'}`}>
+                        <p className={`font-black ${isProfit ? 'text-accent' : 'text-error'}`}>
                           {isProfit ? '+' : ''}${profit.toFixed(4)}
                         </p>
                       </div>
@@ -834,9 +834,9 @@ const Investments: React.FC = () => {
               className="glass-card w-full max-w-lg p-8 relative max-h-[90vh] overflow-y-auto"
             >
               <button onClick={() => setSelectedPlan(null)} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
-                <X size={24} />
+                <X size={20} />
               </button>
-              <h3 className="text-2xl font-black text-white italic tracking-tighter mb-1">Start Strategy</h3>
+              <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-1">Start Strategy</h3>
               <p className="text-slate-400 mb-6 text-sm">{selectedPlan.name} · {selectedPlan.interest_rate}% target alpha every {selectedPlan.interest_period_days} days · {selectedPlan.duration_days} day cycle</p>
 
               {/* Amount Input */}
@@ -845,7 +845,7 @@ const Investments: React.FC = () => {
                 <div className="relative">
                   <input
                     type="number"
-                    className="input-field w-full pr-20 text-2xl font-black italic"
+                    className="input-field w-full pr-16 text-xl font-black"
                     placeholder="0.00"
                     min={selectedPlan.min_amount}
                     max={selectedPlan.max_amount}

@@ -78,11 +78,11 @@ const Referrals: React.FC = () => {
   return (
     <div className="space-y-8 text-slate-200">
       <motion.div
-        initial={{ opacity: 0, x: -20 }}
+        initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
       >
-        <h1 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter italic">Referral Nexus</h1>
-        <p className="text-xs md:text-sm text-slate-400 mt-2 font-medium italic">Expand the Tradify network and harvest passive generational rewards.</p>
+        <h1 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter">Referral Nexus</h1>
+        <p className="text-[10px] md:text-xs text-slate-500 mt-1.5 font-medium">Expand the Tradify network and harvest passive generational rewards.</p>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -96,17 +96,17 @@ const Referrals: React.FC = () => {
           <div className="relative z-10 space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
-                <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight italic">Your Neural Gateway</h3>
-                <p className="text-slate-400 mt-2 max-w-xl leading-relaxed font-medium">
+                <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tight">Your Neural Gateway</h3>
+                <p className="text-[10px] md:text-xs text-slate-500 mt-2 max-w-xl leading-relaxed font-medium">
                   Invite your friends to the Tradify ecosystem and earn continuous passive rewards from every protocol activation they start.
                 </p>
               </div>
-              <div className="bg-white/5 p-6 rounded-3xl border border-white/10 flex flex-col items-center shrink-0">
-                <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mb-4 border border-primary/30 shadow-[0_0_20px_rgba(243,186,47,0.2)]">
-                  <Gift size={28} className="text-primary" />
+              <div className="bg-white/5 p-4 md:p-6 rounded-2xl border border-white/10 flex flex-col items-center shrink-0">
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-3 border border-primary/20 shadow-lg shadow-primary/10">
+                  <Gift size={24} className="text-primary" />
                 </div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Harvested</p>
-                <p className="text-2xl font-black text-white italic tracking-tighter">{stats.rewards.toFixed(2)} <span className="text-xs font-normal text-slate-500">USDC</span></p>
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 leading-none">Total Harvested</p>
+                <p className="text-xl md:text-2xl font-black text-white tracking-tighter leading-none">{stats.rewards.toFixed(2)} <span className="text-[10px] font-normal text-slate-600 ml-1">USDC</span></p>
               </div>
             </div>
 
@@ -136,11 +136,11 @@ const Referrals: React.FC = () => {
               ].map((tier, i) => (
                 <div key={i} className="bg-white/3 border border-white/5 rounded-2xl p-5 hover:bg-white/5 transition-all">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{tier.level}</span>
-                    <span className="text-lg font-black text-primary italic">{tier.rate}%</span>
+                    <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{tier.level}</span>
+                    <span className="text-base font-black text-primary">{tier.rate}%</span>
                   </div>
-                  <h4 className="text-white font-black italic text-sm mb-1 uppercase tracking-tighter">{tier.sub}</h4>
-                  <p className="text-[10px] text-slate-500 leading-relaxed">{tier.desc}</p>
+                  <h4 className="text-white font-black text-[11px] mb-1 uppercase tracking-tighter">{tier.sub}</h4>
+                  <p className="text-[9px] text-slate-600 leading-relaxed font-medium">{tier.desc}</p>
                 </div>
               ))}
             </div>
@@ -170,7 +170,7 @@ const Referrals: React.FC = () => {
                     </div>
                     <span className="text-[11px] font-bold uppercase tracking-widest">{stat.label}</span>
                   </div>
-                  <span className="text-sm font-black text-white italic">{stat.value}</span>
+                  <span className="text-xs font-black text-white">{stat.value}</span>
                 </div>
               ))}
             </div>
@@ -217,12 +217,12 @@ const Referrals: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white/2 italic">
-                <th className="px-6 py-5">Network Entity</th>
-                <th className="px-6 py-5">Operational Status</th>
-                <th className="px-6 py-5">Yield Harvested</th>
-                <th className="px-6 py-5">Node Status</th>
-                <th className="px-6 py-5">Genesis Date</th>
+              <tr className="text-[9px] font-black text-slate-500 uppercase tracking-widest bg-white/2">
+                <th className="px-6 py-4">Network Entity</th>
+                <th className="px-6 py-4">Operational Status</th>
+                <th className="px-6 py-4">Yield Harvested</th>
+                <th className="px-6 py-4">Node Status</th>
+                <th className="px-6 py-4">Genesis Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
