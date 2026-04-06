@@ -6,11 +6,13 @@ interface AuthState {
   user: any | null;
   profile: Profile | null;
   wallet: Wallet | null;
+  language: string;
   loading: boolean;
   setLoading: (loading: boolean) => void;
   setUser: (user: any) => void;
   setProfile: (profile: Profile | null) => void;
   setWallet: (wallet: Wallet | null) => void;
+  setLanguage: (lang: string) => void;
   signOut: () => Promise<void>;
   updateBalance: (amount: number) => void;
 }
@@ -19,11 +21,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   profile: null,
   wallet: null,
+  language: localStorage.getItem('lang') || 'es',
   loading: true,
   setLoading: (loading) => set({ loading }),
   setUser: (user) => set({ user }),
   setProfile: (profile) => set({ profile }),
   setWallet: (wallet) => set({ wallet }),
+  setLanguage: (language) => {
+    localStorage.setItem('lang', language);
+    set({ language });
+  },
   signOut: async () => {
     // 1. CLEAR LOCAL STORAGE IMMEDIATELY
     // This is the only way to definitely break the "ghost session" Loop

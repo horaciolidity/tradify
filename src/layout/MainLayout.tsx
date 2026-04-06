@@ -35,9 +35,54 @@ const navigation = [
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const location = useLocation();
-  const { profile, wallet, signOut } = useAuthStore();
+  const { profile, wallet, signOut, language, setLanguage } = useAuthStore();
   const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, subscribeToNotifications, lastNotification, clearLastNotification } = useNotificationStore();
+
+  const translations = {
+    en: {
+      dashboard: 'Dashboard',
+      trading: 'Trading',
+      strategies: 'Strategies',
+      wallet: 'Wallet',
+      referrals: 'Referrals',
+      tasks: 'Tasks',
+      admin: 'Admin',
+      tokens: 'Tokens',
+      signOut: 'Sign Out',
+      search: 'Search markets, assets...',
+      balanceLabel: 'Live Balance //',
+      notifTitle: 'Operational Alerts',
+      notifPurge: 'Purge All'
+    },
+    es: {
+      dashboard: 'Panel Principal',
+      trading: 'Mercado',
+      strategies: 'Inversiones',
+      wallet: 'Billetera',
+      referrals: 'Referidos',
+      tasks: 'Tareas',
+      admin: 'Panel Admin',
+      tokens: 'Tokens',
+      signOut: 'Cerrar Sesión',
+      search: 'Buscar mercados...',
+      balanceLabel: 'Balance Actual //',
+      notifTitle: 'Alertas Operativas',
+      notifPurge: 'Limpiar Todo'
+    }
+  };
+
+  const t = (key: keyof typeof translations['en']) => (translations[language as 'en' | 'es'] || translations['en'])[key];
+
+  // Close notifications on click outside (simplified for brevity)
+  React.useEffect(() => {
+    const handleOutsideClick = () => setNotifOpen(false);
+    if (notifOpen) {
+      window.addEventListener('click', handleOutsideClick);
+    }
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, [notifOpen]);
 
   React.useEffect(() => {
     if (profile) {
@@ -126,12 +171,12 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               const isActive = location.pathname === item.href;
               return (
                 <Link
-                  key={item.name}
+                  key={item.href}
                   to={item.href}
                   className={`sidebar-link ${isActive ? 'active' : ''}`}
                 >
                   <Icon size={20} />
-                  <span className="font-medium">{item.name}</span>
+                  <span className="font-medium">{t(item.name.toLowerCase() as any)}</span>
                   {isActive && <motion.div layoutId="active-pill" className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
                 </Link>
               );
@@ -143,7 +188,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             className="sidebar-link mt-auto text-rose-400 hover:text-rose-300 hover:bg-rose-400/5"
           >
             <LogOut size={20} />
-            <span className="font-medium">Sign Out</span>
+            <span className="font-medium">{t('signOut')}</span>
           </button>
         </div>
       </aside>
@@ -163,7 +208,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Search size={18} className="text-slate-500 group-focus-within:text-primary transition-colors" />
               <input 
                 type="text" 
-                placeholder="Search markets, assets..." 
+                placeholder={t('search')}
                 className="bg-transparent border-none focus:ring-0 text-sm ml-3 w-full placeholder:text-slate-500"
               />
             </div>
@@ -180,79 +225,96 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Sun size={20} className="hidden dark:block" />
               <Moon size={20} className="block dark:hidden" />
             </button>
+
+            <button 
+              onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
+              className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-primary hover:bg-primary/20 transition-all uppercase tracking-[0.1em]"
+            >
+              {language}
+            </button>
             
             <div className="hidden sm:flex flex-col items-end mr-2 text-right">
-              <span className="terminal-label mb-1">Live Balance //</span>
+              <span className="terminal-label mb-1">{t('balanceLabel')}</span>
               <span className="text-sm md:text-xl font-black text-accent tracking-tighter">
                 {(wallet?.balance_usdc ?? 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} <span className="text-[10px] md:text-xs font-normal text-slate-500">USDC</span>
               </span>
             </div>
             
-            <div className="relative group/notif">
-              <button className="p-2.5 hover:bg-white/5 rounded-full relative transition-all active:scale-95 group-hover/notif:bg-white/10">
-                <Bell size={22} className="text-slate-400 group-hover/notif:text-white transition-colors" />
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
+              <button 
+                onClick={() => setNotifOpen(!notifOpen)}
+                className={`p-2.5 rounded-full relative transition-all active:scale-95 ${notifOpen ? 'bg-primary/20 text-white' : 'hover:bg-white/5 text-slate-400 hover:text-white'}`}
+              >
+                <Bell size={20} className="transition-colors" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-2 right-2 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full border-2 border-dark flex items-center justify-center animate-bounce">
-                    {unreadCount}
-                  </span>
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-dark shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
                 )}
               </button>
               
               {/* Notification Dropdown */}
-              <div className="absolute right-[-60px] md:right-0 mt-2 w-[calc(100vw-40px)] sm:w-[400px] bg-dark-lighter border border-white/10 rounded-3xl shadow-2xl opacity-0 translate-y-4 pointer-events-none group-hover/notif:opacity-100 group-hover/notif:translate-y-0 group-hover/notif:pointer-events-auto transition-all duration-300 z-50 overflow-hidden backdrop-blur-2xl">
-                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
-                  <h3 className="font-black text-white uppercase tracking-tighter">Notifications</h3>
-                  <button 
-                    onClick={() => profile && markAllAsRead(profile.id)}
-                    className="text-[10px] font-black text-primary hover:text-white uppercase tracking-[0.2em] transition-colors"
+              <AnimatePresence>
+                {notifOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-[-60px] md:right-0 mt-3 w-[calc(100vw-32px)] sm:w-[380px] bg-dark-lighter border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-3xl"
                   >
-                    Clear All
-                  </button>
-                </div>
-                
-                <div className="max-h-[450px] overflow-y-auto scrollbar-hide divide-y divide-white/5">
-                  {notifications.length > 0 ? (
-                    notifications.map((n) => (
-                      <div 
-                        key={n.id} 
-                        onClick={() => markAsRead(n.id)}
-                        className={`p-6 hover:bg-white/2 transition-all cursor-pointer relative group/item ${!n.is_read ? 'bg-primary/5' : ''}`}
+                    <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/2">
+                      <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{t('notifTitle')}</h3>
+                      <button 
+                        onClick={() => profile && markAllAsRead(profile.id)}
+                        className="text-[9px] font-black text-primary hover:text-white uppercase tracking-[0.2em] transition-colors"
                       >
-                        {!n.is_read && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />}
-                        <div className="flex items-start space-x-4">
-                          <div className={`mt-1 p-2 rounded-xl ${
-                            n.type === 'success' ? 'bg-accent/10 text-accent' : 
-                            n.type === 'error' ? 'bg-rose-500/10 text-rose-500' : 
-                            'bg-primary/10 text-primary'
-                          }`}>
-                            <Bell size={16} />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <p className="text-xs font-black text-white uppercase tracking-wide">{n.title}</p>
-                              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{new Date(n.created_at).toLocaleDateString()}</span>
-                            </div>
-                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed group-hover/item:text-slate-300 transition-colors">
-                              {n.message}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-12 text-center space-y-4">
-                      <Bell size={40} className="mx-auto text-slate-800" />
-                      <p className="text-slate-500 font-medium italic text-sm">No new notifications. Everything is on track.</p>
+                        {t('notifPurge')}
+                      </button>
                     </div>
-                  )}
-                </div>
-                
-                <div className="p-4 border-t border-white/5 bg-white/2">
-                  <button className="w-full py-3 text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-[0.3em] transition-all">
-                    System Stable
-                  </button>
-                </div>
-              </div>
+                    
+                    <div className="max-h-[400px] overflow-y-auto scrollbar-hide divide-y divide-white/5">
+                      {notifications.length > 0 ? (
+                        notifications.map((n) => (
+                          <div 
+                            key={n.id} 
+                            onClick={() => {
+                              markAsRead(n.id);
+                              setNotifOpen(false);
+                            }}
+                            className={`p-5 hover:bg-white/2 transition-all cursor-pointer relative group/item ${!n.is_read ? 'bg-primary/5' : ''}`}
+                          >
+                            {!n.is_read && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />}
+                            <div className="flex items-start space-x-4">
+                              <div className={`mt-0.5 p-1.5 rounded-lg ${
+                                n.type === 'success' ? 'bg-accent/10 text-accent' : 
+                                n.type === 'error' ? 'bg-rose-500/10 text-rose-500' : 
+                                'bg-primary/10 text-primary'
+                              }`}>
+                                <Bell size={14} />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <p className="text-[10px] font-black text-white uppercase tracking-wider">{n.title}</p>
+                                  <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">{new Date(n.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <p className="text-[10px] text-slate-500 font-medium leading-tight group-hover/item:text-slate-300 transition-colors">
+                                  {n.message}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-10 text-center space-y-3">
+                          <Bell size={32} className="mx-auto text-slate-800" />
+                          <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest">Awaiting Network Data</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3 border-t border-white/5 bg-white/2 text-center">
+                      <span className="text-[8px] font-black text-slate-600 uppercase tracking-[0.4em]">Terminal Status: Encrypted</span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             
             <Link to="/profile" className="flex items-center space-x-2 md:space-x-3 p-1 pr-2 md:pr-4 rounded-full border border-white/10 hover:border-primary/50 transition-all bg-white/5">

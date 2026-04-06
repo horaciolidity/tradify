@@ -47,6 +47,12 @@ const NETWORKS: { id: string; name: string; label: string; color: string; }[] = 
   { id: '1',   name: 'ETH',      label: 'Ethereum',         color: '#627EEA' },
 ];
 
+const DEPOSIT_NETWORKS = [
+  { id: 'TRC20', name: 'Tron',     label: 'TRC20', currency: 'USDT', color: '#FF0013' },
+  { id: 'BEP20', name: 'BSC',      label: 'BEP20', currency: 'USDT', color: '#F0B90B' },
+  { id: 'ERC20', name: 'Ethereum', label: 'ERC20', currency: 'USDT', color: '#627EEA' },
+];
+
 // Minimal ERC-20 ABI for transfer + balanceOf
 const ERC20_ABI = [
   { "constant": true,  "inputs": [{ "name": "_owner", "type": "address" }], "name": "balanceOf", "outputs": [{ "name": "balance", "type": "uint256" }], "type": "function" },
@@ -84,6 +90,9 @@ const Wallet: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWeb3Loading, setIsWeb3Loading] = useState(false);
   const [web3Error, setWeb3Error] = useState('');
+  const [personalAddress, setPersonalAddress] = useState<string | null>(null);
+  const [isGeneratingAddress, setIsGeneratingAddress] = useState(false);
+  const [selectedDepNetwork, setSelectedDepNetwork] = useState(DEPOSIT_NETWORKS[0]);
 
   // Withdrawal modal
   const [withdrawModal, setWithdrawModal] = useState(false);
@@ -94,8 +103,28 @@ const Wallet: React.FC = () => {
   const [withdrawError, setWithdrawError] = useState('');
 
   React.useEffect(() => {
-    if (profile) fetchTransactions();
-  }, [profile, activeTab]);
+    if (profile) {
+      fetchTransactions();
+      getPersonalAddress();
+    }
+  }, [profile, activeTab, selectedDepNetwork]);
+
+  const getPersonalAddress = async () => {
+    if (!profile?.id) return;
+    setPersonalAddress(null);
+    setIsGeneratingAddress(true);
+    try {
+      const resp = await fetch(`/api/oxapay?user_id=${profile.id}&network=${selectedDepNetwork.id}&currency=${selectedDepNetwork.currency}`);
+      const data = await resp.json();
+      if (data.address) {
+        setPersonalAddress(data.address);
+      }
+    } catch (e) {
+      console.warn('Failed to get personal address:', e);
+    } finally {
+      setIsGeneratingAddress(false);
+    }
+  };
 
   const fetchTransactions = async () => {
     let query = supabase
@@ -145,22 +174,22 @@ const Wallet: React.FC = () => {
         user_id: profile.id,
         type: 'deposit',
         amount: parseFloat(depositAmount),
-        description: `Manual USDC deposit — txid: ${txHash.slice(0, 16)}...`,
+        description: `Deposito manual USDC — txid: ${txHash.slice(0, 16)}...`,
         status: 'pending',
         tx_hash: txHash
       });
       if (error) throw error;
       // Notify admin
       await notifyAdmin(
-        '💰 New Deposit Request',
-        `User ${profile.email} submitted a deposit of ${parseFloat(depositAmount).toFixed(2)} USDC. TXID: ${txHash.slice(0, 16)}... Awaiting approval.`
+        '💰 Nueva Solicitud de Deposito',
+        `Usuario ${profile.email} envió un deposito de ${parseFloat(depositAmount).toFixed(2)} USDC. TXID: ${txHash.slice(0, 16)}... Esperando aprobación.`
       );
       setDepositModal(false);
       setDepositAmount('');
       setTxHash('');
       fetchTransactions();
     } catch {
-      alert('Failed to register deposit. Try again.');
+      alert('Error al registrar el depósito. Inténtelo de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -244,10 +273,10 @@ const Wallet: React.FC = () => {
     setWithdrawError('');
     const amount = parseFloat(withdrawAmount);
 
-    if (!amount || amount <= 0) { setWithdrawError('Enter a valid amount.'); return; }
-    if (!withdrawAddress.match(/^0x[0-9a-fA-F]{40}$/)) { setWithdrawError('Invalid wallet address (must be 0x + 40 hex chars).'); return; }
-    if (!wallet || amount > wallet.balance_usdc) { setWithdrawError(`Insufficient margin. You have ${(wallet?.balance_usdc || 0).toFixed(4)} USDC available.`); return; }
-    if (amount < 10) { setWithdrawError('Minimum settlement is 10 USDC.'); return; }
+    if (!amount || amount <= 0) { setWithdrawError('Ingrese una cantidad válida.'); return; }
+    if (!withdrawAddress.match(/^0x[0-9a-fA-F]{40}$/)) { setWithdrawError('Dirección de billetera inválida (debe ser 0x + 40 chars hex).'); return; }
+    if (!wallet || amount > wallet.balance_usdc) { setWithdrawError(`Margen insuficiente. Tiene ${(wallet?.balance_usdc || 0).toFixed(4)} USDC disponibles.`); return; }
+    if (amount < 10) { setWithdrawError('El retiro mínimo es 10 USDC.'); return; }
 
     setWithdrawSubmitting(true);
     try {
@@ -265,8 +294,8 @@ const Wallet: React.FC = () => {
 
       // Notify admin
       await notifyAdmin(
-        '🏧 New Settlement Signal',
-        `User ${profile?.email} requested a settlement of ${amount.toFixed(2)} USDC to ${withdrawAddress.slice(0, 12)}... via ${withdrawNetwork.label}. Awaiting authorization.`
+        '🏧 Nueva Señal de Retiro',
+        `Usuario ${profile?.email} solicitó un retiro de ${amount.toFixed(2)} USDC a ${withdrawAddress.slice(0, 12)}... vía ${withdrawNetwork.label}. Esperando autorización.`
       );
 
       setWithdrawModal(false);
@@ -316,14 +345,14 @@ const Wallet: React.FC = () => {
                className="flex items-center space-x-3 px-8 py-4 bg-primary text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20"
              >
                 <Plus size={18} />
-                <span>Inject Assets</span>
+                <span>Depositar Activos</span>
              </button>
              <button 
                onClick={() => setWithdrawModal(true)}
-               className="flex items-center space-x-3 px-8 py-4 bg-white/5 text-white border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+               className="flex items-center space-x-3 px-8 py-4 bg-white/5 text-white border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-inter"
              >
                 <ArrowUpRight size={18} />
-                <span>Initialize Settlement</span>
+                <span>Retirar Capital</span>
              </button>
           </div>
         </motion.div>
@@ -342,21 +371,25 @@ const Wallet: React.FC = () => {
             </div>
             <div className="bg-black/50 border border-primary/20 rounded-2xl p-5 flex flex-col items-center space-y-4 group/addr relative overflow-hidden">
               <div className="absolute inset-0 bg-primary/3 opacity-0 group-hover/addr:opacity-100 transition-opacity" />
+              <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                <ShieldCheck size={10} className="text-primary" />
+                Your Personal USDT Address
+              </div>
               <span className="text-[11px] font-mono text-primary break-all text-center leading-relaxed font-bold">
-                {MASTER_ADDRESS}
+                {personalAddress || (isGeneratingAddress ? 'Generating...' : MASTER_ADDRESS)}
               </span>
               <button
-                onClick={() => copyText(MASTER_ADDRESS, 'master')}
+                onClick={() => copyText(personalAddress || MASTER_ADDRESS, 'master')}
                 className="w-full flex items-center justify-center space-x-2 py-3 bg-white/5 hover:bg-primary/20 hover:text-primary rounded-xl text-slate-500 transition-all border border-white/5"
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
-                <span className="text-[10px] font-black uppercase tracking-widest">{copied ? 'Copied!' : 'Copy Address'}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">{copied ? '¡Copiado!' : 'Copiar Destino'}</span>
               </button>
             </div>
             <div className="space-y-2">
               {[
-                '✅ Send USDC only to this address',
-                '🌐 Supported: BSC · Optimism · Ethereum',
+                `✅ Send ${selectedDepNetwork.currency} (${selectedDepNetwork.id}) to this address`,
+                '🌐 Automático: Los créditos se reflejan tras 2 confirmaciones',
                 '⚠️ Do NOT send other tokens — funds may be lost',
               ].map(t => (
                 <p key={t} className="text-[10px] text-slate-500 font-bold leading-relaxed">{t}</p>
@@ -398,7 +431,7 @@ const Wallet: React.FC = () => {
               <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 mb-8">
                 <button onClick={() => { setDepositTab('manual'); setWeb3Error(''); }}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${depositTab === 'manual' ? 'bg-primary text-white' : 'text-slate-500'}`}>
-                  Hash Authorization
+                  Personal Address
                 </button>
                 <button onClick={() => { setDepositTab('web3'); setWeb3Error(''); }}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${depositTab === 'web3' ? 'bg-accent/20 text-accent border border-accent/20' : 'text-slate-500'}`}>
@@ -411,10 +444,10 @@ const Wallet: React.FC = () => {
                   {/* Step list */}
                   <div className="bg-white/3 rounded-2xl p-5 border border-white/5 space-y-3">
                     {[
-                      `Send USDC to: ${MASTER_ADDRESS}`,
-                      'Supported networks: BSC, Optimism, Ethereum',
-                      'Copy the Transaction Hash (TXID) from your wallet app',
-                      'Paste below and specify the exact USDC amount sent',
+                      `Envíe USDC a: ${MASTER_ADDRESS}`,
+                      'Redes soportadas: BSC, Optimism, Ethereum',
+                      'Copie el Hash de Transacción (TXID) de su billetera',
+                      'Péguelo abajo y especifique la cantidad exacta enviada',
                     ].map((t, i) => (
                       <div key={i} className="flex items-start space-x-3">
                         <span className="w-5 h-5 rounded-lg bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">{i+1}</span>
@@ -423,17 +456,47 @@ const Wallet: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Master address display */}
-                  <div className="bg-black/40 border border-primary/20 rounded-2xl p-4 flex items-center justify-between">
-                    <span className="text-xs font-mono text-primary font-black truncate mr-3">{MASTER_ADDRESS}</span>
-                    <button onClick={() => copyText(MASTER_ADDRESS, 'master')} className="p-2 bg-primary/10 text-primary rounded-lg shrink-0">
-                      {copied ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
+                  {/* Personal address display */}
+                  <div className="space-y-6">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Seleccionar Red de Depósito</label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {DEPOSIT_NETWORKS.map(n => (
+                          <button key={n.id} onClick={() => setSelectedDepNetwork(n)}
+                            className={`py-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all flex flex-col items-center space-y-1 ${selectedDepNetwork.id === n.id ? 'border-opacity-60' : 'bg-white/3 border-white/10 text-slate-500'}`}
+                            style={selectedDepNetwork.id === n.id ? { background: n.color + '15', borderColor: n.color + '50', color: n.color } : {}}
+                          >
+                            <span>{n.name}</span>
+                            <span className="text-[8px] opacity-60 font-bold">{n.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-black/40 border border-primary/20 rounded-2xl p-6 flex flex-col items-center space-y-4">
+                      <div className="flex items-center justify-between w-full">
+                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Depósito en {selectedDepNetwork.name} ({selectedDepNetwork.label})</span>
+                         <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Directo
+                         </span>
+                      </div>
+                      <div className="w-full bg-black/40 border border-primary/20 rounded-2xl p-4 flex items-center justify-between group/addr">
+                        <span className="text-xs font-mono text-primary font-black truncate mr-3">
+                          {personalAddress || (isGeneratingAddress ? 'Sincronizando...' : 'Solicitando dirección...')}
+                        </span>
+                        <button onClick={() => copyText(personalAddress || '', 'master')} className="p-2 bg-primary/10 text-primary rounded-lg shrink-0">
+                          {copied ? <Check size={14} /> : <Copy size={14} />}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-center text-slate-500 font-bold leading-relaxed">
+                        Este depósito es totalmente automático. Al enviar fondos a esta dirección personal, su saldo se acreditará tras las confirmaciones de red correspondientes.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">USDC Amount</label>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Cantidad USDC</label>
                       <div className="relative">
                         <input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)}
                           placeholder="0.00"
@@ -442,17 +505,17 @@ const Wallet: React.FC = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Network</label>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Red Destino</label>
                       <div className="w-full bg-white/3 border border-white/5 rounded-2xl p-4 text-slate-400 font-black flex items-center space-x-2 uppercase">
                         <span className="text-emerald-400">USDC</span>
                         <span className="text-slate-600">·</span>
-                        <span className="text-slate-400 text-xs">BSC/OP/ETH</span>
+                        <span className="text-slate-400 text-xs text-inter">BSC/OP/ETH</span>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Transaction Hash (TXID)</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Hash de Transacción (TXID)</label>
                     <input type="text" value={txHash} onChange={(e) => setTxHash(e.target.value)}
                       placeholder="0x..."
                       className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-white font-mono text-xs focus:border-primary/50 transition-all outline-none" />
@@ -460,19 +523,19 @@ const Wallet: React.FC = () => {
 
                   <button onClick={handleDepositSubmit} disabled={isSubmitting || !depositAmount || !txHash}
                     className="w-full primary-button py-5 text-xs font-black uppercase tracking-[0.3em] disabled:opacity-40">
-                    {isSubmitting ? 'Verifying...' : 'Authorize Transaction'}
+                    {isSubmitting ? 'Verificando...' : 'Autorizar Transacción'}
                   </button>
                 </div>
               ) : (
                 <div className="space-y-6">
                   <div className="p-6 bg-accent/5 border border-accent/20 rounded-2xl text-center">
                     <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center text-accent mx-auto mb-4"><ShieldCheck size={36} /></div>
-                    <h4 className="text-lg font-black text-white mb-2">Direct USDC Transfer via MetaMask</h4>
-                    <p className="text-slate-400 text-xs leading-relaxed">Connects to your wallet and sends USDC directly. We verify your balance before sending — no failed transactions.</p>
+                    <h4 className="text-lg font-black text-white mb-2 uppercase tracking-tighter">Transferencia Directa MetaMask</h4>
+                    <p className="text-slate-400 text-xs leading-relaxed font-bold">Conecta su billetera y envía USDC directamente. Verificamos su saldo antes de enviar para evitar fallos.</p>
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Amount (USDC)</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Cantidad (USDC)</label>
                     <input type="number" value={depositAmount} onChange={(e) => { setDepositAmount(e.target.value); setWeb3Error(''); }}
                       placeholder="0.00"
                       className="w-full bg-black/40 border border-white/5 rounded-2xl p-5 text-2xl font-black text-primary focus:border-primary/50 transition-all outline-none text-center" />
@@ -486,19 +549,19 @@ const Wallet: React.FC = () => {
                   )}
 
                   <div className="bg-white/3 rounded-xl p-4 border border-white/5 space-y-1">
-                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Supported Networks</p>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Redes Soportadas</p>
                     <div className="flex gap-2 mt-2">
                       {NETWORKS.map(n => (
                         <span key={n.id} className="px-3 py-1 rounded-full text-[10px] font-black border"
                           style={{ borderColor: n.color + '40', color: n.color, background: n.color + '10' }}>{n.name}</span>
                       ))}
                     </div>
-                    <p className="text-[10px] text-slate-600 mt-2">⚠️ We check your USDC balance before sending — you must have enough on the selected network.</p>
+                    <p className="text-[10px] text-slate-600 mt-2">⚠️ Verificamos su saldo de USDC antes de enviar — debe tener suficiente en la red seleccionada.</p>
                   </div>
 
                   <button onClick={handleWeb3Deposit} disabled={isWeb3Loading || !depositAmount}
-                    className="w-full py-5 bg-accent text-dark font-black text-xs uppercase tracking-[0.3em] rounded-2xl shadow-xl shadow-accent/30 hover:scale-[1.02] transition-all flex items-center justify-center space-x-3 disabled:opacity-40">
-                    {isWeb3Loading ? <RefreshCcw size={20} className="animate-spin" /> : <><Plus size={20} /><span>Send USDC via MetaMask</span></>}
+                    className="w-full py-5 bg-accent text-dark font-black text-[10px] uppercase tracking-[0.3em] rounded-2xl shadow-xl shadow-accent/30 hover:scale-[1.02] transition-all flex items-center justify-center space-x-3 disabled:opacity-40">
+                    {isWeb3Loading ? <RefreshCcw size={20} className="animate-spin" /> : <><Plus size={20} /><span>Enviar USDC vía MetaMask</span></>}
                   </button>
                 </div>
               )}
@@ -528,15 +591,15 @@ const Wallet: React.FC = () => {
                   <ArrowUpRight size={28} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Asset Settlement</h3>
-                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Available Margin: {(wallet?.balance_usdc || 0).toFixed(4)} USDC</p>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Retiro de Activos</h3>
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Margen Disponible: {(wallet?.balance_usdc || 0).toFixed(4)} USDC</p>
                 </div>
               </div>
 
               <div className="space-y-6">
                 {/* Network Selector */}
                 <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Select Network</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Seleccionar Red</label>
                   <div className="grid grid-cols-3 gap-3">
                     {NETWORKS.map(n => (
                       <button key={n.id} onClick={() => setWithdrawNetwork(n)}
@@ -554,21 +617,21 @@ const Wallet: React.FC = () => {
                 {/* Destination Address */}
                 <div>
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block flex items-center gap-2">
-                    <Wallet2 size={12} /> Your {withdrawNetwork.name} Wallet Address
+                    <Wallet2 size={12} /> Dirección de Billetera {withdrawNetwork.name}
                   </label>
                   <input type="text" value={withdrawAddress}
                     onChange={(e) => { setWithdrawAddress(e.target.value); setWithdrawError(''); }}
                     placeholder="0x..."
                     className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-white font-mono text-xs focus:border-primary/50 transition-all outline-none" />
-                  <p className="text-[10px] text-slate-600 mt-1 font-bold">EVM address (0x...) compatible with {withdrawNetwork.label}</p>
+                  <p className="text-[10px] text-slate-600 mt-1 font-bold">Dirección EVM (0x...) compatible con {withdrawNetwork.label}</p>
                 </div>
 
                 {/* Amount */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">USDC Amount</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cantidad USDC</label>
                     <button onClick={() => setWithdrawAmount(wallet?.balance_usdc.toFixed(4) || '')}
-                      className="text-[10px] font-black text-primary uppercase tracking-widest">MAX</button>
+                      className="text-[10px] font-black text-primary uppercase tracking-widest">MÁX</button>
                   </div>
                   <div className="relative">
                     <input type="number" value={withdrawAmount}
@@ -578,7 +641,7 @@ const Wallet: React.FC = () => {
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary">USDC</span>
                   </div>
                   {withdrawAmount && wallet && parseFloat(withdrawAmount) > wallet.balance_usdc && (
-                    <p className="text-[10px] text-error font-bold mt-1">⚠️ Exceeds available balance ({wallet.balance_usdc.toFixed(4)} USDC)</p>
+                    <p className="text-[10px] text-error font-bold mt-1">⚠️ Excede el saldo disponible ({wallet.balance_usdc.toFixed(4)} USDC)</p>
                   )}
                 </div>
 
@@ -590,14 +653,14 @@ const Wallet: React.FC = () => {
                 )}
 
                 <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 space-y-1">
-                  <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Node Compliance</p>
-                  <p className="text-[10px] text-slate-500 leading-relaxed">Settlements are processed manually within 24 hours. Minimum: 10 USDC. Always double-check the endpoint — blockchain transfers are irreversible.</p>
+                  <p className="text-[10px] text-amber-400 font-black uppercase tracking-widest">Cumplimiento de Nodo</p>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">Los retiros se procesan manualmente en un margen de 24 horas. Mínimo: 10 USDC. Las transferencias de blockchain son irreversibles. Verifique siempre el destino.</p>
                 </div>
 
                 <button onClick={handleWithdrawSubmit} disabled={withdrawSubmitting || !withdrawAmount || !withdrawAddress}
                   className="w-full py-5 bg-rose-500 text-white font-black text-xs uppercase tracking-[0.3em] rounded-2xl shadow-xl shadow-rose-500/30 hover:scale-[1.02] transition-all disabled:opacity-40 flex items-center justify-center space-x-2">
                   <ArrowUpRight size={18} />
-                  <span>{withdrawSubmitting ? 'Syncing...' : `Settle ${withdrawAmount || '0'} USDC → ${withdrawNetwork.name}`}</span>
+                  <span>{withdrawSubmitting ? 'Sincronizando...' : `Retirar ${withdrawAmount || '0'} USDC → ${withdrawNetwork.name}`}</span>
                 </button>
               </div>
             </motion.div>
@@ -611,15 +674,19 @@ const Wallet: React.FC = () => {
           <div className="flex items-center space-x-4">
             <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20"><History size={24} className="text-primary" /></div>
             <div>
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Transaction History</h3>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">All activity · Real-time</p>
+              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Historial de Transacciones</h3>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Toda la actividad · Tiempo real</p>
             </div>
           </div>
           <div className="flex bg-white/2 p-1.5 rounded-2xl border border-white/5">
-            {['all', 'deposits', 'withdrawals'].map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab as any)}
-                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all ${activeTab === tab ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}>
-                {tab}
+            {[
+              { id: 'all', label: 'Todos' },
+              { id: 'deposits', label: 'Depositos' },
+              { id: 'withdrawals', label: 'Retiros' }
+            ].map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
+                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all ${activeTab === tab.id ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}>
+                {tab.label}
               </button>
             ))}
           </div>
@@ -630,11 +697,11 @@ const Wallet: React.FC = () => {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-white/5 bg-white/2">
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Type</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Amount</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Description</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Date</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Tipo</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Cantidad</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Descripción</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Estado</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Fecha</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -666,7 +733,7 @@ const Wallet: React.FC = () => {
                         <div className="flex items-center space-x-2">
                           <div className={`w-1.5 h-1.5 rounded-full ${tx.status === 'completed' ? 'bg-accent' : tx.status === 'failed' ? 'bg-error' : 'bg-amber-500 animate-pulse'}`} />
                           <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${tx.status === 'completed' ? 'text-accent' : tx.status === 'failed' ? 'text-error' : 'text-amber-500'}`}>
-                            {tx.status}
+                            {tx.status === 'completed' ? 'COMPLETADO' : tx.status === 'failed' ? 'FALLIDO' : 'PENDIENTE'}
                           </span>
                         </div>
                       </td>
@@ -682,7 +749,7 @@ const Wallet: React.FC = () => {
                     <td colSpan={5} className="px-8 py-20 text-center">
                       <div className="flex flex-col items-center justify-center space-y-4 opacity-30">
                         <Database size={48} className="text-slate-500" />
-                        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">No transactions yet</p>
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Sin historial de transacciones</p>
                       </div>
                     </td>
                   </tr>

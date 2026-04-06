@@ -15,6 +15,7 @@ export interface Wallet {
   id: string;
   user_id: string;
   address: string;
+  oxapay_address?: string;
   balance_usdc: number;
   created_at: string;
 }

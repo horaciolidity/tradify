@@ -157,19 +157,22 @@ const TradingDashboard: React.FC = () => {
     // Add lines for active positions
     activePositions.forEach(pos => {
       if (pos.symbol === selectedSymbol && pos.status === 'active') {
+        const pnl = pos.type === 'long' 
+          ? (currentTicker?.price || pos.price_at_execution - pos.price_at_execution) 
+          : (pos.price_at_execution - (currentTicker?.price || pos.price_at_execution));
+
         const line = candlestickSeriesRef.current?.createPriceLine({
           price: pos.price_at_execution,
           color: pos.type === 'long' ? '#0ECB81' : '#F6465D',
           lineWidth: 2,
           lineStyle: 2, // Dashed
           axisLabelVisible: true,
-          title: `E-${pos.type.toUpperCase()}`,
+          title: `${profile?.full_name?.split(' ')[0] || 'Me'} | ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`,
         });
         priceLinesRef.current[pos.id] = line;
       }
     });
 
-    // Add markers
     // Add markers
     const getVolumeColor = (amount: number, isFollowed: boolean, type: 'long' | 'short') => {
       if (isFollowed) return '#3B82F6'; // Followed: Priority Blue
@@ -352,7 +355,7 @@ const TradingDashboard: React.FC = () => {
     // 2. Fetch Personal Orders
     const { data: myOrders } = await supabase
       .from('orders')
-      .select('*')
+      .select('*, profiles(full_name)')
       .eq('user_id', profile.id)
       .order('created_at', { ascending: false });
     
@@ -405,37 +408,42 @@ const TradingDashboard: React.FC = () => {
     });
     priceLinesRef.current['market'] = marketLine;
 
-    // ENTRY LINES & PNL LABELS
-    activePositions.forEach(pos => {
+    // ENTRY LINES & PNL LABELS (Personal + Others)
+    const allChartPositions = [...activePositions, ...othersActivePositions];
+
+    allChartPositions.forEach(pos => {
       if (pos.symbol === selectedSymbol && pos.status === 'active') {
         const pnl = pos.type === 'long' 
           ? (currentTicker.price - pos.price_at_execution) 
           : (pos.price_at_execution - currentTicker.price);
         
+        const isMe = pos.user_id === profile?.id;
+        const displayName = isMe ? 'YOU' : (pos.profiles?.full_name?.split(' ')[0] || 'Trdr');
+
         const line = candlestickSeriesRef.current?.createPriceLine({
           price: pos.price_at_execution,
           color: pos.type === 'long' ? '#0ECB81' : '#F6465D',
-          lineWidth: 2,
+          lineWidth: isMe ? 2 : 1,
           lineStyle: 2, // Dashed
           axisLabelVisible: true,
-          title: `ENTRY ${pos.type.toUpperCase()} (${pnl >= 0 ? '+' : ''}$${pnl.toFixed(4)})`,
+          title: `${displayName} | ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(4)}`,
         });
         priceLinesRef.current[pos.id] = line;
       }
     });
 
-    const markers = activePositions
+    const markers = allChartPositions
       .filter(p => p.symbol === selectedSymbol && p.status === 'active')
       .map(p => ({
         time: Math.floor(new Date(p.created_at).getTime() / 1000),
         position: p.type === 'long' ? 'belowBar' : 'aboveBar',
         color: p.type === 'long' ? '#0ECB81' : '#F6465D',
         shape: p.type === 'long' ? 'arrowUp' : 'arrowDown',
-        text: 'ENTRY NODE',
+        text: p.user_id === profile?.id ? 'YOUR NODE' : 'USER NODE',
       }));
     
     candlestickSeriesRef.current.setMarkers(markers as any);
-  }, [activePositions, selectedSymbol, currentTicker?.price]);
+  }, [activePositions, othersActivePositions, selectedSymbol, currentTicker?.price]);
 
   const settleOrder = async (order: any, manualPrice?: number) => {
     if (!profile || !wallet || settlingIds.current.has(order.id)) {
