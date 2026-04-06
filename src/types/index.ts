@@ -14,9 +14,8 @@ export interface Profile {
 export interface Wallet {
   id: string;
   user_id: string;
-  address: string;
-  oxapay_address?: string;
   balance_usdc: number;
+  oxapay_address?: string;
   created_at: string;
 }
 
@@ -48,9 +47,9 @@ export interface Investment {
 export interface Transaction {
   id: string;
   user_id: string;
-  type: 'deposit' | 'withdrawal' | 'investment' | 'profit' | 'referral' | 'reward';
+  type: string;
   amount: number;
-  status: 'pending' | 'completed' | 'failed';
+  status: string;
   description: string;
   tx_hash?: string;
   created_at: string;
