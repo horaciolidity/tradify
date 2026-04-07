@@ -15,6 +15,7 @@ export interface Wallet {
   id: string;
   user_id: string;
   balance_usdc: number;
+  address?: string;
   oxapay_address?: string;
   created_at: string;
 }
@@ -39,7 +40,7 @@ export interface Investment {
   start_date: string;
   end_date: string;
   last_interest_payment: string;
-  status: 'active' | 'completed' | 'cancelled';
+  status: string;
   withdrawn_amount?: number;
   plan?: Plan;
 }
