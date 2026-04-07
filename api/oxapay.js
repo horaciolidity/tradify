@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     const merchantKey = process.env.OXAPAY_MERCHANT_KEY;
 
     if (!supabaseUrl || !supabaseKey || !merchantKey) {
-      return res.status(500).json({ error: "Faltan variables en Vercel." });
+      return res.status(500).json({ error: "Variables faltantes." });
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       if (status === 'paid' || status === 'confirmed') {
         const { data: w } = await supabase.from('wallets').select('balance_usdc').eq('user_id', userId).single();
         await supabase.from('wallets').update({ balance_usdc: (w?.balance_usdc || 0) + parseFloat(amount) }).eq('user_id', userId);
-        await supabase.from('transactions').insert({ user_id: userId, type: 'deposit', amount: parseFloat(amount), description: 'Depósito OxaPay', status: 'completed' });
+        await supabase.from('transactions').insert({ user_id: userId, type: 'deposit', amount: parseFloat(amount), description: 'Depósito automático', status: 'completed' });
       }
       return res.status(200).send('OK');
     }
@@ -35,8 +35,8 @@ export default async function handler(req, res) {
       const { data: exist } = await supabase.from('oxapay_addresses').select('address').eq('user_id', user_id).eq('network', network).single();
       if (exist?.address) return res.status(200).json({ address: exist.address });
 
-      // LLAMADA CON GUION BAJO: static_address
-      const oxaResp = await fetch('https://api.oxapay.com/merchants/get/static_address', {
+      // PRUEBA CON "request" (Endpoint más reciente de OxaPay para 2024)
+      const oxaResp = await fetch('https://api.oxapay.com/merchants/request/static-address', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
         await supabase.from('oxapay_addresses').insert({ user_id, network, address: oxaData.address, currency: currency || 'USDT' });
         return res.status(200).json({ address: oxaData.address });
       } else {
-        return res.status(500).json({ error: `OxaPay dice: ${oxaData.message || 'Error API'}. (Status: ${oxaData.status})` });
+        return res.status(500).json({ error: `Fallo OxaPay: ${oxaData.message || 'Error Desconocido'}. (Status: ${oxaData.status})` });
       }
     }
     return res.status(405).send('Not Allowed');
