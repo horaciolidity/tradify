@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // --- Webhook ---
+    // --- Webhook (POST) ---
     if (req.method === 'POST') {
       const hmac = crypto.createHmac('sha512', merchantKey);
       const calculated = hmac.update(JSON.stringify(req.body)).digest('hex');
@@ -28,43 +28,40 @@ export default async function handler(req, res) {
       return res.status(200).send('OK');
     }
 
-    // --- Obtener Dirección ---
+    // --- Obtener Dirección (GET) ---
     if (req.method === 'GET') {
       const { user_id, network, currency } = req.query;
-      if (!user_id || !network) return res.status(400).json({ error: 'Data missing.' });
+      if (!user_id || !network) return res.status(400).json({ error: 'Faltan datos.' });
 
+      // Verificamos si ya existe en BD para no gastar llamadas a la API
       const { data: exist } = await supabase.from('oxapay_addresses').select('address').eq('user_id', user_id).eq('network', network).single();
       if (exist?.address) return res.status(200).json({ address: exist.address });
 
-      // LLAMADA A OXAPAY (URL PLURAL CORRECTA)
+      // LLAMADA A OXAPAY (Formato oficial corregido)
       const oxaResp = await fetch('https://api.oxapay.com/merchants/get/static-address', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          key: merchantKey,
+          merchant: merchantKey, // IMPORTANTE: OxaPay a veces pide 'merchant' en lugar de 'key'
+          key: merchantKey,      // Enviamos ambos por seguridad
           currency: currency || 'USDT',
           network: network,
           callbackUrl: `https://${req.headers.host}/api/oxapay`
         })
       });
 
-      // Validar si la respuesta es JSON antes de parsear
-      const contentType = oxaResp.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const textError = await oxaResp.text();
-        return res.status(500).json({ error: `OxaPay no devolvió JSON. Status: ${oxaResp.status}. Body: ${textError.slice(0, 50)}` });
-      }
-
       const oxaData = await oxaResp.json();
-      if ((oxaData.status === 200 || oxaData.address) && oxaData.address) {
+      
+      if (oxaData.status === 200 && oxaData.address) {
         await supabase.from('oxapay_addresses').insert({ user_id, network, address: oxaData.address, currency: currency || 'USDT' });
         return res.status(200).json({ address: oxaData.address });
       } else {
-        return res.status(500).json({ error: `OxaPay Error: ${oxaData.message || 'Sin mensaje'}` });
+        // Reportamos el error detallado de OxaPay
+        return res.status(500).json({ error: `OxaPay dice: ${oxaData.message || 'Error Desconocido'}. Status: ${oxaData.status}` });
       }
     }
     return res.status(405).send('Not Allowed');
   } catch (err) {
-    return res.status(500).json({ error: `Crash: ${err.message}` });
+    return res.status(500).json({ error: `Crash Backend: ${err.message}` });
   }
 }
