@@ -7,18 +7,19 @@ export default async function handler(req, res) {
     const merchantKey = process.env.OXAPAY_MERCHANT_KEY;
 
     if (!supabaseUrl || !supabaseKey || !merchantKey) {
-      return res.status(200).json({ error: "Faltan variables: URL=" + !!supabaseUrl + " KEY=" + !!supabaseKey + " OXA=" + !!merchantKey });
+      return res.status(200).json({ error: "Faltan variables en Vercel." });
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     if (req.method === 'GET') {
       const { user_id, network, currency } = req.query;
-      
+
+      // 1. Ver si ya existe
       const { data: exist } = await supabase.from('oxapay_addresses').select('address').eq('user_id', user_id).eq('network', network).single();
       if (exist?.address) return res.status(200).json({ address: exist.address });
 
-      // LLAMADA A OXAPAY (URL PLURAL)
+      // 2. Pedir a OxaPay (NUEVA URL DE RESPALDO)
       const oxaResp = await fetch('https://api.oxapay.com/merchants/get/static-address', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,16 +33,18 @@ export default async function handler(req, res) {
 
       const oxaData = await oxaResp.json();
       
-      if (oxaData.status === 200 && oxaData.address) {
+      // Si OxaPay responde con éxito
+      if (oxaData.address) {
         await supabase.from('oxapay_addresses').insert({ user_id, network, address: oxaData.address, currency: currency || 'USDT' });
         return res.status(200).json({ address: oxaData.address });
       } else {
-        return res.status(200).json({ error: "OxaPay Status " + oxaData.status + ": " + (oxaData.message || "Fallo API") });
+        // Si no, mostramos todo el objeto para ver qué falta
+        return res.status(200).json({ error: "OxaPay dice: " + (oxaData.message || JSON.stringify(oxaData)) });
       }
     }
 
     return res.status(200).send("API Online");
   } catch (err) {
-    return res.status(200).json({ error: "CRASH: " + err.message });
+    return res.status(200).json({ error: "CONEXION: " + err.message });
   }
 }
