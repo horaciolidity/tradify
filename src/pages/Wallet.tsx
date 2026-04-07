@@ -1,30 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Plus, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
   Copy, 
   Check, 
   X, 
-  ShieldCheck, 
   History,
   AlertCircle
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { supabase } from '../services/supabase';
 
-// Redes de OxaPay
+// Redes de OxaPay (CORREGIDAS: Usando IDs que OxaPay entiende como 'TRON', 'BSC', 'ETH')
 const DEPOSIT_NETWORKS = [
-  { id: 'TRC20', name: 'Tron (USDT)', label: 'TRC20', currency: 'USDT' },
-  { id: 'BEP20', name: 'BSC (USDT)',  label: 'BEP20', currency: 'USDT' },
-  { id: 'ERC20', name: 'Ethereum (USDT)', label: 'ERC20', currency: 'USDT' },
+  { id: 'TRON', name: 'Tron (USDT)', label: 'TRC20', currency: 'USDT' },
+  { id: 'BSC',  name: 'Binance Smart Chain',  label: 'BEP20', currency: 'USDT' },
+  { id: 'ETH',  name: 'Ethereum (USDT)', label: 'ERC20', currency: 'USDT' },
 ];
 
 const Wallet: React.FC = () => {
   const { wallet, profile } = useAuthStore();
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'deposits' | 'withdrawals'>('all');
   const [transactions, setTransactions] = useState<any[]>([]);
 
   // Modales
@@ -48,7 +43,7 @@ const Wallet: React.FC = () => {
       fetchTransactions();
       if (depositModal) fetchPersonalAddress();
     }
-  }, [profile, activeTab, selectedNet, depositModal]);
+  }, [profile, selectedNet, depositModal]);
 
   const fetchPersonalAddress = async () => {
     if (!profile?.id) return;
@@ -59,7 +54,7 @@ const Wallet: React.FC = () => {
       const resp = await fetch(`/api/oxapay?user_id=${profile.id}&network=${selectedNet.id}&currency=${selectedNet.currency}`);
       const data = await resp.json();
       if (data.address) setPersonalAddress(data.address);
-      else setGenError(data.error || 'Error de sincronización.');
+      else setGenError(data.error || 'Falla de Sincronización.');
     } catch {
       setGenError('Error de red.');
     } finally {
@@ -69,10 +64,7 @@ const Wallet: React.FC = () => {
 
   const fetchTransactions = async () => {
     if (!profile?.id) return;
-    let query = supabase.from('transactions').select('*').eq('user_id', profile.id).order('created_at', { ascending: false });
-    if (activeTab === 'deposits')    query = query.eq('type', 'deposit');
-    if (activeTab === 'withdrawals') query = query.eq('type', 'withdrawal');
-    const { data } = await query;
+    const { data } = await supabase.from('transactions').select('*').eq('user_id', profile.id).order('created_at', { ascending: false });
     if (data) setTransactions(data);
   };
 
@@ -85,7 +77,7 @@ const Wallet: React.FC = () => {
   const handleWithdraw = async () => {
     const amount = parseFloat(withdrawAmount);
     if (!amount || amount <= 0 || !wallet || amount > wallet.balance_usdc) {
-      setWithdrawError('Monto insuficiente o inválido.');
+      setWithdrawError('Monto insuficiente.');
       return;
     }
     setWithdrawPending(true);
@@ -101,7 +93,7 @@ const Wallet: React.FC = () => {
       setWithdrawModal(false);
       fetchTransactions();
     } catch {
-      setWithdrawError('Error al procesar retiro.');
+      setWithdrawError('Error en retiro.');
     } finally {
       setWithdrawPending(false);
     }
@@ -122,13 +114,9 @@ const Wallet: React.FC = () => {
         </motion.div>
 
         <div className="glass-card p-8 border-white/10">
-          <h3 className="text-white font-black uppercase mb-4 text-sm tracking-tighter">OxaPay Network</h3>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Sincronización Activa</span>
-          </div>
-          <p className="text-xs text-slate-500 font-bold mb-6 italic leading-relaxed">Depósitos instantáneos vía TRC20, BEP20 y ERC20.</p>
-          <button onClick={() => setDepositModal(true)} className="w-full py-4 border border-white/5 hover:bg-white/5 transition-all text-white font-black text-[10px] uppercase rounded-xl">Gestionar Direcciones</button>
+          <h3 className="text-white font-black uppercase mb-4 text-sm tracking-tighter">OxaPay Automático</h3>
+          <p className="text-xs text-slate-500 font-bold mb-6 italic leading-relaxed">Depósitos instantáneos. Escanea y paga.</p>
+          <button onClick={() => setDepositModal(true)} className="w-full py-4 border border-white/5 hover:bg-white/5 transition-all text-white font-black text-[10px] uppercase rounded-xl">Ver Direcciones</button>
         </div>
       </div>
 
@@ -148,12 +136,12 @@ const Wallet: React.FC = () => {
                 </div>
 
                 <div className="bg-black/40 border border-primary/20 rounded-xl p-8 text-center flex flex-col items-center">
-                   <div className="bg-black/60 rounded-xl p-4 mb-4 flex items-center justify-between w-full border border-white/5">
-                     <span className="text-xs font-mono text-primary font-black truncate">{personalAddress || (isGenerating ? 'Enlazando...' : 'Obteniendo...') }</span>
+                   <div className="bg-black/60 rounded-xl p-4 mb-4 flex items-center justify-between w-full border border-white/5 min-h-[60px]">
+                     <span className="text-xs font-mono text-primary font-black truncate max-w-[250px]">{personalAddress || (isGenerating ? 'Enlazando red...' : 'Iniciando...') }</span>
                      {personalAddress && <button onClick={() => copyToClipboard(personalAddress)} className="p-2 border border-primary/20 text-primary rounded-lg hover:bg-primary/20 transition-all">{copied ? <Check size={18} /> : <Copy size={18} />}</button>}
                    </div>
-                   {genError && <p className="text-xs text-error font-black mb-4">{genError}</p>}
-                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Envía USDT exclusivamente por red {selectedNet.name}</p>
+                   {genError && <p className="text-xs text-error font-black mb-4 flex items-center justify-center gap-2"><AlertCircle size={14} /> {genError}</p>}
+                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Envía USDT por red {selectedNet.name}</p>
                 </div>
               </div>
             </motion.div>
@@ -171,8 +159,8 @@ const Wallet: React.FC = () => {
               <div className="space-y-4">
                 <input type="text" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} placeholder="Dirección de Billetera" className="w-full bg-black border border-white/5 p-4 rounded-xl text-white outline-none focus:border-primary/50 transition-all font-mono" />
                 <input type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="0.00 USDC" className="w-full bg-black border border-white/5 p-4 rounded-xl text-white outline-none focus:border-primary/50 transition-all font-black" />
-                {withdrawError && <p className="text-xs text-error font-black">{withdrawError}</p>}
-                <button onClick={handleWithdraw} disabled={withdrawPending} className="w-full py-5 bg-rose-600 text-white font-black rounded-xl uppercase tracking-widest disabled:opacity-50 hover:bg-rose-500 transition-all">{withdrawPending ? 'Procesando...' : 'Confirmar Retiro'}</button>
+                {withdrawError && <p className="text-xs text-error font-black text-center">{withdrawError}</p>}
+                <button onClick={handleWithdraw} disabled={withdrawPending} className="w-full py-5 bg-rose-600 text-white font-black rounded-xl uppercase tracking-widest hover:bg-rose-500 transition-all">{withdrawPending ? 'Procesando...' : 'Confirmar Retiro'}</button>
               </div>
             </motion.div>
           </div>
@@ -182,14 +170,14 @@ const Wallet: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center gap-3">
            <History className="text-primary" size={24} />
-           <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Historial de Red</h3>
+           <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Últimas Operaciones</h3>
         </div>
         <div className="glass-card overflow-hidden border-white/10 bg-white/2">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Monto</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Acción</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Importe</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado</th>
               </tr>
             </thead>
@@ -197,8 +185,8 @@ const Wallet: React.FC = () => {
               {transactions.map(tx => (
                 <tr key={tx.id} className="hover:bg-white/2 transition-all">
                   <td className="px-8 py-6 text-xs text-white font-black uppercase italic">{tx.type}</td>
-                  <td className={`px-8 py-6 text-sm font-black ${tx.type === 'deposit' || tx.type === 'profit' ? 'text-accent' : 'text-rose-500'}`}>{tx.amount} USDC</td>
-                  <td className="px-8 py-6 uppercase font-black text-[10px] text-slate-600 tracking-widest">{tx.status}</td>
+                  <td className={`px-8 py-6 text-sm font-black ${tx.type === 'deposit' || tx.type === 'profit' || tx.type === 'referral' ? 'text-accent' : 'text-rose-500'}`}>{tx.amount} USDC</td>
+                  <td className="px-8 py-6 uppercase font-black text-[10px] text-slate-500 tracking-widest">{tx.status}</td>
                 </tr>
               ))}
             </tbody>
