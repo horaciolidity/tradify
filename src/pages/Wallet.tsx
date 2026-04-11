@@ -10,11 +10,11 @@ import {
 import { useAuthStore } from '../store/useAuthStore';
 import { supabase } from '../services/supabase';
 
-// Redes de OxaPay (CORREGIDAS: Usando IDs que OxaPay entiende como 'TRON', 'BSC', 'ETH')
+// Redes de OxaPay (Sincronizadas con la API v1)
 const DEPOSIT_NETWORKS = [
-  { id: 'TRON', name: 'Tron (USDT)', label: 'TRC20', currency: 'USDT' },
+  { id: 'TRON', name: 'Tron', label: 'TRC20', currency: 'USDT' },
   { id: 'BSC',  name: 'Binance Smart Chain',  label: 'BEP20', currency: 'USDT' },
-  { id: 'ETH',  name: 'Ethereum (USDT)', label: 'ERC20', currency: 'USDT' },
+  { id: 'ETH',  name: 'Ethereum', label: 'ERC20', currency: 'USDT' },
 ];
 
 const Wallet: React.FC = () => {
@@ -39,11 +39,16 @@ const Wallet: React.FC = () => {
   const [withdrawError, setWithdrawError] = useState('');
 
   useEffect(() => {
-    if (profile?.id) {
-      fetchTransactions();
-      if (depositModal) fetchPersonalAddress();
+    if (profile?.id && depositModal) {
+      fetchPersonalAddress();
     }
   }, [profile, selectedNet, depositModal]);
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchTransactions();
+    }
+  }, [profile]);
 
   const fetchPersonalAddress = async () => {
     if (!profile?.id) return;
@@ -53,10 +58,13 @@ const Wallet: React.FC = () => {
     try {
       const resp = await fetch(`/api/oxapay?user_id=${profile.id}&network=${selectedNet.id}&currency=${selectedNet.currency}`);
       const data = await resp.json();
-      if (data.address) setPersonalAddress(data.address);
-      else setGenError(data.error || 'Falla de Sincronización.');
-    } catch {
-      setGenError('Error de red.');
+      if (data.address) {
+        setPersonalAddress(data.address);
+      } else {
+        setGenError(data.error || 'No se pudo generar la dirección.');
+      }
+    } catch (err) {
+      setGenError('Error de conexión con el servidor.');
     } finally {
       setIsGenerating(false);
     }
