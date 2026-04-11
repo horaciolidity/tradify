@@ -49,23 +49,7 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
     }
   };
 
-  const connectWallet = async () => {
-    if (!window.ethereum) {
-      alert('Neural Wallet (Metamask) not detected.');
-      return;
-    }
-    setLoading(true);
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      console.log('Connected to:', accounts[0]);
-      // Simulation of wallet-based auth linking
-      alert('Wallet Sync Intent Detected. Please sign in with your email to link this node.');
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-black flex flex-col md:flex-row overflow-hidden font-sans">
@@ -239,21 +223,11 @@ const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
                 <div className="w-full border-t border-white/5"></div>
               </div>
               <div className="relative flex justify-center text-[9px] font-black uppercase tracking-widest">
-                <span className="bg-black px-4 text-slate-600">Secure Bridge</span>
+                <span className="bg-black px-4 text-slate-600">Secure Access</span>
               </div>
             </div>
-
-            <button 
-              onClick={connectWallet}
-              disabled={loading}
-              className="w-full py-5 border border-white/5 bg-white/2 hover:bg-white/5 rounded-3xl flex items-center justify-center space-x-4 transition-all group active:scale-95"
-            >
-              <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center border border-orange-500/20 group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(249,115,22,0.1)]">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Alpha_Color.svg" alt="Metamask" className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] font-black text-slate-400 group-hover:text-white uppercase tracking-widest transition-colors">Connect Neural Wallet</span>
-            </button>
           </div>
+
 
           <div className="text-center space-y-8 pt-6">
             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">

@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   try {
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const merchantKey = process.env.OXAPAY_MERCHANT_KEY || '1CGXHT-VVIJA3-ISZAEU-OC7I5D'; // Prioritize ENV but fallback if needed
+    const merchantKey = process.env.OXAPAY_MERCHANT_KEY || '1CGXHT-VVIJA3-ISZAEU-OC7I5D';
 
     if (!supabaseKey) {
       return res.status(200).json({ error: "Faltan claves de Supabase en Vercel." });
@@ -19,32 +19,34 @@ export default async function handler(req, res) {
         return res.status(200).json({ error: "Parámetros insuficientes." });
       }
 
-      // 1. Intentar recuperar desde la cache de la base de datos
+      // 1. Intentar recuperar desde la cache de la base de datos (oxapay_addresses)
       try {
         const { data: exist } = await supabase
           .from('oxapay_addresses')
           .select('address')
           .eq('user_id', user_id)
-          .eq('network', network)
+          .eq('network', network.toUpperCase())
           .maybeSingle();
 
-        if (exist?.address) return res.status(200).json({ address: exist.address });
+        if (exist?.address) {
+          return res.status(200).json({ address: exist.address });
+        }
       } catch (dbErr) {
-        console.warn("DB Cache Error (Table might not exist):", dbErr.message);
+        console.warn("DB Cache Error:", dbErr.message);
       }
 
-      // 2. Mapeo de Redes (Sincronizado con Wallet.tsx y lo que OxaPay v1 espera)
-      // Ajustamos según el snippet del usuario (TRON) y estándares (BSC, ETH)
+      // 2. Mapeo de Redes
       const networkMapping = {
         'TRON': 'TRON', 
         'BSC': 'BSC',
-        'ETH': 'ETH'
+        'ETH': 'ETH',
+        'OPTIMISM': 'OPTIMISM'
       };
 
       const oxaNetwork = networkMapping[network.toUpperCase()] || network.toUpperCase();
 
-      // 3. Llamada al API de OxaPay v1 (Payment/Static Address)
-      // Usando el endpoint y formato sugerido por el usuario
+      // 3. Llamada al API de OxaPay v1
+      // Usamos un order_id consistente para evitar duplicados en OxaPay si lo soportan
       const oxaResp = await fetch('https://api.oxapay.com/v1/payment/static-address', {
         method: 'POST',
         headers: { 
@@ -53,33 +55,36 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           network: oxaNetwork,
-          to_currency: (currency || 'USDT').toUpperCase(),
-          auto_withdrawal: false,
-          order_id: `DEP_${user_id.slice(0, 5)}_${Date.now().toString().slice(-4)}`,
+          currency: (currency || 'USDT').toUpperCase(),
+          order_id: `DEP_${user_id.slice(0, 8)}_${network.toUpperCase()}`,
           description: `Deposit address for user ${user_id}`
         })
       });
 
       const oxaData = await oxaResp.json();
       
-      if (oxaData.address) {
-        // Intentar guardar en la BD para futuras peticiones (no bloqueante)
+      // En OxaPay v1, la respuesta suele estar en oxaData.data.address
+      const address = oxaData.address || oxaData.data?.address;
+
+      if (address) {
+        // Guardar en la BD para persistencia
         try {
-          await supabase.from('oxapay_addresses').insert({
+          await supabase.from('oxapay_addresses').upsert({
             user_id,
-            network: network,
-            address: oxaData.address,
-            currency: currency || 'USDT'
-          });
+            network: network.toUpperCase(),
+            address: address,
+            currency: (currency || 'USDT').toUpperCase(),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id, network' });
         } catch (saveErr) {
           console.error("Error saving to DB:", saveErr.message);
         }
 
-        return res.status(200).json({ address: oxaData.address });
+        return res.status(200).json({ address });
       } else {
-        // Enviar error específico de OxaPay
         const errorMsg = oxaData.message || oxaData.description || JSON.stringify(oxaData);
-        return res.status(200).json({ error: `OxaPay: ${errorMsg}` });
+        // Si el mensaje es "Operation completed successfully" pero no hay address, es un error de mapeo o params
+        return res.status(200).json({ error: `OxaPay Response: ${errorMsg}` });
       }
     }
     
@@ -89,3 +94,4 @@ export default async function handler(req, res) {
     return res.status(200).json({ error: "Excepción en el servidor: " + err.message });
   }
 }
+

@@ -15,7 +15,9 @@ const DEPOSIT_NETWORKS = [
   { id: 'TRON', name: 'Tron', label: 'TRC20', currency: 'USDT' },
   { id: 'BSC',  name: 'Binance Smart Chain',  label: 'BEP20', currency: 'USDT' },
   { id: 'ETH',  name: 'Ethereum', label: 'ERC20', currency: 'USDT' },
+  { id: 'OPTIMISM',  name: 'Optimism', label: 'OP', currency: 'USDT' },
 ];
+
 
 const Wallet: React.FC = () => {
   const { wallet, profile } = useAuthStore();
@@ -137,7 +139,7 @@ const Wallet: React.FC = () => {
               <h2 className="text-2xl font-black text-white uppercase mb-8 italic">Configurar Depósito</h2>
               
               <div className="space-y-6">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-4 gap-3">
                   {DEPOSIT_NETWORKS.map(n => (
                     <button key={n.id} onClick={() => setSelectedNet(n)} className={`py-4 rounded-xl border text-[10px] font-black transition-all ${selectedNet.id === n.id ? 'border-primary bg-primary/10 text-primary' : 'bg-white/3 border-white/10 text-slate-500'}`}>{n.label}</button>
                   ))}
