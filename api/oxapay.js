@@ -20,71 +20,87 @@ export default async function handler(req, res) {
       }
 
       // 1. Intentar recuperar desde la cache de la base de datos (oxapay_addresses)
+      // Normalizamos el nombre de la red para evitar duplicados por casing
+      const normNetwork = network.toUpperCase();
+
       try {
-        const { data: exist } = await supabase
+        const { data: exist, error: fetchErr } = await supabase
           .from('oxapay_addresses')
           .select('address')
           .eq('user_id', user_id)
-          .eq('network', network.toUpperCase())
+          .eq('network', normNetwork)
           .maybeSingle();
 
+        if (fetchErr) console.error("Supabase Fetch Error:", fetchErr);
         if (exist?.address) {
-          return res.status(200).json({ address: exist.address });
+          return res.status(200).json({ address: exist.address, source: 'cache' });
         }
       } catch (dbErr) {
-        console.warn("DB Cache Error:", dbErr.message);
+        console.warn("DB Cache Query Exception:", dbErr.message);
       }
 
-      // 2. Mapeo de Redes
+      // 2. Mapeo de Redes para OxaPay
+      // OxaPay v1 para Static Address a veces prefiere TRC20/BEP20/ERC20 o TRON/BSC/ETH
       const networkMapping = {
         'TRON': 'TRON', 
         'BSC': 'BSC',
         'ETH': 'ETH',
-        'OPTIMISM': 'OPTIMISM'
+        'OPTIMISM': 'OPTIMISM',
+        'TRC20': 'TRON',
+        'BEP20': 'BSC',
+        'ERC20': 'ETH',
+        'OP': 'OPTIMISM'
       };
 
-      const oxaNetwork = networkMapping[network.toUpperCase()] || network.toUpperCase();
+      const oxaNetwork = networkMapping[normNetwork] || normNetwork;
 
       // 3. Llamada al API de OxaPay v1
-      // Usamos un order_id consistente para evitar duplicados en OxaPay si lo soportan
+      const requestBody = {
+        network: oxaNetwork,
+        currency: (currency || 'USDT').toUpperCase(),
+        order_id: `DEP_${user_id.slice(0, 8)}_${normNetwork}`,
+        description: `Deposit address for user ${user_id}`
+      };
+
       const oxaResp = await fetch('https://api.oxapay.com/v1/payment/static-address', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'merchant_api_key': merchantKey 
         },
-        body: JSON.stringify({
-          network: oxaNetwork,
-          currency: (currency || 'USDT').toUpperCase(),
-          order_id: `DEP_${user_id.slice(0, 8)}_${network.toUpperCase()}`,
-          description: `Deposit address for user ${user_id}`
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const oxaData = await oxaResp.json();
       
-      // En OxaPay v1, la respuesta suele estar en oxaData.data.address
       const address = oxaData.address || oxaData.data?.address;
 
       if (address) {
         // Guardar en la BD para persistencia
         try {
-          await supabase.from('oxapay_addresses').upsert({
+          // Usamos upsert para asegurar que si ya existe se actualice, 
+          // pero lo ideal es que el query de arriba lo encuentre primero.
+          const { error: upsertErr } = await supabase.from('oxapay_addresses').upsert({
             user_id,
-            network: network.toUpperCase(),
+            network: normNetwork,
             address: address,
             currency: (currency || 'USDT').toUpperCase(),
             updated_at: new Date().toISOString()
           }, { onConflict: 'user_id, network' });
+
+          if (upsertErr) console.error("Supabase Upsert Error:", upsertErr);
         } catch (saveErr) {
-          console.error("Error saving to DB:", saveErr.message);
+          console.error("Critical Save Error:", saveErr.message);
         }
 
-        return res.status(200).json({ address });
+        return res.status(200).json({ address, source: 'api' });
       } else {
         const errorMsg = oxaData.message || oxaData.description || JSON.stringify(oxaData);
-        // Si el mensaje es "Operation completed successfully" pero no hay address, es un error de mapeo o params
-        return res.status(200).json({ error: `OxaPay Response: ${errorMsg}` });
+        // Debugging logs for the user if they see the response
+        return res.status(200).json({ 
+          error: `OxaPay Error: ${errorMsg}`, 
+          details: { requested_network: oxaNetwork, status: oxaData.status } 
+        });
       }
     }
     
@@ -94,4 +110,5 @@ export default async function handler(req, res) {
     return res.status(200).json({ error: "Excepción en el servidor: " + err.message });
   }
 }
+
 
