@@ -2,14 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
   try {
-    // 1. CONFIGURATION & ENV DETECTION
     const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const merchantKey = process.env.OXAPAY_MERCHANT_KEY || '1CGXHT-VVIJA3-ISZAEU-OC7I5D';
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error("OXAPAY_API_ERROR: Supabase credentials missing.");
-      return res.status(200).json({ error: "ERR_CONFIG: Server configuration incomplete." });
+      return res.status(200).json({ error: "ERR_CONFIG: Missing Server Credentials (SERVICE_ROLE_KEY)" });
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -21,43 +19,36 @@ export default async function handler(req, res) {
         return res.status(200).json({ error: "ERR_PARAMS: Missing user_id or network." });
       }
 
+      const cleanUserId = user_id.trim();
       const cleanNetwork = network.toUpperCase().trim();
       const cleanCurrency = (currency || 'USDT').toUpperCase().trim();
 
-      // 1. CACHE FETCH (Try to find existing static address)
+      // 1. BUSCAR EN CACHÉ (La base de datos siempre manda)
       try {
         const { data: exist, error: fetchErr } = await supabase
           .from('oxapay_addresses')
           .select('address')
-          .eq('user_id', user_id)
+          .eq('user_id', cleanUserId)
           .eq('network', cleanNetwork)
           .maybeSingle();
 
-        if (fetchErr) {
-          console.warn(`[CACHE_FETCH_WARN] for user ${user_id}:`, fetchErr.message);
-        } else if (exist?.address) {
-          console.log(`[CACHE_HIT] user ${user_id} on ${cleanNetwork}`);
+        if (exist?.address) {
           return res.status(200).json({ address: exist.address, source: 'cache_stable' });
         }
       } catch (dbErr) {
-        console.error("[CACHE_FETCH_FATAL]:", dbErr.message);
+        console.error("DB_FETCH_ERROR", dbErr);
       }
 
-      // 2. NETWORK MAPPING (Map internal labels to OxaPay strings)
+      // 2. MAPEO DE REDES PARA OXAPAY
       const networkMap = {
-        'TRON': 'TRON', 
-        'BSC': 'BSC',
-        'ETH': 'ETH',
-        'TRC20': 'TRON',
-        'BEP20': 'BSC',
-        'ERC20': 'ETH'
+        'TRON': 'TRON', 'TRC20': 'TRON',
+        'BSC': 'BSC', 'BEP20': 'BSC',
+        'ETH': 'ETH', 'ERC20': 'ETH'
       };
-
       const oxaNetwork = networkMap[cleanNetwork] || cleanNetwork;
 
-      // 3. OXAPAY API CALL
-      console.log(`[API_REQUEST] Generating fresh address for ${user_id} on ${oxaNetwork}`);
-      
+      // 3. PEDIR A OXAPAY (Si no estaba en DB)
+      // Usamos el user_id como order_id para que OxaPay asocie la dirección al mismo usuario
       const oxaResp = await fetch('https://api.oxapay.com/v1/payment/static-address', {
         method: 'POST',
         headers: { 
@@ -67,37 +58,28 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           network: oxaNetwork,
           currency: cleanCurrency,
-          order_id: `DEP_${user_id.split('-')[0]}_${Date.now()}`,
-          description: `Static Deposit for ID: ${user_id}`
+          order_id: `STATIC_${cleanUserId.slice(0, 8)}`,
+          description: `Address for User ${cleanUserId}`
         })
       });
 
       const oxaData = await oxaResp.json();
-      
-      // Determine if it's a success based on code or message
-      const isOxaSuccess = oxaData.code === 100 || 
-                           oxaData.message === "Operation completed successfully!" || 
-                           oxaData.message === "success";
-      
+      const isOxaSuccess = oxaData.code === 100 || oxaData.message?.includes('success');
       const newAddress = oxaData.address || oxaData.data?.address;
 
       if (isOxaSuccess && newAddress) {
-        // 4. PERSISTENCE SAVE (UPSERT)
+        // 4. GUARDAR EN DB ANTES DE RETORNAR
         const { error: upsertErr } = await supabase
           .from('oxapay_addresses')
           .upsert({
-            user_id,
-            network: cleanNetwork, 
+            user_id: cleanUserId,
+            network: cleanNetwork,
             address: newAddress,
             currency: cleanCurrency,
             updated_at: new Date().toISOString()
-          }, { 
-            onConflict: 'user_id,network' 
-          });
+          }, { onConflict: 'user_id,network' });
 
-        if (upsertErr) {
-          console.error("[PERSISTENCE_ERROR]:", upsertErr);
-        }
+        if (upsertErr) console.error("DB_SAVE_ERROR", upsertErr);
 
         return res.status(200).json({ 
           address: newAddress, 
@@ -105,26 +87,16 @@ export default async function handler(req, res) {
           saved: !upsertErr
         });
       } else {
-        // Log detailed failure for debugging
-        console.error(`[OXAPAY_FAILURE] for network ${oxaNetwork}:`, oxaData);
-        
-        const errorMessage = oxaData.description || oxaData.message || "Unknown error";
         return res.status(200).json({ 
-          error: `OxaPay Direct: ${errorMessage}`,
-          debug: { 
-            code: oxaData.code,
-            has_address: !!newAddress,
-            sent_network: oxaNetwork,
-            full_response: oxaData 
-          }
+          error: "OxaPay Error: " + (oxaData.message || "Unknown"),
+          debug: oxaData
         });
       }
     }
     
-    return res.status(200).send("Tradify OxaPay Gateway Ready");
+    return res.status(200).send("Endpoint Active");
   } catch (err) {
-    console.error("[CRITICAL_SERVER_ERROR]:", err);
-    return res.status(200).json({ error: "INTERNAL_SERVER_ERROR: " + err.message });
+    return res.status(200).json({ error: "INTERNAL_ERROR: " + err.message });
   }
 }
 
