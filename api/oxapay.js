@@ -48,7 +48,7 @@ export default async function handler(req, res) {
       const oxaNetwork = networkMap[cleanNetwork] || cleanNetwork;
 
       // 3. PEDIR A OXAPAY (Si no estaba en DB)
-      // Usamos el user_id como order_id para que OxaPay asocie la dirección al mismo usuario
+      // Usamos el user_id COMPLETO en el order_id como respaldo para el Webhook
       const oxaResp = await fetch('https://api.oxapay.com/v1/payment/static-address', {
         method: 'POST',
         headers: { 
@@ -58,13 +58,13 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           network: oxaNetwork,
           currency: cleanCurrency,
-          order_id: `STATIC_${cleanUserId.slice(0, 8)}`,
-          description: `Address for User ${cleanUserId}`
+          order_id: cleanUserId, // ENVIAMOS EL ID COMPLETO AQUÍ
+          description: `Deposit for User ${cleanUserId}`
         })
       });
 
       const oxaData = await oxaResp.json();
-      const isOxaSuccess = oxaData.code === 100 || oxaData.message?.includes('success');
+      const isOxaSuccess = oxaData.code === 100 || oxaData.message?.toLowerCase().includes('success');
       const newAddress = oxaData.address || oxaData.data?.address;
 
       if (isOxaSuccess && newAddress) {
@@ -84,7 +84,8 @@ export default async function handler(req, res) {
         return res.status(200).json({ 
           address: newAddress, 
           source: 'api_fresh',
-          saved: !upsertErr
+          saved: !upsertErr,
+          debug_user: cleanUserId
         });
       } else {
         return res.status(200).json({ 

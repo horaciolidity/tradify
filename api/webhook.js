@@ -20,26 +20,34 @@ export default async function handler(req, res) {
 
     // OxaPay envía los datos en el body
     // Por seguridad, OxaPay recomienda verificar el HMAC, pero para MVP usaremos validación de campos
-    const { address, amount, status, currency, network, tx_hash } = body;
+    const { address, amount, status, currency, network, tx_hash, order_id } = body;
 
-    console.log(`[WEBHOOK_RECEIVED] Address: ${address}, Amount: ${amount}, Status: ${status}`);
+    console.log(`[WEBHOOK_RECEIVED] Address: ${address}, Amount: ${amount}, Status: ${status}, Order: ${order_id}`);
 
-    // Solo procesar si el estado es 'paid' o 'confirmed' (dependiendo de la red)
+    // Solo procesar si el estado es 'paid' o 'confirmed'
     if (status === 'paid' || status === 'confirmed' || status === 'success') {
       
-      // 1. Buscar al usuario dueño de esa dirección
-      const { data: addressData, error: addrErr } = await supabase
+      // 1. Buscar al usuario (Primero por dirección, luego por order_id como respaldo)
+      let userId = null;
+
+      const { data: addressData } = await supabase
         .from('oxapay_addresses')
         .select('user_id')
         .eq('address', address)
         .maybeSingle();
 
-      if (addrErr || !addressData) {
-        console.error(`[WEBHOOK_ERROR] No user found for address: ${address}`);
-        return res.status(200).json({ message: "Address not recognized" });
+      if (addressData?.user_id) {
+        userId = addressData.user_id;
+      } else if (order_id && order_id.length > 20) {
+        // El user_id es un UUID, si order_id se ve como un UUID lo usamos
+        userId = order_id;
+        console.log(`[WEBHOOK_FALLBACK] User found via order_id: ${userId}`);
       }
 
-      const userId = addressData.user_id;
+      if (!userId) {
+        console.error(`[WEBHOOK_ERROR] No user found for address: ${address} and order: ${order_id}`);
+        return res.status(200).json({ message: "User not identified" });
+      }
 
       // 2. Verificar si la transacción ya fue procesada (para evitar duplicados)
       const { data: existingTx } = await supabase
