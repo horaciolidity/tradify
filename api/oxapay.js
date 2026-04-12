@@ -74,15 +74,20 @@ export default async function handler(req, res) {
 
       const oxaData = await oxaResp.json();
       
-      if (oxaData.code === 100 && oxaData.address) {
-        const newAddress = oxaData.address;
+      // Determine if it's a success based on code or message
+      const isOxaSuccess = oxaData.code === 100 || 
+                           oxaData.message === "Operation completed successfully!" || 
+                           oxaData.message === "success";
+      
+      const newAddress = oxaData.address || oxaData.data?.address;
 
+      if (isOxaSuccess && newAddress) {
         // 4. PERSISTENCE SAVE (UPSERT)
         const { error: upsertErr } = await supabase
           .from('oxapay_addresses')
           .upsert({
             user_id,
-            network: cleanNetwork, // Save with the label used by the frontend
+            network: cleanNetwork, 
             address: newAddress,
             currency: cleanCurrency,
             updated_at: new Date().toISOString()
@@ -91,23 +96,27 @@ export default async function handler(req, res) {
           });
 
         if (upsertErr) {
-          console.error("[PERSISTENCE_ERROR]: Failed to save address.", upsertErr);
-          // Return the address anyway so the user can pay, but log the failure
-        } else {
-          console.log(`[PERSISTENCE_SUCCESS] Address saved for user ${user_id}`);
+          console.error("[PERSISTENCE_ERROR]:", upsertErr);
         }
 
         return res.status(200).json({ 
           address: newAddress, 
           source: 'api_fresh',
-          status: upsertErr ? 'saved_failed' : 'saved_ok'
+          saved: !upsertErr
         });
       } else {
-        const errorDetail = oxaData.description || oxaData.message || "Unknown OxaPay error";
-        console.error(`[OXAPAY_FAILURE]: ${errorDetail}`, oxaData);
+        // Log detailed failure for debugging
+        console.error(`[OXAPAY_FAILURE] for network ${oxaNetwork}:`, oxaData);
+        
+        const errorMessage = oxaData.description || oxaData.message || "Unknown error";
         return res.status(200).json({ 
-          error: `OxaPay Direct: ${errorDetail}`,
-          debug: { sent_network: oxaNetwork, user: user_id }
+          error: `OxaPay Direct: ${errorMessage}`,
+          debug: { 
+            code: oxaData.code,
+            has_address: !!newAddress,
+            sent_network: oxaNetwork,
+            full_response: oxaData 
+          }
         });
       }
     }
