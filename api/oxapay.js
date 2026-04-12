@@ -23,32 +23,34 @@ export default async function handler(req, res) {
       const cleanNetwork = network.toUpperCase().trim();
       const cleanCurrency = (currency || 'USDT').toUpperCase().trim();
 
-      // 1. BUSCAR EN CACHÉ (La base de datos siempre manda)
+      // 1. BUSCAR EN CACHÉ
+      console.log(`[DEBUG_OXA] Fetching for User: ${cleanUserId}, Net: ${cleanNetwork}`);
       try {
         const { data: exist, error: fetchErr } = await supabase
           .from('oxapay_addresses')
-          .select('address')
+          .select('*') // Seleccionar todo para debug
           .eq('user_id', cleanUserId)
           .eq('network', cleanNetwork)
           .maybeSingle();
 
+        if (fetchErr) {
+          console.error("[DEBUG_OXA] Fetch Error:", fetchErr);
+        }
+
         if (exist?.address) {
-          return res.status(200).json({ address: exist.address, source: 'cache_stable' });
+          console.log(`[DEBUG_OXA] HIT! Returning existing address: ${exist.address}`);
+          return res.status(200).json({ 
+             address: exist.address, 
+             source: 'cache_stable', 
+             db_id: exist.id 
+          });
         }
       } catch (dbErr) {
-        console.error("DB_FETCH_ERROR", dbErr);
+        console.error("[DEBUG_OXA] Exception in Fetch:", dbErr);
       }
 
-      // 2. MAPEO DE REDES PARA OXAPAY
-      const networkMap = {
-        'TRON': 'TRON', 'TRC20': 'TRON',
-        'BSC': 'BSC', 'BEP20': 'BSC',
-        'ETH': 'ETH', 'ERC20': 'ETH'
-      };
-      const oxaNetwork = networkMap[cleanNetwork] || cleanNetwork;
-
-      // 3. PEDIR A OXAPAY (Si no estaba en DB)
-      // Usamos el user_id COMPLETO en el order_id como respaldo para el Webhook
+      // 2. PEDIR A OXAPAY (Si no estaba en DB)
+      console.log(`[DEBUG_OXA] MISS! Calling OxaPay for fresh address.`);
       const oxaResp = await fetch('https://api.oxapay.com/v1/payment/static-address', {
         method: 'POST',
         headers: { 
@@ -58,8 +60,8 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           network: oxaNetwork,
           currency: cleanCurrency,
-          order_id: cleanUserId, // ENVIAMOS EL ID COMPLETO AQUÍ
-          description: `Deposit for User ${cleanUserId}`
+          order_id: cleanUserId,
+          description: `Static Addr for ${cleanUserId}`
         })
       });
 
@@ -68,8 +70,9 @@ export default async function handler(req, res) {
       const newAddress = oxaData.address || oxaData.data?.address;
 
       if (isOxaSuccess && newAddress) {
-        // 4. GUARDAR EN DB ANTES DE RETORNAR
-        const { error: upsertErr } = await supabase
+        // 4. GUARDAR EN DB
+        console.log(`[DEBUG_OXA] Saving new address: ${newAddress}`);
+        const { data: savedData, error: upsertErr } = await supabase
           .from('oxapay_addresses')
           .upsert({
             user_id: cleanUserId,
@@ -77,20 +80,30 @@ export default async function handler(req, res) {
             address: newAddress,
             currency: cleanCurrency,
             updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id,network' });
+          }, { 
+            onConflict: 'user_id,network',
+            ignoreDuplicates: false
+          })
+          .select();
 
-        if (upsertErr) console.error("DB_SAVE_ERROR", upsertErr);
+        if (upsertErr) {
+          console.error("[DEBUG_OXA] CRITICAL UPSERT ERROR:", upsertErr);
+        } else {
+          console.log("[DEBUG_OXA] Save Successful:", savedData);
+        }
 
         return res.status(200).json({ 
           address: newAddress, 
           source: 'api_fresh',
-          saved: !upsertErr,
+          db_persistence: upsertErr ? "FAILED" : "SUCCESS",
+          db_error: upsertErr ? upsertErr.message : null,
           debug_user: cleanUserId
         });
       } else {
+        console.error("[DEBUG_OXA] OxaPay API Returned Failure:", oxaData);
         return res.status(200).json({ 
           error: "OxaPay Error: " + (oxaData.message || "Unknown"),
-          debug: oxaData
+          debug_full: oxaData
         });
       }
     }
