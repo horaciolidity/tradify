@@ -58,7 +58,7 @@ export default async function handler(req, res) {
           'merchant_api_key': merchantKey 
         },
         body: JSON.stringify({
-          network: oxaNetwork,
+          network: cleanNetwork,
           currency: cleanCurrency,
           order_id: cleanUserId,
           description: `Static Addr for ${cleanUserId}`
